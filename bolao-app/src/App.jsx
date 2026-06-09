@@ -185,7 +185,7 @@ const MATA_MATA_CONFIG = {
     { id: 74, label: "1E x 3A/B/C/D/F", kickoffEt: "2026-06-28T16:30:00-04:00", horaEt: "16:30", local: "Boston", refA: "1E", refThirdGroups: ['A', 'B', 'C', 'D', 'F'] },
     { id: 75, label: "1F x 2C", kickoffEt: "2026-06-29T21:00:00-04:00", horaEt: "21:00", local: "Monterrey", refA: "1F", refB: "2C" },
     { id: 76, label: "1C x 2F", kickoffEt: "2026-06-29T13:00:00-04:00", horaEt: "13:00", local: "Houston", refA: "1C", refB: "2F" },
-    { id: 77, label: "1I x 3C/D/F/G/H", kickoffEt: "2026-06-30T17:00:00-04:00", horaEt: "17:00", local: "Filadélfia", refA: "1I", refThirdGroups: ['C', 'D', 'F', 'G', 'H'] },
+    { id: 77, label: "1I x 3C/D/F/G/H", kickoffEt: "2026-06-30T17:00:00-04:00", horaEt: "17:00", local: "Nova York/Nova Jersey", refA: "1I", refThirdGroups: ['C', 'D', 'F', 'G', 'H'] },
     { id: 78, label: "2E x 2I", kickoffEt: "2026-06-30T13:00:00-04:00", horaEt: "13:00", local: "Dallas", refA: "2E", refB: "2I" },
     { id: 79, label: "1A x 3C/E/F/H/I", kickoffEt: "2026-06-30T21:00:00-04:00", horaEt: "21:00", local: "Cid. México", refA: "1A", refThirdGroups: ['C', 'E', 'F', 'H', 'I'] },
     { id: 80, label: "1L x 3E/H/I/J/K", kickoffEt: "2026-07-01T12:00:00-04:00", horaEt: "12:00", local: "Atlanta", refA: "1L", refThirdGroups: ['E', 'H', 'I', 'J', 'K'] },
