@@ -3,17 +3,17 @@ import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, Che
 
 // --- DADOS ESTRUTURAIS ---
 const GRUPOS_2026 = {
-  A: ['México', 'África do Sul', 'Coreia do Sul', 'Repescagem Eur D'],
-  B: ['Canadá', 'Suíça', 'Catar', 'Repescagem Eur A'],
+  A: ['México', 'África do Sul', 'Coreia do Sul', 'Rep. Tcheca'],
+  B: ['Canadá', 'Suíça', 'Catar', 'Bósnia'],
   C: ['Brasil', 'Marrocos', 'Escócia', 'Haiti'],
-  D: ['EUA', 'Paraguai', 'Austrália', 'Repescagem Eur C'],
+  D: ['EUA', 'Paraguai', 'Austrália', 'Turquia'],
   E: ['Alemanha', 'Equador', 'Curaçao', 'Costa do Marfim'],
-  F: ['Holanda', 'Japão', 'Tunísia', 'Repescagem Eur B'],
+  F: ['Holanda', 'Japão', 'Tunísia', 'Suécia'],
   G: ['Bélgica', 'Egito', 'Irã', 'Nova Zelândia'],
   H: ['Espanha', 'Uruguai', 'Arábia Saudita', 'Cabo Verde'],
-  I: ['França', 'Senegal', 'Noruega', 'Repescagem Mun 2'],
+  I: ['França', 'Senegal', 'Noruega', 'Iraque'],
   J: ['Argentina', 'Áustria', 'Argélia', 'Jordânia'],
-  K: ['Portugal', 'Colômbia', 'Uzbequistão', 'Repescagem Mun 1'],
+  K: ['Portugal', 'Colômbia', 'Uzbequistão', 'RD Congo'],
   L: ['Inglaterra', 'Croácia', 'Gana', 'Panamá']
 };
 
@@ -22,6 +22,13 @@ const TODOS_TIMES = Object.values(GRUPOS_2026).flat().sort();
 const PONTOS = {
   JOGO: { CHEIO: 20, VITORIA: 5 },
   MATA: { CAMPEAO: 100, VICE: 70, TOP3: 50, TOP4: 40, SF: 30, QF: 20, R16: 10, R32: 5 }
+};
+
+const PONTOS_CONDUTA = {
+  AMARELO: -1,
+  VERMELHO_INDIRETO: -3,
+  VERMELHO_DIRETO: -4,
+  AMARELO_E_VERMELHO_DIRETO: -5
 };
 
 // --- CONFIGURAÇÃO INICIAL ---
@@ -44,21 +51,21 @@ const gerarJogosIniciais = () => {
 const MATA_MATA_CONFIG = {
   r32: [
     { id: 73, label: "2A x 2B", data: "28/06", local: "Los Angeles", refA: "2A", refB: "2B" },
-    { id: 74, label: "1D x 3B/E/F", data: "28/06", local: "San Francisco", refA: "1D", refB: "3BEF" },
-    { id: 75, label: "1G x 3A/H/I", data: "28/06", local: "Seattle", refA: "1G", refB: "3AHI" },
-    { id: 76, label: "1F x 2C", data: "29/06", local: "Dallas", refA: "1F", refB: "2C" },
-    { id: 77, label: "1C x 2F", data: "29/06", local: "Houston", refA: "1C", refB: "2F" },
-    { id: 78, label: "1E x 3A/B/C/D", data: "29/06", local: "Monterrey", refA: "1E", refB: "3ABCD" },
-    { id: 79, label: "1A x 3C/E/F", data: "30/06", local: "Cid. México", refA: "1A", refB: "3CEF" },
-    { id: 80, label: "1B x 3E/F/G", data: "30/06", local: "Vancouver", refA: "1B", refB: "3EFG" },
-    { id: 81, label: "2H x 2I", data: "30/06", local: "Atlanta", refA: "2H", refB: "2I" },
-    { id: 82, label: "1I x 3G/H", data: "01/07", local: "Boston", refA: "1I", refB: "3GH" },
-    { id: 83, label: "1H x 3J/K/L", data: "01/07", local: "Miami", refA: "1H", refB: "3JKL" },
-    { id: 84, label: "1L x 3H/I", data: "01/07", local: "Nova York", refA: "1L", refB: "3HI" },
-    { id: 85, label: "1J x 2K", data: "02/07", local: "Toronto", refA: "1J", refB: "2K" },
-    { id: 86, label: "1K x 2J", data: "02/07", local: "Filadélfia", refA: "1K", refB: "2J" },
-    { id: 87, label: "2D x 2E", data: "02/07", local: "Kansas City", refA: "2D", refB: "2E" },
-    { id: 88, label: "2G x 2L", data: "02/07", local: "Guadalajara", refA: "2G", refB: "2L" },
+    { id: 74, label: "1E x 3A/B/C/D/F", data: "29/06", local: "Boston", refA: "1E", refThirdGroups: ['A', 'B', 'C', 'D', 'F'] },
+    { id: 75, label: "1F x 2C", data: "29/06", local: "Monterrey", refA: "1F", refB: "2C" },
+    { id: 76, label: "1C x 2F", data: "29/06", local: "Houston", refA: "1C", refB: "2F" },
+    { id: 77, label: "1I x 3C/D/F/G/H", data: "30/06", local: "Nova York/Nova Jersey", refA: "1I", refThirdGroups: ['C', 'D', 'F', 'G', 'H'] },
+    { id: 78, label: "2E x 2I", data: "30/06", local: "Dallas", refA: "2E", refB: "2I" },
+    { id: 79, label: "1A x 3C/E/F/H/I", data: "30/06", local: "Cid. México", refA: "1A", refThirdGroups: ['C', 'E', 'F', 'H', 'I'] },
+    { id: 80, label: "1L x 3E/H/I/J/K", data: "01/07", local: "Atlanta", refA: "1L", refThirdGroups: ['E', 'H', 'I', 'J', 'K'] },
+    { id: 81, label: "1D x 3B/E/F/I/J", data: "01/07", local: "San Francisco", refA: "1D", refThirdGroups: ['B', 'E', 'F', 'I', 'J'] },
+    { id: 82, label: "1G x 3A/E/H/I/J", data: "01/07", local: "Seattle", refA: "1G", refThirdGroups: ['A', 'E', 'H', 'I', 'J'] },
+    { id: 83, label: "2K x 2L", data: "02/07", local: "Toronto", refA: "2K", refB: "2L" },
+    { id: 84, label: "1H x 2J", data: "02/07", local: "Los Angeles", refA: "1H", refB: "2J" },
+    { id: 85, label: "1B x 3E/F/G/I/J", data: "02/07", local: "Vancouver", refA: "1B", refThirdGroups: ['E', 'F', 'G', 'I', 'J'] },
+    { id: 86, label: "1J x 2H", data: "03/07", local: "Miami", refA: "1J", refB: "2H" },
+    { id: 87, label: "1K x 3D/E/I/J/L", data: "03/07", local: "Kansas City", refA: "1K", refThirdGroups: ['D', 'E', 'I', 'J', 'L'] },
+    { id: 88, label: "2D x 2G", data: "03/07", local: "Dallas", refA: "2D", refB: "2G" },
   ],
   r16: [
     { id: 89, feedA: 73, feedB: 74, data: "04/07", local: "Houston" },
@@ -83,10 +90,141 @@ const MATA_MATA_CONFIG = {
 };
 
 // --- LÓGICA DE NEGÓCIO ---
-const calcularTabelaGrupo = (grupo, jogos, palpitesUsuario) => {
+const getTeamConductScore = (grupo, time, condutaGrupos) => {
+  const registro = condutaGrupos?.[grupo]?.[time];
+  if (!registro) return 0;
+  if (typeof registro.score === 'number' && !Number.isNaN(registro.score)) return registro.score;
+  const amarelos = Number(registro.amarelos || 0);
+  const vermelhoIndireto = Number(registro.vermelhoIndireto || 0);
+  const vermelhoDireto = Number(registro.vermelhoDireto || 0);
+  const amareloEVermelhoDireto = Number(registro.amareloEVermelhoDireto || 0);
+  return (
+    amarelos * PONTOS_CONDUTA.AMARELO +
+    vermelhoIndireto * PONTOS_CONDUTA.VERMELHO_INDIRETO +
+    vermelhoDireto * PONTOS_CONDUTA.VERMELHO_DIRETO +
+    amareloEVermelhoDireto * PONTOS_CONDUTA.AMARELO_E_VERMELHO_DIRETO
+  );
+};
+
+const calcularMiniTabela = (timesEmpatados, jogosProcessados) => {
+  const mini = {};
+  timesEmpatados.forEach((time) => {
+    mini[time] = { p: 0, sg: 0, gp: 0 };
+  });
+
+  jogosProcessados.forEach((jogo) => {
+    if (!timesEmpatados.includes(jogo.timeA) || !timesEmpatados.includes(jogo.timeB)) return;
+
+    mini[jogo.timeA].gp += jogo.pA;
+    mini[jogo.timeA].sg += jogo.pA - jogo.pB;
+    mini[jogo.timeB].gp += jogo.pB;
+    mini[jogo.timeB].sg += jogo.pB - jogo.pA;
+
+    if (jogo.pA > jogo.pB) {
+      mini[jogo.timeA].p += 3;
+    } else if (jogo.pB > jogo.pA) {
+      mini[jogo.timeB].p += 3;
+    } else {
+      mini[jogo.timeA].p += 1;
+      mini[jogo.timeB].p += 1;
+    }
+  });
+
+  return mini;
+};
+
+const compararCritBase = (a, b, rankKey = 'rankFifa') => (
+  b.p - a.p ||
+  b.sg - a.sg ||
+  b.gp - a.gp ||
+  b.conduta - a.conduta ||
+  (a[rankKey] ?? Number.MAX_SAFE_INTEGER) - (b[rankKey] ?? Number.MAX_SAFE_INTEGER) ||
+  a.time.localeCompare(b.time, 'pt-BR')
+);
+
+const resolverEmpateGrupoFifa = (linhas, jogosProcessados) => {
+  if (linhas.length <= 1) return linhas;
+
+  const miniTabela = calcularMiniTabela(linhas.map((linha) => linha.time), jogosProcessados);
+  const enriquecidas = linhas.map((linha) => ({
+    ...linha,
+    miniP: miniTabela[linha.time].p,
+    miniSg: miniTabela[linha.time].sg,
+    miniGp: miniTabela[linha.time].gp
+  }));
+
+  enriquecidas.sort((a, b) =>
+    b.miniP - a.miniP ||
+    b.miniSg - a.miniSg ||
+    b.miniGp - a.miniGp
+  );
+
+  const grupos = [];
+  enriquecidas.forEach((linha) => {
+    const ultimo = grupos[grupos.length - 1];
+    if (
+      ultimo &&
+      ultimo[0].miniP === linha.miniP &&
+      ultimo[0].miniSg === linha.miniSg &&
+      ultimo[0].miniGp === linha.miniGp
+    ) {
+      ultimo.push(linha);
+      return;
+    }
+    grupos.push([linha]);
+  });
+
+  return grupos.flatMap((grupoEmpatado) => {
+    if (grupoEmpatado.length === 1) return grupoEmpatado;
+    if (grupoEmpatado.length !== linhas.length) {
+      return resolverEmpateGrupoFifa(
+        grupoEmpatado.map(({ miniP, miniSg, miniGp, ...resto }) => resto),
+        jogosProcessados
+      );
+    }
+    return grupoEmpatado
+      .map(({ miniP, miniSg, miniGp, ...resto }) => resto)
+      .sort((a, b) => compararCritBase(a, b));
+  });
+};
+
+const ordenarTabelaGrupoFifa = (linhas, jogosProcessados) => {
+  const porPontos = [...linhas].sort((a, b) => b.p - a.p);
+  const grupos = [];
+
+  porPontos.forEach((linha) => {
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo && ultimo[0].p === linha.p) {
+      ultimo.push(linha);
+      return;
+    }
+    grupos.push([linha]);
+  });
+
+  return grupos.flatMap((grupoEmpatado) => (
+    grupoEmpatado.length === 1 ? grupoEmpatado : resolverEmpateGrupoFifa(grupoEmpatado, jogosProcessados)
+  ));
+};
+
+const calcularTabelaGrupo = (grupo, jogos, palpitesUsuario, condutaGrupos = {}) => {
   const times = GRUPOS_2026[grupo];
   const tabela = {};
-  times.forEach(time => { tabela[time] = { time, grupo, p: 0, j: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, sg: 0 }; });
+  const jogosProcessados = [];
+  times.forEach(time => {
+    tabela[time] = {
+      time,
+      grupo,
+      p: 0,
+      j: 0,
+      v: 0,
+      e: 0,
+      d: 0,
+      gp: 0,
+      gc: 0,
+      sg: 0,
+      conduta: getTeamConductScore(grupo, time, condutaGrupos)
+    };
+  });
   const jogosDoGrupo = jogos.filter(j => j.grupo === grupo);
   jogosDoGrupo.forEach(jogo => {
     let gA = jogo.placarA, gB = jogo.placarB;
@@ -96,6 +234,7 @@ const calcularTabelaGrupo = (grupo, jogos, palpitesUsuario) => {
     }
     if (gA !== '' && gB !== '') {
       const pA = parseInt(gA), pB = parseInt(gB);
+      jogosProcessados.push({ timeA: jogo.timeA, timeB: jogo.timeB, pA, pB });
       tabela[jogo.timeA].j++; tabela[jogo.timeA].gp += pA; tabela[jogo.timeA].gc += pB; tabela[jogo.timeA].sg += (pA - pB);
       tabela[jogo.timeB].j++; tabela[jogo.timeB].gp += pB; tabela[jogo.timeB].gc += pA; tabela[jogo.timeB].sg += (pB - pA);
       if (pA > pB) { tabela[jogo.timeA].v++; tabela[jogo.timeA].p += 3; tabela[jogo.timeB].d++; }
@@ -103,46 +242,65 @@ const calcularTabelaGrupo = (grupo, jogos, palpitesUsuario) => {
       else { tabela[jogo.timeA].e++; tabela[jogo.timeA].p += 1; tabela[jogo.timeB].e++; tabela[jogo.timeB].p += 1; }
     }
   });
-  return Object.values(tabela).sort((a, b) => b.p - a.p || b.sg - a.sg || b.gp - a.gp);
+  return ordenarTabelaGrupoFifa(Object.values(tabela), jogosProcessados);
 };
+
+const ordenarTerceirosFifa = (terceiros) => [...terceiros].sort((a, b) => compararCritBase(a, b));
 
 const resolverConfrontosTerceiros = (melhoresTerceiros, slotsDisponiveis) => {
   let solucao = null;
-  const backtrack = (index, alocados) => {
+  const ordenados = ordenarTerceirosFifa(melhoresTerceiros);
+  const backtrack = (index, alocados, usados) => {
     if (solucao) return;
-    if (index === melhoresTerceiros.length) { solucao = alocados; return; }
-    const timeAtual = melhoresTerceiros[index];
-    for (let i = 0; i < slotsDisponiveis.length; i++) {
-      if (!alocados[i]) {
-        const slot = slotsDisponiveis[i];
-        if (slot.grupoVencedor !== timeAtual.grupo) {
-          backtrack(index + 1, { ...alocados, [i]: timeAtual.time });
-        }
-      }
+    if (index === slotsDisponiveis.length) { solucao = alocados; return; }
+    const slot = slotsDisponiveis[index];
+    if (!slot.refThirdGroups) {
+      backtrack(index + 1, alocados, usados);
+      return;
+    }
+    for (const timeAtual of ordenados) {
+      if (usados.has(timeAtual.time)) continue;
+      if (!slot.refThirdGroups.includes(timeAtual.grupo)) continue;
+      const proximosUsados = new Set(usados);
+      proximosUsados.add(timeAtual.time);
+      backtrack(index + 1, { ...alocados, [slot.id]: timeAtual.time }, proximosUsados);
     }
   };
-  backtrack(0, {});
+  backtrack(0, {}, new Set());
   return solucao || {};
 };
 
-const getWinnerOfMatch = (matchId, source) => {
-  if (!source) return null;
-  if (matchId >= 73 && matchId <= 88) return source.dezeszeseisavos?.[matchId - 73];
-  if (matchId >= 89 && matchId <= 96) return source.oitavas?.[matchId - 89];
-  if (matchId >= 97 && matchId <= 100) return source.quartas?.[matchId - 97];
-  if (matchId >= 101 && matchId <= 102) return source.semis?.[matchId - 101];
-  return null;
-};
+const placarPreenchido = (placarA, placarB) => (
+  placarA !== '' &&
+  placarB !== '' &&
+  placarA !== undefined &&
+  placarB !== undefined &&
+  placarA !== null &&
+  placarB !== null
+);
 
-const getR32Team = (ref, jogos, palpitesUsuario) => {
+const faseDeGruposCompleta = (jogos, palpitesUsuario) => jogos.every((jogo) => {
+  if (placarPreenchido(jogo.placarA, jogo.placarB)) return true;
+  const palpite = palpitesUsuario?.[jogo.id];
+  return placarPreenchido(palpite?.placarA, palpite?.placarB);
+});
+
+const getR32Team = (ref, jogos, palpitesUsuario, condutaGrupos, gruposCompletos) => {
+  if (!gruposCompletos) return "A definir";
   if (!ref) return "???";
   if (ref.length === 2) {
     const pos = parseInt(ref[0]);
     const grp = ref[1];
-    const tabela = calcularTabelaGrupo(grp, jogos, palpitesUsuario);
+    const tabela = calcularTabelaGrupo(grp, jogos, palpitesUsuario, condutaGrupos);
     return tabela[pos-1]?.time || "A definir";
   }
   return null;
+};
+
+const getThirdPlaceCandidate = (match, alocacaoTerceiros, gruposCompletos) => {
+  if (!match.refThirdGroups) return null;
+  if (!gruposCompletos) return "A definir";
+  return alocacaoTerceiros[match.id] || `3º de ${match.refThirdGroups.join('/')}`;
 };
 
 const calcularPontosJogo = (palpiteA, palpiteB, realA, realB) => {
@@ -155,6 +313,15 @@ const calcularPontosJogo = (palpiteA, palpiteB, realA, realB) => {
     return { pts: PONTOS.JOGO.VITORIA, label: 'VENCEDOR', color: 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30' };
   }
   return { pts: 0, label: 'ERROU', color: 'text-red-400 bg-red-500/20 border-red-500/30' };
+};
+
+const getWinnerOfMatch = (matchId, source) => {
+  if (!source) return null;
+  if (matchId >= 73 && matchId <= 88) return source.dezeszeseisavos?.[matchId - 73];
+  if (matchId >= 89 && matchId <= 96) return source.oitavas?.[matchId - 89];
+  if (matchId >= 97 && matchId <= 100) return source.quartas?.[matchId - 97];
+  if (matchId >= 101 && matchId <= 102) return source.semis?.[matchId - 101];
+  return null;
 };
 
 // --- ESTILOS MAC STYLE ---
@@ -234,29 +401,35 @@ export default function App() {
   const [palpitesJogos, setPalpitesJogos] = useState(() => JSON.parse(localStorage.getItem('bolao26_bets_games')) || {});
   const [palpitesMataMata, setPalpitesMataMata] = useState(() => JSON.parse(localStorage.getItem('bolao26_bets_knockout_v2')) || {});
   const [gabaritoMataMata, setGabaritoMataMata] = useState(() => JSON.parse(localStorage.getItem('bolao26_official_knockout_v2')) || {});
+  const [condutaGrupos, setCondutaGrupos] = useState(() => JSON.parse(localStorage.getItem('bolao26_group_conduct')) || {});
 
   useEffect(() => { localStorage.setItem('bolao26_users', JSON.stringify(usuarios)); }, [usuarios]);
   useEffect(() => { localStorage.setItem('bolao26_matches', JSON.stringify(jogosReais)); }, [jogosReais]);
   useEffect(() => { localStorage.setItem('bolao26_bets_games', JSON.stringify(palpitesJogos)); }, [palpitesJogos]);
   useEffect(() => { localStorage.setItem('bolao26_bets_knockout_v2', JSON.stringify(palpitesMataMata)); }, [palpitesMataMata]);
   useEffect(() => { localStorage.setItem('bolao26_official_knockout_v2', JSON.stringify(gabaritoMataMata)); }, [gabaritoMataMata]);
+  useEffect(() => { localStorage.setItem('bolao26_group_conduct', JSON.stringify(condutaGrupos)); }, [condutaGrupos]);
 
   const modoAdmin = currentUser?.nome?.toLowerCase() === 'admin'; 
+  const palpitesUsuarioAtual = currentUser ? palpitesJogos[currentUser.id] : undefined;
+  const gruposCompletos = currentUser ? faseDeGruposCompleta(jogosReais, modoAdmin ? undefined : palpitesUsuarioAtual) : false;
 
   useEffect(() => {
     if (!currentUser) return;
+    if (!gruposCompletos) {
+      setAlocacaoTerceiros({});
+      return;
+    }
     const tabelaGeral = {};
-    Object.keys(GRUPOS_2026).forEach(g => { tabelaGeral[g] = calcularTabelaGrupo(g, jogosReais, palpitesJogos[currentUser.id]); });
+    Object.keys(GRUPOS_2026).forEach(g => { tabelaGeral[g] = calcularTabelaGrupo(g, jogosReais, palpitesUsuarioAtual, condutaGrupos); });
     const terceiros = [];
     Object.values(tabelaGeral).forEach(t => { if(t[2]) terceiros.push(t[2]); });
-    terceiros.sort((a, b) => b.p - a.p || b.sg - a.sg || b.gp - a.gp);
+    terceiros.sort((a, b) => compararCritBase(a, b));
     const top8 = terceiros.slice(0, 8);
-    const slots = [{ id: 74, grupoVencedor: 'D' }, { id: 75, grupoVencedor: 'G' }, { id: 78, grupoVencedor: 'E' }, { id: 79, grupoVencedor: 'A' }, { id: 80, grupoVencedor: 'B' }, { id: 82, grupoVencedor: 'I' }, { id: 83, grupoVencedor: 'H' }, { id: 84, grupoVencedor: 'L' }];
+    const slots = MATA_MATA_CONFIG.r32.filter(match => match.refThirdGroups);
     const resultado = resolverConfrontosTerceiros(top8, slots);
-    const mapaFinal = {};
-    slots.forEach((slot, index) => { if (resultado[index]) mapaFinal[slot.id] = resultado[index]; });
-    setAlocacaoTerceiros(mapaFinal);
-  }, [jogosReais, palpitesJogos, currentUser]);
+    setAlocacaoTerceiros(resultado);
+  }, [jogosReais, palpitesUsuarioAtual, condutaGrupos, currentUser, gruposCompletos]);
 
   const handleLogin = (id, nome, senha) => {
     if (nome === 'Admin' && !usuarios.find(u => u.nome === 'Admin')) {
@@ -271,6 +444,18 @@ export default function App() {
   const handleLogout = () => setCurrentUser(null);
   const atualizarJogo = (id, c, v) => setJogosReais(p => p.map(j => j.id === id ? { ...j, [c]: v } : j));
   const atualizarPalpite = (id, c, v) => setPalpitesJogos(p => ({ ...p, [currentUser.id]: { ...(p[currentUser.id] || {}), [id]: { ...(p[currentUser.id]?.[id] || { placarA: '', placarB: '' }), [c]: v } } }));
+  const atualizarCondutaGrupo = (grupo, time, campo, valor) => {
+    setCondutaGrupos((anterior) => ({
+      ...anterior,
+      [grupo]: {
+        ...(anterior[grupo] || {}),
+        [time]: {
+          ...(anterior[grupo]?.[time] || {}),
+          [campo]: valor
+        }
+      }
+    }));
+  };
   const atualizarMataMata = (c, v, i) => {
     const setter = modoAdmin ? setGabaritoMataMata : setPalpitesMataMata;
     setter(p => {
@@ -302,8 +487,8 @@ export default function App() {
         const userMM = palpitesMataMata[user.id] || {};
         if (gabaritoMataMata.campeao && userMM.campeao === gabaritoMataMata.campeao) ptsMataMata += PONTOS.MATA.CAMPEAO;
         if (gabaritoMataMata.vice && userMM.vice === gabaritoMataMata.vice) ptsMataMata += PONTOS.MATA.VICE;
-        if (gabaritoMataMata.terceiro && userMM.terceiro === gabaritoMataMata.terceiro) ptsMataMata += PONTOS.MATA.TERCEIRO;
-        if (gabaritoMataMata.quarto && userMM.quarto === gabaritoMataMata.quarto) ptsMataMata += PONTOS.MATA.QUARTO;
+        if (gabaritoMataMata.terceiro && userMM.terceiro === gabaritoMataMata.terceiro) ptsMataMata += PONTOS.MATA.TOP3;
+        if (gabaritoMataMata.quarto && userMM.quarto === gabaritoMataMata.quarto) ptsMataMata += PONTOS.MATA.TOP4;
         const checkPhase = (field, points) => {
            const official = gabaritoMataMata[field] || [];
            const userBet = userMM[field] || [];
@@ -330,7 +515,7 @@ export default function App() {
   };
 
   const TabelaClassificacao = ({ grupo }) => {
-    const tabela = calcularTabelaGrupo(grupo, jogosReais, palpitesJogos[currentUser.id]);
+    const tabela = calcularTabelaGrupo(grupo, jogosReais, palpitesJogos[currentUser.id], condutaGrupos);
     return (
       <div className={`${GLASS_CARD} overflow-hidden mb-4`}>
         <div className="bg-white/5 px-4 py-2.5 flex justify-between items-center border-b border-white/5">
@@ -357,6 +542,23 @@ export default function App() {
             })}
           </tbody>
         </table>
+        {modoAdmin && (
+          <div className="border-t border-white/5 p-3 space-y-2 bg-black/10">
+            <div className={`text-[10px] uppercase font-bold ${TEXT_MUTED}`}>Fair play / conduta FIFA</div>
+            {GRUPOS_2026[grupo].map((time) => {
+              const registro = condutaGrupos?.[grupo]?.[time] || {};
+              return (
+                <div key={time} className="grid grid-cols-[minmax(0,1fr)_44px_44px_44px_44px] gap-2 items-center">
+                  <span className="truncate text-[11px] text-white/80">{time}</span>
+                  <input type="number" min="0" value={registro.amarelos ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'amarelos', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs`} placeholder="A" title="Amarelos" />
+                  <input type="number" min="0" value={registro.vermelhoIndireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'vermelhoIndireto', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs`} placeholder="2A" title="Vermelho indireto" />
+                  <input type="number" min="0" value={registro.vermelhoDireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'vermelhoDireto', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs`} placeholder="VD" title="Vermelho direto" />
+                  <input type="number" min="0" value={registro.amareloEVermelhoDireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'amareloEVermelhoDireto', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs`} placeholder="A+V" title="Amarelo + vermelho direto" />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   };
@@ -364,15 +566,17 @@ export default function App() {
   const RestrictedMatchDropdown = ({ match, idx, phaseKey }) => {
     let timeA, timeB;
     if (phaseKey === 'dezeszeseisavos') {
-      timeA = getR32Team(match.refA, jogosReais, palpitesJogos[currentUser.id]);
-      timeB = match.refB.startsWith('3') ? (alocacaoTerceiros[match.id] || "Aguardando 3ºs") : getR32Team(match.refB, jogosReais, palpitesJogos[currentUser.id]);
+      timeA = getR32Team(match.refA, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos);
+      timeB = match.refThirdGroups
+        ? getThirdPlaceCandidate(match, alocacaoTerceiros, gruposCompletos)
+        : getR32Team(match.refB, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos);
     } else {
       const source = modoAdmin ? gabaritoMataMata : (palpitesMataMata[currentUser.id] || {});
       timeA = getWinnerOfMatch(match.feedA, source) || `Venc. ${match.feedA}`;
       timeB = getWinnerOfMatch(match.feedB, source) || `Venc. ${match.feedB}`;
     }
     const currentValue = modoAdmin ? gabaritoMataMata[phaseKey]?.[idx] : palpitesMataMata[currentUser.id]?.[phaseKey]?.[idx];
-    const options = [timeA, timeB].filter(t => t && !t.includes("Aguardando") && !t.includes("Venc."));
+    const options = [timeA, timeB].filter(t => t && t !== 'A definir' && !t.includes("Aguardando") && !t.includes("Venc.") && !t.startsWith('3º de '));
     const isReady = options.length === 2;
     let feedback = null;
     if (!modoAdmin && gabaritoMataMata[phaseKey]?.[idx]) {
@@ -505,7 +709,7 @@ export default function App() {
               <p className="text-[11px] text-blue-100 leading-snug">Seus palpites da fase de grupos preenchem automaticamente os confrontos abaixo.</p>
             </div>
             {[
-              { id: 'r32', title: '16-avos (Top 32)', list: MATA_MATA_CONFIG.r32, key: 'dezeszeseisavos', pts: PONTOS.MATA.R32 },
+              { id: 'r32', title: '32-avos (Top 32)', list: MATA_MATA_CONFIG.r32, key: 'dezeszeseisavos', pts: PONTOS.MATA.R32 },
               { id: 'r16', title: 'Oitavas de Final', list: MATA_MATA_CONFIG.r16, key: 'oitavas', pts: PONTOS.MATA.R16 },
               { id: 'qf', title: 'Quartas de Final', list: MATA_MATA_CONFIG.qf, key: 'quartas', pts: PONTOS.MATA.QF },
               { id: 'sf', title: 'Semifinais', list: MATA_MATA_CONFIG.sf, key: 'semis', pts: PONTOS.MATA.SF }
