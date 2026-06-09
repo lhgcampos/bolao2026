@@ -4,18 +4,94 @@ import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, Che
 // --- DADOS ESTRUTURAIS ---
 const GRUPOS_2026 = {
   A: ['México', 'África do Sul', 'Coreia do Sul', 'Rep. Tcheca'],
-  B: ['Canadá', 'Suíça', 'Catar', 'Bósnia'],
-  C: ['Brasil', 'Marrocos', 'Escócia', 'Haiti'],
+  B: ['Canadá', 'Bósnia', 'Catar', 'Suíça'],
+  C: ['Brasil', 'Marrocos', 'Haiti', 'Escócia'],
   D: ['EUA', 'Paraguai', 'Austrália', 'Turquia'],
-  E: ['Alemanha', 'Equador', 'Curaçao', 'Costa do Marfim'],
-  F: ['Holanda', 'Japão', 'Tunísia', 'Suécia'],
+  E: ['Alemanha', 'Costa do Marfim', 'Curaçao', 'Equador'],
+  F: ['Holanda', 'Japão', 'Suécia', 'Tunísia'],
   G: ['Bélgica', 'Egito', 'Irã', 'Nova Zelândia'],
-  H: ['Espanha', 'Uruguai', 'Arábia Saudita', 'Cabo Verde'],
-  I: ['França', 'Senegal', 'Noruega', 'Iraque'],
-  J: ['Argentina', 'Áustria', 'Argélia', 'Jordânia'],
-  K: ['Portugal', 'Colômbia', 'Uzbequistão', 'RD Congo'],
+  H: ['Espanha', 'Cabo Verde', 'Arábia Saudita', 'Uruguai'],
+  I: ['França', 'Senegal', 'Iraque', 'Noruega'],
+  J: ['Argentina', 'Argélia', 'Áustria', 'Jordânia'],
+  K: ['Portugal', 'RD Congo', 'Uzbequistão', 'Colômbia'],
   L: ['Inglaterra', 'Croácia', 'Gana', 'Panamá']
 };
+
+// Horarios oficiais publicados pela FIFA em 10/04/2026 (ET).
+const JOGOS_FASE_DE_GRUPOS = [
+  { id: 1, grupo: 'A', timeA: 'México', timeB: 'África do Sul', data: '11/06', hora: '15:00', local: 'Cid. México' },
+  { id: 2, grupo: 'A', timeA: 'Coreia do Sul', timeB: 'Rep. Tcheca', data: '11/06', hora: '20:00', local: 'Guadalajara' },
+  { id: 3, grupo: 'A', timeA: 'Rep. Tcheca', timeB: 'África do Sul', data: '18/06', hora: '12:00', local: 'Atlanta' },
+  { id: 4, grupo: 'A', timeA: 'México', timeB: 'Coreia do Sul', data: '18/06', hora: '21:00', local: 'Guadalajara' },
+  { id: 5, grupo: 'A', timeA: 'Rep. Tcheca', timeB: 'México', data: '24/06', hora: '21:00', local: 'Cid. México' },
+  { id: 6, grupo: 'A', timeA: 'África do Sul', timeB: 'Coreia do Sul', data: '24/06', hora: '21:00', local: 'Monterrey' },
+  { id: 7, grupo: 'B', timeA: 'Canadá', timeB: 'Bósnia', data: '12/06', hora: '15:00', local: 'Toronto' },
+  { id: 8, grupo: 'B', timeA: 'Catar', timeB: 'Suíça', data: '13/06', hora: '15:00', local: 'San Francisco Bay Area' },
+  { id: 9, grupo: 'B', timeA: 'Suíça', timeB: 'Bósnia', data: '18/06', hora: '15:00', local: 'Los Angeles' },
+  { id: 10, grupo: 'B', timeA: 'Canadá', timeB: 'Catar', data: '18/06', hora: '18:00', local: 'Vancouver' },
+  { id: 11, grupo: 'B', timeA: 'Suíça', timeB: 'Canadá', data: '24/06', hora: '15:00', local: 'Vancouver' },
+  { id: 12, grupo: 'B', timeA: 'Bósnia', timeB: 'Catar', data: '24/06', hora: '15:00', local: 'Seattle' },
+  { id: 13, grupo: 'C', timeA: 'Haiti', timeB: 'Escócia', data: '13/06', hora: '21:00', local: 'Boston' },
+  { id: 14, grupo: 'C', timeA: 'Brasil', timeB: 'Marrocos', data: '13/06', hora: '18:00', local: 'Nova York/Nova Jersey' },
+  { id: 15, grupo: 'C', timeA: 'Escócia', timeB: 'Marrocos', data: '19/06', hora: '18:00', local: 'Boston' },
+  { id: 16, grupo: 'C', timeA: 'Brasil', timeB: 'Haiti', data: '19/06', hora: '20:30', local: 'Filadélfia' },
+  { id: 17, grupo: 'C', timeA: 'Escócia', timeB: 'Brasil', data: '24/06', hora: '18:00', local: 'Miami' },
+  { id: 18, grupo: 'C', timeA: 'Marrocos', timeB: 'Haiti', data: '24/06', hora: '18:00', local: 'Atlanta' },
+  { id: 19, grupo: 'D', timeA: 'EUA', timeB: 'Paraguai', data: '12/06', hora: '21:00', local: 'Los Angeles' },
+  { id: 20, grupo: 'D', timeA: 'Austrália', timeB: 'Turquia', data: '13/06', hora: '00:00', local: 'Vancouver' },
+  { id: 21, grupo: 'D', timeA: 'Turquia', timeB: 'Paraguai', data: '19/06', hora: '23:00', local: 'San Francisco Bay Area' },
+  { id: 22, grupo: 'D', timeA: 'EUA', timeB: 'Austrália', data: '19/06', hora: '15:00', local: 'Seattle' },
+  { id: 23, grupo: 'D', timeA: 'Turquia', timeB: 'EUA', data: '25/06', hora: '22:00', local: 'Los Angeles' },
+  { id: 24, grupo: 'D', timeA: 'Paraguai', timeB: 'Austrália', data: '25/06', hora: '22:00', local: 'San Francisco Bay Area' },
+  { id: 25, grupo: 'E', timeA: 'Costa do Marfim', timeB: 'Equador', data: '14/06', hora: '19:00', local: 'Filadélfia' },
+  { id: 26, grupo: 'E', timeA: 'Alemanha', timeB: 'Curaçao', data: '14/06', hora: '13:00', local: 'Houston' },
+  { id: 27, grupo: 'E', timeA: 'Alemanha', timeB: 'Costa do Marfim', data: '20/06', hora: '16:00', local: 'Toronto' },
+  { id: 28, grupo: 'E', timeA: 'Equador', timeB: 'Curaçao', data: '20/06', hora: '20:00', local: 'Kansas City' },
+  { id: 29, grupo: 'E', timeA: 'Curaçao', timeB: 'Costa do Marfim', data: '25/06', hora: '16:00', local: 'Filadélfia' },
+  { id: 30, grupo: 'E', timeA: 'Equador', timeB: 'Alemanha', data: '25/06', hora: '21:00', local: 'Nova York/Nova Jersey' },
+  { id: 31, grupo: 'F', timeA: 'Holanda', timeB: 'Japão', data: '14/06', hora: '16:00', local: 'Dallas' },
+  { id: 32, grupo: 'F', timeA: 'Suécia', timeB: 'Tunísia', data: '14/06', hora: '22:00', local: 'Monterrey' },
+  { id: 33, grupo: 'F', timeA: 'Holanda', timeB: 'Suécia', data: '20/06', hora: '13:00', local: 'Houston' },
+  { id: 34, grupo: 'F', timeA: 'Tunísia', timeB: 'Japão', data: '20/06', hora: '00:00', local: 'Monterrey' },
+  { id: 35, grupo: 'F', timeA: 'Japão', timeB: 'Suécia', data: '25/06', hora: '19:00', local: 'Dallas' },
+  { id: 36, grupo: 'F', timeA: 'Tunísia', timeB: 'Holanda', data: '25/06', hora: '19:00', local: 'Kansas City' },
+  { id: 37, grupo: 'G', timeA: 'Bélgica', timeB: 'Egito', data: '15/06', hora: '15:00', local: 'Seattle' },
+  { id: 38, grupo: 'G', timeA: 'Irã', timeB: 'Nova Zelândia', data: '15/06', hora: '21:00', local: 'Los Angeles' },
+  { id: 39, grupo: 'G', timeA: 'Bélgica', timeB: 'Irã', data: '21/06', hora: '15:00', local: 'Los Angeles' },
+  { id: 40, grupo: 'G', timeA: 'Nova Zelândia', timeB: 'Egito', data: '21/06', hora: '21:00', local: 'Vancouver' },
+  { id: 41, grupo: 'G', timeA: 'Egito', timeB: 'Irã', data: '26/06', hora: '23:00', local: 'Seattle' },
+  { id: 42, grupo: 'G', timeA: 'Nova Zelândia', timeB: 'Bélgica', data: '26/06', hora: '23:00', local: 'Vancouver' },
+  { id: 43, grupo: 'H', timeA: 'Arábia Saudita', timeB: 'Uruguai', data: '14/06', hora: '18:00', local: 'Miami' },
+  { id: 44, grupo: 'H', timeA: 'Espanha', timeB: 'Cabo Verde', data: '14/06', hora: '12:00', local: 'Atlanta' },
+  { id: 45, grupo: 'H', timeA: 'Uruguai', timeB: 'Cabo Verde', data: '21/06', hora: '18:00', local: 'Miami' },
+  { id: 46, grupo: 'H', timeA: 'Espanha', timeB: 'Arábia Saudita', data: '21/06', hora: '12:00', local: 'Atlanta' },
+  { id: 47, grupo: 'H', timeA: 'Cabo Verde', timeB: 'Arábia Saudita', data: '26/06', hora: '20:00', local: 'Houston' },
+  { id: 48, grupo: 'H', timeA: 'Uruguai', timeB: 'Espanha', data: '26/06', hora: '20:00', local: 'Guadalajara' },
+  { id: 49, grupo: 'I', timeA: 'Iraque', timeB: 'Noruega', data: '16/06', hora: '18:00', local: 'Boston' },
+  { id: 50, grupo: 'I', timeA: 'França', timeB: 'Senegal', data: '16/06', hora: '21:00', local: 'Nova York/Nova Jersey' },
+  { id: 51, grupo: 'I', timeA: 'Noruega', timeB: 'Senegal', data: '21/06', hora: '21:00', local: 'Dallas' },
+  { id: 52, grupo: 'I', timeA: 'França', timeB: 'Iraque', data: '21/06', hora: '17:00', local: 'Nova York/Nova Jersey' },
+  { id: 53, grupo: 'I', timeA: 'Noruega', timeB: 'França', data: '26/06', hora: '15:00', local: 'Boston' },
+  { id: 54, grupo: 'I', timeA: 'Senegal', timeB: 'Iraque', data: '26/06', hora: '15:00', local: 'Toronto' },
+  { id: 55, grupo: 'J', timeA: 'Áustria', timeB: 'Jordânia', data: '16/06', hora: '00:00', local: 'San Francisco Bay Area' },
+  { id: 56, grupo: 'J', timeA: 'Argentina', timeB: 'Argélia', data: '16/06', hora: '21:00', local: 'Kansas City' },
+  { id: 57, grupo: 'J', timeA: 'Argentina', timeB: 'Áustria', data: '22/06', hora: '13:00', local: 'Dallas' },
+  { id: 58, grupo: 'J', timeA: 'Jordânia', timeB: 'Argélia', data: '22/06', hora: '23:00', local: 'San Francisco Bay Area' },
+  { id: 59, grupo: 'J', timeA: 'Argélia', timeB: 'Áustria', data: '27/06', hora: '22:00', local: 'Kansas City' },
+  { id: 60, grupo: 'J', timeA: 'Jordânia', timeB: 'Argentina', data: '27/06', hora: '22:00', local: 'Dallas' },
+  { id: 61, grupo: 'K', timeA: 'Portugal', timeB: 'RD Congo', data: '17/06', hora: '13:00', local: 'Houston' },
+  { id: 62, grupo: 'K', timeA: 'Uzbequistão', timeB: 'Colômbia', data: '17/06', hora: '22:00', local: 'Cid. México' },
+  { id: 63, grupo: 'K', timeA: 'Portugal', timeB: 'Uzbequistão', data: '23/06', hora: '13:00', local: 'Houston' },
+  { id: 64, grupo: 'K', timeA: 'Colômbia', timeB: 'RD Congo', data: '23/06', hora: '22:00', local: 'Guadalajara' },
+  { id: 65, grupo: 'K', timeA: 'Colômbia', timeB: 'Portugal', data: '27/06', hora: '19:30', local: 'Miami' },
+  { id: 66, grupo: 'K', timeA: 'RD Congo', timeB: 'Uzbequistão', data: '27/06', hora: '19:30', local: 'Atlanta' },
+  { id: 67, grupo: 'L', timeA: 'Gana', timeB: 'Panamá', data: '17/06', hora: '19:00', local: 'Toronto' },
+  { id: 68, grupo: 'L', timeA: 'Inglaterra', timeB: 'Croácia', data: '17/06', hora: '16:00', local: 'Dallas' },
+  { id: 69, grupo: 'L', timeA: 'Inglaterra', timeB: 'Gana', data: '22/06', hora: '16:00', local: 'Boston' },
+  { id: 70, grupo: 'L', timeA: 'Panamá', timeB: 'Croácia', data: '22/06', hora: '19:00', local: 'Toronto' },
+  { id: 71, grupo: 'L', timeA: 'Panamá', timeB: 'Inglaterra', data: '27/06', hora: '17:00', local: 'Nova York/Nova Jersey' },
+  { id: 72, grupo: 'L', timeA: 'Croácia', timeB: 'Gana', data: '27/06', hora: '17:00', local: 'Filadélfia' }
+];
 
 const TODOS_TIMES = Object.values(GRUPOS_2026).flat().sort();
 
@@ -46,20 +122,59 @@ const AVATAR_MAX_DIMENSION = 160;
 const DEMO_AVATAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAABv7bNHAAABpUlEQVR4nO3QwQ3CMBQFQYz//8u2g0QdW0dManIeZDV4SSQdlqzTeWYIAAAAAAAAAAB4m7vN3Wf9eR9n3rV7h9t7n5f4q2w8b0v2m2vV8f9bKf9t8m9bM4QGg9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rer8BX3kD6XhSx8AAAAASUVORK5CYII=';
 
 // --- CONFIGURAÇÃO INICIAL ---
-const gerarJogosIniciais = () => {
-  let jogos = [];
-  let id = 1;
-  const locais = ['Cid. México', 'Nova York', 'Los Angeles', 'Toronto', 'Dallas', 'Miami', 'Guadalajara', 'Atlanta', 'Vancouver', 'Seattle', 'San Francisco', 'Houston'];
-  Object.entries(GRUPOS_2026).forEach(([grupo, times]) => {
-    jogos.push({ id: id++, grupo, timeA: times[0], timeB: times[1], placarA: '', placarB: '', data: '11/06', hora: '15:00', local: locais[id % 12] });
-    jogos.push({ id: id++, grupo, timeA: times[2], timeB: times[3], placarA: '', placarB: '', data: '11/06', hora: '18:00', local: locais[(id+1) % 12] });
-    jogos.push({ id: id++, grupo, timeA: times[0], timeB: times[2], placarA: '', placarB: '', data: '17/06', hora: '16:00', local: locais[(id+2) % 12] });
-    jogos.push({ id: id++, grupo, timeA: times[3], timeB: times[1], placarA: '', placarB: '', data: '17/06', hora: '20:00', local: locais[(id+3) % 12] });
-    jogos.push({ id: id++, grupo, timeA: times[3], timeB: times[0], placarA: '', placarB: '', data: '24/06', hora: '17:00', local: locais[(id+4) % 12] });
-    jogos.push({ id: id++, grupo, timeA: times[1], timeB: times[2], placarA: '', placarB: '', data: '24/06', hora: '17:00', local: locais[(id+5) % 12] });
-  });
-  return jogos;
+const buildPairKey = (timeA, timeB) => [timeA, timeB].sort().join('||');
+
+const findOfficialMatchForPair = (match) => {
+  if (!match?.grupo || !match?.timeA || !match?.timeB) return null;
+  const pairKey = buildPairKey(match.timeA, match.timeB);
+  return JOGOS_FASE_DE_GRUPOS.find(
+    (officialMatch) => officialMatch.grupo === match.grupo && buildPairKey(officialMatch.timeA, officialMatch.timeB) === pairKey
+  ) || null;
 };
+
+const normalizePersistedGameData = (matches = [], betsGames = {}) => {
+  const officialMatches = JOGOS_FASE_DE_GRUPOS.map((match) => ({ ...match, placarA: '', placarB: '' }));
+  const officialById = new Map(officialMatches.map((match) => [match.id, match]));
+  const migrationBySourceId = new Map();
+
+  matches.forEach((match) => {
+    const officialMatch = findOfficialMatchForPair(match);
+    if (!officialMatch) return;
+
+    const swapScores = officialMatch.timeA === match.timeB && officialMatch.timeB === match.timeA;
+    migrationBySourceId.set(String(match.id), { targetId: officialMatch.id, swapScores });
+
+    officialById.set(officialMatch.id, {
+      ...officialById.get(officialMatch.id),
+      placarA: swapScores ? (match.placarB ?? '') : (match.placarA ?? ''),
+      placarB: swapScores ? (match.placarA ?? '') : (match.placarB ?? '')
+    });
+  });
+
+  const normalizedBetsGames = Object.fromEntries(
+    Object.entries(betsGames || {}).map(([userId, userBets]) => {
+      const nextUserBets = {};
+
+      Object.entries(userBets || {}).forEach(([matchId, bet]) => {
+        const migration = migrationBySourceId.get(String(matchId));
+        if (!migration || !bet) return;
+
+        nextUserBets[migration.targetId] = migration.swapScores
+          ? { ...bet, placarA: bet.placarB ?? '', placarB: bet.placarA ?? '' }
+          : { ...bet };
+      });
+
+      return [userId, nextUserBets];
+    })
+  );
+
+  return {
+    matches: [...officialById.values()],
+    betsGames: normalizedBetsGames
+  };
+};
+
+const gerarJogosIniciais = () => JOGOS_FASE_DE_GRUPOS.map((match) => ({ ...match, placarA: '', placarB: '' }));
 
 // --- CONFIGURAÇÃO MATA-MATA ---
 const MATA_MATA_CONFIG = {
@@ -466,7 +581,7 @@ const buildRemotePayload = ({
   conduct,
   submissions
 }) => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   updatedAt: Date.now(),
   usersById: Object.fromEntries(users.map((user) => [user.id, user])),
   matches,
@@ -482,11 +597,12 @@ const parseRemotePayload = (payload) => {
   if (!payload || typeof payload !== 'object') return fallback;
 
   const users = Object.values(payload.usersById || {}).map(normalizeUser);
+  const normalizedGameData = normalizePersistedGameData(payload.matches, payload.betsGames);
 
   return {
     users,
-    matches: Array.isArray(payload.matches) && payload.matches.length ? payload.matches : fallback.matches,
-    betsGames: payload.betsGames || {},
+    matches: Array.isArray(payload.matches) && payload.matches.length ? normalizedGameData.matches : fallback.matches,
+    betsGames: normalizedGameData.betsGames,
     betsKnockout: payload.betsKnockout || {},
     officialKnockout: payload.officialKnockout || {},
     conduct: payload.conduct || {},
@@ -786,12 +902,22 @@ export default function App() {
   const skipNextRemoteSyncRef = useRef(false);
   const remoteSnapshotRef = useRef('');
 
-  const [usuarios, setUsuarios] = useState(() => {
+  const [bootstrapState] = useState(() => {
     const savedUsers = JSON.parse(localStorage.getItem('bolao26_users')) || [];
-    return savedUsers.map(normalizeUser);
+    const savedMatches = JSON.parse(localStorage.getItem('bolao26_matches')) || [];
+    const savedBetsGames = JSON.parse(localStorage.getItem('bolao26_bets_games')) || {};
+    const normalizedGameData = normalizePersistedGameData(savedMatches, savedBetsGames);
+
+    return {
+      users: savedUsers.map(normalizeUser),
+      matches: savedMatches.length ? normalizedGameData.matches : gerarJogosIniciais(),
+      betsGames: savedMatches.length ? normalizedGameData.betsGames : savedBetsGames
+    };
   });
-  const [jogosReais, setJogosReais] = useState(() => JSON.parse(localStorage.getItem('bolao26_matches')) || gerarJogosIniciais());
-  const [palpitesJogos, setPalpitesJogos] = useState(() => JSON.parse(localStorage.getItem('bolao26_bets_games')) || {});
+
+  const [usuarios, setUsuarios] = useState(() => bootstrapState.users);
+  const [jogosReais, setJogosReais] = useState(() => bootstrapState.matches);
+  const [palpitesJogos, setPalpitesJogos] = useState(() => bootstrapState.betsGames);
   const [palpitesMataMata, setPalpitesMataMata] = useState(() => JSON.parse(localStorage.getItem('bolao26_bets_knockout_v2')) || {});
   const [gabaritoMataMata, setGabaritoMataMata] = useState(() => JSON.parse(localStorage.getItem('bolao26_official_knockout_v2')) || {});
   const [condutaGrupos, setCondutaGrupos] = useState(() => JSON.parse(localStorage.getItem('bolao26_group_conduct')) || {});
