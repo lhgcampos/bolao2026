@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff } from 'lucide-react';
 
 // --- DADOS ESTRUTURAIS ---
@@ -30,6 +30,20 @@ const PONTOS_CONDUTA = {
   VERMELHO_DIRETO: -4,
   AMARELO_E_VERMELHO_DIRETO: -5
 };
+
+const ADMIN_USER_ID = 999;
+const SUBMISSION_FIELDS = {
+  JOGOS: 'jogosAt',
+  MATA: 'mataAt'
+};
+const REMOTE_STORE_BASE = 'https://mantledb.sh/v2';
+const REMOTE_NAMESPACE = 'lhgcampos-bolao2026-live-20260609';
+const REMOTE_STATE_PATH = 'state';
+const REMOTE_POLL_MS = 5000;
+const AVATAR_MAX_FILE_BYTES = 2 * 1024 * 1024;
+const AVATAR_MAX_OUTPUT_BYTES = 180 * 1024;
+const AVATAR_MAX_DIMENSION = 160;
+const DEMO_AVATAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAABv7bNHAAABpUlEQVR4nO3QwQ3CMBQFQYz//8u2g0QdW0dManIeZDV4SSQdlqzTeWYIAAAAAAAAAAB4m7vN3Wf9eR9n3rV7h9t7n5f4q2w8b0v2m2vV8f9bKf9t8m9bM4QGg9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rer8BX3kD6XhSx8AAAAASUVORK5CYII=';
 
 // --- CONFIGURAÇÃO INICIAL ---
 const gerarJogosIniciais = () => {
@@ -285,6 +299,27 @@ const faseDeGruposCompleta = (jogos, palpitesUsuario) => jogos.every((jogo) => {
   return placarPreenchido(palpite?.placarA, palpite?.placarB);
 });
 
+const usuarioPreencheuTodosOsJogos = (jogos, palpitesUsuario) => jogos.every((jogo) => {
+  const palpite = palpitesUsuario?.[jogo.id];
+  return placarPreenchido(palpite?.placarA, palpite?.placarB);
+});
+
+const usuarioPreencheuMataCompleta = (palpitesUsuario = {}) => (
+  Array.isArray(palpitesUsuario.dezeszeseisavos) &&
+  palpitesUsuario.dezeszeseisavos.length === MATA_MATA_CONFIG.r32.length &&
+  palpitesUsuario.dezeszeseisavos.every(Boolean) &&
+  Array.isArray(palpitesUsuario.oitavas) &&
+  palpitesUsuario.oitavas.length === MATA_MATA_CONFIG.r16.length &&
+  palpitesUsuario.oitavas.every(Boolean) &&
+  Array.isArray(palpitesUsuario.quartas) &&
+  palpitesUsuario.quartas.length === MATA_MATA_CONFIG.qf.length &&
+  palpitesUsuario.quartas.every(Boolean) &&
+  Array.isArray(palpitesUsuario.semis) &&
+  palpitesUsuario.semis.length === MATA_MATA_CONFIG.sf.length &&
+  palpitesUsuario.semis.every(Boolean) &&
+  [palpitesUsuario.campeao, palpitesUsuario.vice, palpitesUsuario.terceiro, palpitesUsuario.quarto].every(Boolean)
+);
+
 const getR32Team = (ref, jogos, palpitesUsuario, condutaGrupos, gruposCompletos) => {
   if (!gruposCompletos) return "A definir";
   if (!ref) return "???";
@@ -324,21 +359,310 @@ const getWinnerOfMatch = (matchId, source) => {
   return null;
 };
 
-// --- ESTILOS MAC STYLE ---
-const GLASS_CARD = "bg-white/5 backdrop-blur-md border border-white/10 shadow-lg rounded-2xl";
-const GLASS_INPUT = "bg-black/20 border border-white/10 rounded-lg text-white focus:border-white/30 focus:outline-none transition-all placeholder:text-white/20";
-const GLASS_BTN_PRIMARY = "bg-gradient-to-r from-blue-600/80 to-blue-500/80 hover:from-blue-500 hover:to-blue-400 text-white font-semibold shadow-lg backdrop-blur-sm border border-white/10 rounded-xl transition-all active:scale-95";
-const GLASS_BTN_SECONDARY = "bg-white/5 hover:bg-white/10 text-white/80 border border-white/10 rounded-xl transition-all active:scale-95";
-const TEXT_MUTED = "text-white/40";
-const TEXT_HIGHLIGHT = "text-white/90";
+const buildPlanilhaDemoData = () => {
+  const matches = gerarJogosIniciais().map((match, index) => ({
+    ...match,
+    placarA: String((index + 2) % 4),
+    placarB: String(index % 3)
+  }));
+
+  const users = [
+    { id: 101, nome: 'Ana Turbo', senha: '123', role: 'participant', avatar: DEMO_AVATAR },
+    { id: 102, nome: 'Beto Foguete', senha: '123', role: 'participant', avatar: DEMO_AVATAR },
+    { id: ADMIN_USER_ID, nome: 'Admin', senha: 'qwer', role: 'admin', avatar: DEMO_AVATAR }
+  ];
+
+  const betsGames = { 101: {}, 102: {} };
+  matches.forEach((match, index) => {
+    const a = Number(match.placarA);
+    const b = Number(match.placarB);
+    betsGames[101][match.id] = index % 3 === 0
+      ? { placarA: String(a), placarB: String(b) }
+      : index % 3 === 1
+        ? { placarA: String(a + 1), placarB: String(b + 1) }
+        : { placarA: String(Math.max(0, b + 1)), placarB: String(Math.max(0, a - 1)) };
+    betsGames[102][match.id] = index % 4 === 0
+      ? { placarA: String(a), placarB: String(b) }
+      : index % 4 === 1
+        ? { placarA: String(a), placarB: String(Math.max(0, b + 2)) }
+        : index % 4 === 2
+          ? { placarA: String(a + 1), placarB: String(b) }
+          : { placarA: String(Math.max(0, b)), placarB: String(Math.max(0, a)) };
+  });
+
+  const officialKnockout = {
+    dezeszeseisavos: ['México', 'Canadá', 'Brasil', 'Alemanha', 'Holanda', 'Bélgica', 'Espanha', 'França', 'Argentina', 'Portugal', 'Inglaterra', 'EUA', 'Marrocos', 'Suíça', 'Croácia', 'Uruguai'],
+    oitavas: ['México', 'Brasil', 'Holanda', 'França', 'Argentina', 'Inglaterra', 'Marrocos', 'Uruguai'],
+    quartas: ['Brasil', 'França', 'Argentina', 'Uruguai'],
+    semis: ['Brasil', 'Argentina'],
+    campeao: 'Brasil',
+    vice: 'Argentina',
+    terceiro: 'França',
+    quarto: 'Uruguai'
+  };
+
+  const betsKnockout = {
+    101: {
+      dezeszeseisavos: ['México', 'Canadá', 'Brasil', 'Alemanha', 'Holanda', 'Bélgica', 'Espanha', 'França', 'Argentina', 'Portugal', 'Inglaterra', 'EUA', 'Marrocos', 'Suíça', 'Croácia', 'Uruguai'],
+      oitavas: ['México', 'Brasil', 'Holanda', 'França', 'Argentina', 'Inglaterra', 'Marrocos', 'Uruguai'],
+      quartas: ['Brasil', 'França', 'Argentina', 'Uruguai'],
+      semis: ['Brasil', 'Argentina'],
+      campeao: 'Brasil',
+      vice: 'Argentina',
+      terceiro: 'França',
+      quarto: 'Uruguai'
+    },
+    102: {
+      dezeszeseisavos: ['México', 'Suíça', 'Brasil', 'Equador', 'Holanda', 'Egito', 'Espanha', 'Noruega', 'Argentina', 'Colômbia', 'Inglaterra', 'Paraguai', 'Marrocos', 'Canadá', 'Croácia', 'Uruguai'],
+      oitavas: ['México', 'Brasil', 'Holanda', 'Noruega', 'Argentina', 'Inglaterra', 'Marrocos', 'Uruguai'],
+      quartas: ['Brasil', 'Noruega', 'Argentina', 'Uruguai'],
+      semis: ['Brasil', 'Uruguai'],
+      campeao: 'Brasil',
+      vice: 'Uruguai',
+      terceiro: 'Argentina',
+      quarto: 'Noruega'
+    }
+  };
+
+  const submissions = {
+    101: {
+      jogosAt: new Date('2026-06-09T08:15:00Z').getTime(),
+      mataAt: new Date('2026-06-09T08:40:00Z').getTime()
+    },
+    102: {
+      jogosAt: new Date('2026-06-09T09:05:00Z').getTime(),
+      mataAt: new Date('2026-06-09T09:25:00Z').getTime()
+    }
+  };
+
+  return {
+    users,
+    matches,
+    betsGames,
+    betsKnockout,
+    officialKnockout,
+    submissions,
+    conduct: {},
+    adminUser: normalizeUser(users.find((user) => user.id === ADMIN_USER_ID))
+  };
+};
+
+const createInitialAppState = () => ({
+  users: [],
+  matches: gerarJogosIniciais(),
+  betsGames: {},
+  betsKnockout: {},
+  officialKnockout: {},
+  conduct: {},
+  submissions: {}
+});
+
+const buildRemotePayload = ({
+  users,
+  matches,
+  betsGames,
+  betsKnockout,
+  officialKnockout,
+  conduct,
+  submissions
+}) => ({
+  schemaVersion: 1,
+  updatedAt: Date.now(),
+  usersById: Object.fromEntries(users.map((user) => [user.id, user])),
+  matches,
+  betsGames,
+  betsKnockout,
+  officialKnockout,
+  conduct,
+  submissions
+});
+
+const parseRemotePayload = (payload) => {
+  const fallback = createInitialAppState();
+  if (!payload || typeof payload !== 'object') return fallback;
+
+  const users = Object.values(payload.usersById || {}).map(normalizeUser);
+
+  return {
+    users,
+    matches: Array.isArray(payload.matches) && payload.matches.length ? payload.matches : fallback.matches,
+    betsGames: payload.betsGames || {},
+    betsKnockout: payload.betsKnockout || {},
+    officialKnockout: payload.officialKnockout || {},
+    conduct: payload.conduct || {},
+    submissions: payload.submissions || {}
+  };
+};
+
+const remoteStateUrl = `${REMOTE_STORE_BASE}/${REMOTE_NAMESPACE}/${REMOTE_STATE_PATH}`;
+
+const fetchRemoteState = async () => {
+  const response = await fetch(remoteStateUrl);
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`Falha ao ler base online (${response.status})`);
+  return response.json();
+};
+
+const writeRemoteState = async (payload) => {
+  const response = await fetch(remoteStateUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Falha ao gravar base online (${response.status})`);
+  }
+};
+
+const patchRemoteState = async (patch) => {
+  const response = await fetch(remoteStateUrl, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...patch,
+      updatedAt: Date.now()
+    })
+  });
+
+  if (response.status === 404) {
+    const current = createInitialAppState();
+    await writeRemoteState(buildRemotePayload(current));
+    return patchRemoteState(patch);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Falha ao sincronizar base online (${response.status})`);
+  }
+};
+
+const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = () => reject(new Error('Não foi possível ler o arquivo.'));
+  reader.readAsDataURL(file);
+});
+
+const loadImage = (src) => new Promise((resolve, reject) => {
+  const image = new Image();
+  image.onload = () => resolve(image);
+  image.onerror = () => reject(new Error('Não foi possível abrir a imagem.'));
+  image.src = src;
+});
+
+const processAvatarFile = async (file) => {
+  if (!file) throw new Error('Selecione um arquivo JPG ou PNG.');
+  if (!['image/jpeg', 'image/png'].includes(file.type)) {
+    throw new Error('Use apenas JPG ou PNG.');
+  }
+  if (file.size > AVATAR_MAX_FILE_BYTES) {
+    throw new Error('O arquivo precisa ter no máximo 2 MB.');
+  }
+
+  const source = await readFileAsDataUrl(file);
+  const image = await loadImage(source);
+  const scale = Math.min(1, AVATAR_MAX_DIMENSION / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * scale));
+  const height = Math.max(1, Math.round(image.height * scale));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext('2d');
+  context.clearRect(0, 0, width, height);
+  context.drawImage(image, 0, 0, width, height);
+
+  let quality = 0.88;
+  let output = canvas.toDataURL('image/webp', quality);
+
+  while (output.length > AVATAR_MAX_OUTPUT_BYTES && quality > 0.45) {
+    quality -= 0.08;
+    output = canvas.toDataURL('image/webp', quality);
+  }
+
+  if (output.length > AVATAR_MAX_OUTPUT_BYTES) {
+    throw new Error('A imagem ficou grande demais mesmo após compactar.');
+  }
+
+  return output;
+};
+
+const normalizeUser = (user) => {
+  if (!user) return user;
+  const nome = user.nome || '';
+  const role = user.role || ((user.id === ADMIN_USER_ID || nome.toLowerCase() === 'admin') ? 'admin' : 'participant');
+  return { ...user, role };
+};
+
+const isAdminUser = (user) => user?.role === 'admin' || user?.id === ADMIN_USER_ID;
+
+const formatSubmissionDate = (timestamp) => {
+  if (!timestamp) return 'Rascunho';
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  }).format(new Date(timestamp));
+};
+
+const parseMatchDateTime = (match) => {
+  const [day, month] = String(match.data || '01/01').split('/').map(Number);
+  const [hour, minute] = String(match.hora || '00:00').split(':').map(Number);
+  return new Date(2026, (month || 1) - 1, day || 1, hour || 0, minute || 0).getTime();
+};
+
+const formatMatchMeta = (match) => {
+  const [day, month] = String(match.data || '01/01').split('/');
+  return {
+    top: `Grupo ${match.grupo}`,
+    bottom: `${Number(day)}/${Number(month)} - ${match.hora || '00:00'}`
+  };
+};
+
+const AvatarBadge = ({ user, size = 'md', className = '' }) => {
+  const sizes = {
+    sm: 'w-7 h-7 text-[11px]',
+    md: 'w-9 h-9 text-sm',
+    lg: 'w-14 h-14 text-lg'
+  };
+
+  const sizeClass = sizes[size] || sizes.md;
+  const initials = (user?.nome || '?').trim().charAt(0).toUpperCase();
+
+  if (user?.avatar) {
+    return (
+      <img
+        src={user.avatar}
+        alt={user.nome}
+        className={`${sizeClass} rounded-full border border-white/70 object-cover shadow-lg ${className}`}
+      />
+    );
+  }
+
+  return (
+    <div className={`${sizeClass} rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center font-bold text-white shadow-lg border border-white/60 ${className}`}>
+      {initials}
+    </div>
+  );
+};
+
+// --- ESTILOS LIGHT ---
+const GLASS_CARD = "rounded-[28px] border border-slate-200/80 bg-white shadow-[0_18px_60px_-28px_rgba(15,23,42,0.25)]";
+const GLASS_INPUT = "rounded-xl border border-slate-200 bg-slate-50 text-slate-800 placeholder:text-slate-400 focus:border-sky-400 focus:bg-white focus:outline-none transition-all disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400";
+const GLASS_BTN_PRIMARY = "bg-gradient-to-r from-sky-600 to-cyan-500 hover:from-sky-500 hover:to-cyan-400 text-white font-semibold shadow-[0_16px_40px_-18px_rgba(14,116,144,0.55)] rounded-xl transition-all active:scale-95";
+const GLASS_BTN_SECONDARY = "bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl transition-all active:scale-95";
+const TEXT_MUTED = "text-slate-500";
+const TEXT_HIGHLIGHT = "text-slate-800";
 
 // --- SUB-COMPONENTES UI ---
-const LoginScreen = ({ onLogin, users }) => {
+const LoginScreen = ({ onLogin, users, syncStatus = 'online', syncError = '', isDemoMode = false }) => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [avatarPreview, setAvatarPreview] = useState('');
+  const [avatarLoading, setAvatarLoading] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -351,57 +675,127 @@ const LoginScreen = ({ onLogin, users }) => {
     const existingUser = users.find(u => u.nome.toLowerCase() === name.trim().toLowerCase());
     if (isRegistering) {
       if (existingUser) { setError('Nome já existe. Tente fazer login.'); } 
-      else { onLogin(Date.now(), name.trim(), password.trim()); }
+      else { onLogin(Date.now(), name.trim(), password.trim(), { avatar: avatarPreview }); }
     } else {
       if (existingUser) {
-        if (existingUser.senha === password.trim()) { onLogin(existingUser.id, existingUser.nome, existingUser.senha); } 
+        if (existingUser.senha === password.trim()) { onLogin(existingUser.id, existingUser.nome, existingUser.senha, existingUser); } 
         else { setError('Senha incorreta.'); }
       } else { setError('Usuário não encontrado. Crie uma conta.'); }
     }
   };
 
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setAvatarLoading(true);
+    setError('');
+
+    try {
+      const avatar = await processAvatarFile(file);
+      setAvatarPreview(avatar);
+    } catch (avatarError) {
+      setError(avatarError.message || 'Não foi possível preparar a imagem.');
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0a] text-white p-6 font-sans bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0a0a0a] to-black">
-      <div className={`${GLASS_CARD} w-full max-w-sm p-8 relative overflow-hidden`}>
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-80"></div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[linear-gradient(180deg,#f8fbff_0%,#eef5ff_100%)] text-slate-900 p-6 font-sans">
+      <div className={`${GLASS_CARD} w-full max-w-sm p-8 md:p-10 relative overflow-hidden`}>
+        <div className="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.18),_transparent_70%)]"></div>
         <div className="flex justify-center mb-6">
-          <div className="bg-white/5 p-4 rounded-full shadow-inner border border-white/5">
-            <Trophy size={40} className="text-yellow-400 drop-shadow-md" />
+          <div className="bg-sky-50 p-4 rounded-full shadow-inner border border-sky-100">
+            <Trophy size={40} className="text-amber-500" />
           </div>
         </div>
-        <h1 className="text-3xl font-bold text-center mb-1 tracking-tight">BOLÃO 2026</h1>
-        <p className={`text-center text-xs uppercase tracking-widest font-semibold mb-8 ${TEXT_MUTED}`}>Acesso Seguro</p>
+        <h1 className="text-3xl font-bold text-center mb-8 tracking-tight text-slate-900">BOLÃO 2026</h1>
+        {!isDemoMode && (
+          <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[11px] font-semibold text-slate-700">Base online</span>
+              <span className={`text-[11px] font-bold ${
+                syncStatus === 'online'
+                  ? 'text-emerald-600'
+                  : syncStatus === 'syncing' || syncStatus === 'connecting'
+                    ? 'text-amber-600'
+                    : 'text-rose-600'
+              }`}>
+                {syncStatus === 'online' && 'Online'}
+                {syncStatus === 'syncing' && 'Sincronizando'}
+                {syncStatus === 'connecting' && 'Conectando'}
+                {syncStatus === 'offline' && 'Falha de sync'}
+              </span>
+            </div>
+            {syncError && <div className="mt-2 text-[11px] text-rose-600">{syncError}</div>}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className={`text-[10px] font-bold uppercase ml-1 mb-1.5 block ${TEXT_MUTED}`}>Nome de Usuário</label>
-            <div className="relative"><User size={18} className={`absolute left-3.5 top-3.5 ${TEXT_MUTED}`} /><input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: João Silva" className={`${GLASS_INPUT} w-full pl-11 p-3.5 text-sm`}/></div>
+            <div className="relative"><User size={18} className={`absolute left-3.5 top-3.5 ${TEXT_MUTED}`} /><input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Fera Braba" className={`${GLASS_INPUT} w-full pl-11 p-3.5 text-sm`}/></div>
           </div>
           <div>
             <label className={`text-[10px] font-bold uppercase ml-1 mb-1.5 block ${TEXT_MUTED}`}>Senha</label>
-            <div className="relative"><Lock size={18} className={`absolute left-3.5 top-3.5 ${TEXT_MUTED}`} /><input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="Sua senha secreta" className={`${GLASS_INPUT} w-full pl-11 pr-11 p-3.5 text-sm`}/><button type="button" onClick={() => setShowPassword(!showPassword)} className={`absolute right-3.5 top-3.5 hover:text-white transition-colors ${TEXT_MUTED}`}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>
+            <div className="relative"><Lock size={18} className={`absolute left-3.5 top-3.5 ${TEXT_MUTED}`} /><input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="Sua senha secreta" className={`${GLASS_INPUT} w-full pl-11 pr-11 p-3.5 text-sm`}/><button type="button" onClick={() => setShowPassword(!showPassword)} className={`absolute right-3.5 top-3.5 hover:text-slate-800 transition-colors ${TEXT_MUTED}`}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>
           </div>
-          {error && <div className="flex items-center gap-2 text-red-400 text-xs bg-red-500/10 p-3 rounded-lg border border-red-500/20"><AlertCircle size={14} /> {error}</div>}
+          {isRegistering && (
+            <div className="space-y-3">
+              <label className={`text-[10px] font-bold uppercase ml-1 block ${TEXT_MUTED}`}>Imagem do Perfil</label>
+              <div className="flex items-center gap-3">
+                <AvatarBadge user={{ nome: name || 'Novo usuário', avatar: avatarPreview }} size="lg" />
+                <div className="flex-1">
+                  <label className={`${GLASS_BTN_SECONDARY} flex cursor-pointer items-center justify-center px-4 py-3 text-xs font-bold uppercase tracking-widest`}>
+                    <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleAvatarChange} />
+                    {avatarLoading ? 'Processando...' : avatarPreview ? 'Trocar imagem' : 'Escolher imagem'}
+                  </label>
+                  <p className={`mt-2 text-[11px] ${TEXT_MUTED}`}>JPG ou PNG, até 2 MB.</p>
+                </div>
+              </div>
+            </div>
+          )}
+          {error && <div className="flex items-center gap-2 text-red-500 text-xs bg-red-50 p-3 rounded-lg border border-red-200"><AlertCircle size={14} /> {error}</div>}
           <button type="submit" className={`${GLASS_BTN_PRIMARY} w-full py-3.5 mt-2 flex items-center justify-center gap-2`}>{isRegistering ? 'Criar Conta' : 'Entrar'} <ArrowRight size={18} /></button>
         </form>
-        <div className="mt-8 text-center"><button onClick={() => { setIsRegistering(!isRegistering); setError(''); }} className={`text-xs hover:text-white transition-colors underline decoration-white/30 hover:decoration-white ${TEXT_MUTED}`}>{isRegistering ? 'Já tenho conta. Fazer Login.' : 'Não tem conta? Criar nova.'}</button></div>
+        <div className="mt-8 text-center"><button onClick={() => { setIsRegistering(!isRegistering); setError(''); setAvatarPreview(''); }} className="text-xs text-slate-500 hover:text-slate-800 transition-colors underline decoration-slate-300 hover:decoration-slate-700">{isRegistering ? 'Já tenho conta. Fazer Login.' : 'Não tem conta? Criar nova.'}</button></div>
       </div>
     </div>
   );
 };
 
 export default function App() {
+  const isDemoMode = useMemo(() => new URLSearchParams(window.location.search).get('demo') === 'planilha', []);
   const [currentUser, setCurrentUser] = useState(null); 
   const [abaAtiva, setAbaAtiva] = useState('jogos');
   const [secaoExpandida, setSecaoExpandida] = useState('r32');
   const [alocacaoTerceiros, setAlocacaoTerceiros] = useState({});
   const [resetConfirm, setResetConfirm] = useState(false);
+  const [userDeleteConfirmId, setUserDeleteConfirmId] = useState(null);
+  const [reviewMode, setReviewMode] = useState('jogos');
+  const [reviewSearch, setReviewSearch] = useState('');
+  const [reviewGroupFilter, setReviewGroupFilter] = useState('todos');
+  const [avatarError, setAvatarError] = useState('');
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(isDemoMode ? 'demo' : 'connecting');
+  const [syncError, setSyncError] = useState('');
+  const avatarInputRef = useRef(null);
+  const remoteReadyRef = useRef(false);
+  const remoteUpdatedAtRef = useRef(0);
+  const skipNextRemoteSyncRef = useRef(false);
+  const remoteSnapshotRef = useRef('');
 
-  const [usuarios, setUsuarios] = useState(() => JSON.parse(localStorage.getItem('bolao26_users')) || []);
+  const [usuarios, setUsuarios] = useState(() => {
+    const savedUsers = JSON.parse(localStorage.getItem('bolao26_users')) || [];
+    return savedUsers.map(normalizeUser);
+  });
   const [jogosReais, setJogosReais] = useState(() => JSON.parse(localStorage.getItem('bolao26_matches')) || gerarJogosIniciais());
   const [palpitesJogos, setPalpitesJogos] = useState(() => JSON.parse(localStorage.getItem('bolao26_bets_games')) || {});
   const [palpitesMataMata, setPalpitesMataMata] = useState(() => JSON.parse(localStorage.getItem('bolao26_bets_knockout_v2')) || {});
   const [gabaritoMataMata, setGabaritoMataMata] = useState(() => JSON.parse(localStorage.getItem('bolao26_official_knockout_v2')) || {});
   const [condutaGrupos, setCondutaGrupos] = useState(() => JSON.parse(localStorage.getItem('bolao26_group_conduct')) || {});
+  const [submissoes, setSubmissoes] = useState(() => JSON.parse(localStorage.getItem('bolao26_submissions')) || {});
 
   useEffect(() => { localStorage.setItem('bolao26_users', JSON.stringify(usuarios)); }, [usuarios]);
   useEffect(() => { localStorage.setItem('bolao26_matches', JSON.stringify(jogosReais)); }, [jogosReais]);
@@ -409,10 +803,168 @@ export default function App() {
   useEffect(() => { localStorage.setItem('bolao26_bets_knockout_v2', JSON.stringify(palpitesMataMata)); }, [palpitesMataMata]);
   useEffect(() => { localStorage.setItem('bolao26_official_knockout_v2', JSON.stringify(gabaritoMataMata)); }, [gabaritoMataMata]);
   useEffect(() => { localStorage.setItem('bolao26_group_conduct', JSON.stringify(condutaGrupos)); }, [condutaGrupos]);
+  useEffect(() => { localStorage.setItem('bolao26_submissions', JSON.stringify(submissoes)); }, [submissoes]);
 
-  const modoAdmin = currentUser?.nome?.toLowerCase() === 'admin'; 
+  const applyAppState = (nextState, nextUpdatedAt = Date.now()) => {
+    skipNextRemoteSyncRef.current = true;
+    setUsuarios((nextState.users || []).map(normalizeUser));
+    setJogosReais(nextState.matches || gerarJogosIniciais());
+    setPalpitesJogos(nextState.betsGames || {});
+    setPalpitesMataMata(nextState.betsKnockout || {});
+    setGabaritoMataMata(nextState.officialKnockout || {});
+    setCondutaGrupos(nextState.conduct || {});
+    setSubmissoes(nextState.submissions || {});
+    remoteUpdatedAtRef.current = nextUpdatedAt;
+    remoteSnapshotRef.current = JSON.stringify(buildRemotePayload({
+      users: (nextState.users || []).map(normalizeUser),
+      matches: nextState.matches || gerarJogosIniciais(),
+      betsGames: nextState.betsGames || {},
+      betsKnockout: nextState.betsKnockout || {},
+      officialKnockout: nextState.officialKnockout || {},
+      conduct: nextState.conduct || {},
+      submissions: nextState.submissions || {}
+    }));
+    setCurrentUser((current) => {
+      if (!current) return current;
+      const updatedUser = (nextState.users || []).find((user) => user.id === current.id);
+      return updatedUser ? normalizeUser(updatedUser) : current;
+    });
+  };
+
+  useEffect(() => {
+    if (!isDemoMode) return;
+    const demo = buildPlanilhaDemoData();
+    applyAppState({
+      users: demo.users,
+      matches: demo.matches,
+      betsGames: demo.betsGames,
+      betsKnockout: demo.betsKnockout,
+      officialKnockout: demo.officialKnockout,
+      conduct: demo.conduct,
+      submissions: demo.submissions
+    });
+    setCurrentUser(demo.adminUser);
+    setAbaAtiva('painel');
+    setReviewMode('jogos');
+    setReviewSearch('');
+    setReviewGroupFilter('todos');
+    setSyncStatus('demo');
+  }, [isDemoMode]);
+
+  useEffect(() => {
+    if (isDemoMode) return;
+
+    let cancelled = false;
+
+    const bootstrapRemoteState = async () => {
+      try {
+        setSyncStatus('connecting');
+        setSyncError('');
+        const remotePayload = await fetchRemoteState();
+        if (cancelled) return;
+
+        if (!remotePayload) {
+          const initialState = createInitialAppState();
+          await writeRemoteState(buildRemotePayload(initialState));
+          if (cancelled) return;
+          applyAppState(initialState, Date.now());
+          remoteReadyRef.current = true;
+          setSyncStatus('online');
+          return;
+        }
+
+        applyAppState(parseRemotePayload(remotePayload), remotePayload.updatedAt || Date.now());
+        remoteReadyRef.current = true;
+        setSyncStatus('online');
+      } catch (error) {
+        if (cancelled) return;
+        setSyncStatus('offline');
+        setSyncError(error.message || 'Falha ao conectar com a base online.');
+      }
+    };
+
+    bootstrapRemoteState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemoMode]);
+
+  useEffect(() => {
+    if (isDemoMode || !remoteReadyRef.current) return;
+
+    const intervalId = window.setInterval(async () => {
+      try {
+        const remotePayload = await fetchRemoteState();
+        if (!remotePayload) return;
+        const remoteUpdatedAt = remotePayload.updatedAt || 0;
+        if (remoteUpdatedAt <= remoteUpdatedAtRef.current) return;
+        applyAppState(parseRemotePayload(remotePayload), remoteUpdatedAt);
+        setSyncStatus('online');
+        setSyncError('');
+      } catch (error) {
+        setSyncStatus('offline');
+        setSyncError(error.message || 'Falha ao atualizar dados online.');
+      }
+    }, REMOTE_POLL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [isDemoMode]);
+
+  useEffect(() => {
+    if (isDemoMode || !remoteReadyRef.current) return;
+    if (skipNextRemoteSyncRef.current) {
+      skipNextRemoteSyncRef.current = false;
+      return;
+    }
+
+    const payload = buildRemotePayload({
+      users: usuarios,
+      matches: jogosReais,
+      betsGames: palpitesJogos,
+      betsKnockout: palpitesMataMata,
+      officialKnockout: gabaritoMataMata,
+      conduct: condutaGrupos,
+      submissions: submissoes
+    });
+    const snapshot = JSON.stringify(payload);
+
+    if (snapshot === remoteSnapshotRef.current) return;
+
+    let cancelled = false;
+
+    const syncRemoteState = async () => {
+      try {
+        setSyncStatus('syncing');
+        setSyncError('');
+        await writeRemoteState(payload);
+        if (cancelled) return;
+        remoteUpdatedAtRef.current = payload.updatedAt;
+        remoteSnapshotRef.current = snapshot;
+        setSyncStatus('online');
+      } catch (error) {
+        if (cancelled) return;
+        setSyncStatus('offline');
+        setSyncError(error.message || 'Falha ao salvar dados online.');
+      }
+    };
+
+    syncRemoteState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemoMode, usuarios, jogosReais, palpitesJogos, palpitesMataMata, gabaritoMataMata, condutaGrupos, submissoes]);
+
+  const modoAdmin = isAdminUser(currentUser); 
   const palpitesUsuarioAtual = currentUser ? palpitesJogos[currentUser.id] : undefined;
+  const palpitesMataUsuarioAtual = currentUser ? (palpitesMataMata[currentUser.id] || {}) : {};
   const gruposCompletos = currentUser ? faseDeGruposCompleta(jogosReais, modoAdmin ? undefined : palpitesUsuarioAtual) : false;
+  const jogosEnviadosAt = currentUser ? submissoes[currentUser.id]?.[SUBMISSION_FIELDS.JOGOS] : null;
+  const mataEnviadosAt = currentUser ? submissoes[currentUser.id]?.[SUBMISSION_FIELDS.MATA] : null;
+  const palpitesTravadosJogos = !modoAdmin && Boolean(jogosEnviadosAt);
+  const palpitesTravadosMata = !modoAdmin && Boolean(mataEnviadosAt);
+  const participanteUsuarios = usuarios.filter((user) => !isAdminUser(user));
 
   useEffect(() => {
     if (!currentUser) return;
@@ -431,19 +983,53 @@ export default function App() {
     setAlocacaoTerceiros(resultado);
   }, [jogosReais, palpitesUsuarioAtual, condutaGrupos, currentUser, gruposCompletos]);
 
-  const handleLogin = (id, nome, senha) => {
-    if (nome === 'Admin' && !usuarios.find(u => u.nome === 'Admin')) {
-      const adminUser = { id: 999, nome: 'Admin', senha: 'qwer' };
-      setUsuarios([...usuarios, adminUser]);
+  const handleLogin = (id, nome, senha, extraUser = {}) => {
+    const normalizedUser = normalizeUser({ id, nome, senha, ...extraUser });
+
+    if (isAdminUser(normalizedUser) && !usuarios.find(isAdminUser)) {
+      setUsuarios([...usuarios, normalizedUser]);
     } else if (!usuarios.find(u => u.id === id)) {
-      setUsuarios([...usuarios, { id, nome, senha }]); 
+      setUsuarios([...usuarios, normalizedUser]); 
     }
-    setCurrentUser({ id, nome });
+    setCurrentUser(normalizedUser);
   };
 
   const handleLogout = () => setCurrentUser(null);
+  const handleAvatarSelected = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!currentUser || !file) return;
+
+    setAvatarLoading(true);
+    setAvatarError('');
+
+    try {
+      const avatar = await processAvatarFile(file);
+      const updatedUser = { ...currentUser, avatar };
+
+      setUsuarios((current) => current.map((user) => (
+        user.id === currentUser.id ? { ...user, avatar } : user
+      )));
+      setCurrentUser(updatedUser);
+    } catch (error) {
+      setAvatarError(error.message || 'Não foi possível salvar a imagem.');
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+  const handleRemoveAvatar = () => {
+    if (!currentUser) return;
+    setAvatarError('');
+    setUsuarios((current) => current.map((user) => (
+      user.id === currentUser.id ? { ...user, avatar: '' } : user
+    )));
+    setCurrentUser((current) => ({ ...current, avatar: '' }));
+  };
   const atualizarJogo = (id, c, v) => setJogosReais(p => p.map(j => j.id === id ? { ...j, [c]: v } : j));
-  const atualizarPalpite = (id, c, v) => setPalpitesJogos(p => ({ ...p, [currentUser.id]: { ...(p[currentUser.id] || {}), [id]: { ...(p[currentUser.id]?.[id] || { placarA: '', placarB: '' }), [c]: v } } }));
+  const atualizarPalpite = (id, c, v) => {
+    if (palpitesTravadosJogos) return;
+    setPalpitesJogos(p => ({ ...p, [currentUser.id]: { ...(p[currentUser.id] || {}), [id]: { ...(p[currentUser.id]?.[id] || { placarA: '', placarB: '' }), [c]: v } } }));
+  };
   const atualizarCondutaGrupo = (grupo, time, campo, valor) => {
     setCondutaGrupos((anterior) => ({
       ...anterior,
@@ -457,6 +1043,7 @@ export default function App() {
     }));
   };
   const atualizarMataMata = (c, v, i) => {
+    if (palpitesTravadosMata && !modoAdmin) return;
     const setter = modoAdmin ? setGabaritoMataMata : setPalpitesMataMata;
     setter(p => {
       const root = modoAdmin ? p : (p[currentUser.id] || {});
@@ -466,14 +1053,72 @@ export default function App() {
     });
   };
 
-  const handleReset = () => {
-    if (resetConfirm) { localStorage.clear(); window.location.reload(); } 
-    else { setResetConfirm(true); setTimeout(() => setResetConfirm(false), 3000); }
+  const handleSubmitSection = (field) => {
+    if (!currentUser || modoAdmin) return;
+    if (field === SUBMISSION_FIELDS.MATA && !jogosEnviadosAt) return;
+    setSubmissoes((current) => ({
+      ...current,
+      [currentUser.id]: {
+        ...(current[currentUser.id] || {}),
+        [field]: Date.now()
+      }
+    }));
+  };
+
+  const handleReset = async () => {
+    if (!resetConfirm) {
+      setResetConfirm(true);
+      setTimeout(() => setResetConfirm(false), 3000);
+      return;
+    }
+
+    const initialState = createInitialAppState();
+    if (!isDemoMode) {
+      try {
+        await writeRemoteState(buildRemotePayload(initialState));
+      } catch (error) {
+        setSyncStatus('offline');
+        setSyncError(error.message || 'Falha ao resetar a base online.');
+        return;
+      }
+    }
+
+    localStorage.clear();
+    window.location.reload();
+  };
+
+  const handleDeleteUser = (userId) => {
+    const targetUser = usuarios.find((user) => user.id === userId);
+    if (!modoAdmin || isAdminUser(targetUser)) return;
+
+    if (userDeleteConfirmId !== userId) {
+      setUserDeleteConfirmId(userId);
+      setTimeout(() => setUserDeleteConfirmId((current) => (current === userId ? null : current)), 3000);
+      return;
+    }
+
+    setUsuarios((current) => current.filter((user) => user.id !== userId));
+    setPalpitesJogos((current) => {
+      const next = { ...current };
+      delete next[userId];
+      return next;
+    });
+    setPalpitesMataMata((current) => {
+      const next = { ...current };
+      delete next[userId];
+      return next;
+    });
+    setSubmissoes((current) => {
+      const next = { ...current };
+      delete next[userId];
+      return next;
+    });
+    setUserDeleteConfirmId(null);
   };
 
   const RankingTable = () => {
     const ranking = useMemo(() => {
-      return usuarios.map(user => {
+      return usuarios.filter((user) => !isAdminUser(user)).map(user => {
         let ptsJogos = 0, ptsMataMata = 0, exatos = 0;
         jogosReais.forEach(jogo => {
           if (jogo.placarA !== '' && jogo.placarB !== '') {
@@ -507,8 +1152,301 @@ export default function App() {
         <div className={`${GLASS_CARD} overflow-hidden`}>
           <table className="w-full text-xs">
             <thead className="bg-white/5 text-white/40 font-bold uppercase text-[9px] border-b border-white/5"><tr><th className="p-4 text-center">#</th><th className="p-4 text-left">Nome</th><th className="p-4 text-center">Jogos</th><th className="p-4 text-center">Mata</th><th className="p-4 text-center text-white">Total</th></tr></thead>
-            <tbody>{ranking.map((user, idx) => (<tr key={user.id} className={`border-b border-white/5 last:border-0 ${user.id === currentUser.id ? 'bg-blue-500/10' : ''}`}><td className={`p-4 text-center font-bold ${TEXT_MUTED}`}>{idx + 1}</td><td className={`p-4 font-bold ${user.id === currentUser.id ? 'text-blue-400' : TEXT_HIGHLIGHT}`}>{user.nome} {user.id === currentUser.id && '(Você)'}</td><td className={`p-4 text-center ${TEXT_MUTED}`}>{user.ptsJogos}</td><td className={`p-4 text-center ${TEXT_MUTED}`}>{user.ptsMataMata}</td><td className="p-4 text-center font-bold text-green-400 text-sm">{user.total}</td></tr>))}</tbody>
+            <tbody>{ranking.map((user, idx) => (
+              <tr key={user.id} className={`border-b border-white/5 last:border-0 ${user.id === currentUser.id ? 'bg-blue-500/10' : ''}`}>
+                <td className={`p-4 text-center font-bold ${TEXT_MUTED}`}>{idx + 1}</td>
+                <td className={`p-4 ${user.id === currentUser.id ? 'text-blue-400' : TEXT_HIGHLIGHT}`}>
+                  <div className="flex items-center gap-3">
+                    <AvatarBadge user={user} size="sm" />
+                    <span className="font-bold">{user.nome} {user.id === currentUser.id && '(Você)'}</span>
+                  </div>
+                </td>
+                <td className={`p-4 text-center ${TEXT_MUTED}`}>{user.ptsJogos}</td>
+                <td className={`p-4 text-center ${TEXT_MUTED}`}>{user.ptsMataMata}</td>
+                <td className="p-4 text-center font-bold text-green-400 text-sm">{user.total}</td>
+              </tr>
+            ))}</tbody>
           </table>
+        </div>
+      </div>
+    );
+  };
+
+  const ReviewSheet = () => {
+    const searchTerm = reviewSearch.trim().toLowerCase();
+    const usersFiltrados = [...participanteUsuarios]
+      .filter((user) => !searchTerm || user.nome.toLowerCase().includes(searchTerm))
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+    const jogosFiltrados = jogosReais
+      .filter((jogo) => reviewGroupFilter === 'todos' || jogo.grupo === reviewGroupFilter)
+      .sort((a, b) => (
+        parseMatchDateTime(a) - parseMatchDateTime(b) ||
+        a.grupo.localeCompare(b.grupo, 'pt-BR') ||
+        a.id - b.id
+      ));
+
+    const gameRows = jogosFiltrados.map((jogo) => {
+      const realPreenchido = placarPreenchido(jogo.placarA, jogo.placarB);
+
+      return {
+        id: jogo.id,
+        grupoMeta: formatMatchMeta(jogo),
+        confronto: `${jogo.timeA} x ${jogo.timeB}`,
+        real: realPreenchido ? `${jogo.placarA} x ${jogo.placarB}` : '—',
+        palpites: usersFiltrados.map((user) => {
+          const palpite = palpitesJogos[user.id]?.[jogo.id];
+          const palpitePreenchido = placarPreenchido(palpite?.placarA, palpite?.placarB);
+          const resultado = palpitePreenchido && realPreenchido
+            ? calcularPontosJogo(palpite.placarA, palpite.placarB, jogo.placarA, jogo.placarB)
+            : null;
+
+          let status = { label: 'Sem palpite', tone: 'bg-slate-100 text-slate-500' };
+          if (palpitePreenchido && !realPreenchido) status = { label: 'Aguardando real', tone: 'bg-amber-100 text-amber-700' };
+          if (resultado?.pts === PONTOS.JOGO.CHEIO) status = { label: 'Cravou', tone: 'bg-emerald-100 text-emerald-700' };
+          if (resultado?.pts === PONTOS.JOGO.VITORIA) status = { label: 'Vencedor', tone: 'bg-sky-100 text-sky-700' };
+          if (resultado && resultado.pts === 0) status = { label: 'Errou', tone: 'bg-rose-100 text-rose-700' };
+
+          return {
+            userId: user.id,
+            usuario: user.nome,
+            palpite: palpitePreenchido ? `${palpite.placarA} x ${palpite.placarB}` : '—',
+            status,
+            pontos: resultado?.pts ?? 0,
+            envio: formatSubmissionDate(submissoes[user.id]?.[SUBMISSION_FIELDS.JOGOS]),
+            enviado: Boolean(submissoes[user.id]?.[SUBMISSION_FIELDS.JOGOS])
+          };
+        })
+      };
+    });
+
+    const knockoutRows = usersFiltrados.flatMap((user) => {
+      const userMata = palpitesMataMata[user.id] || {};
+      const phaseRows = [
+        ...MATA_MATA_CONFIG.r32.map((match, idx) => ({
+          id: `${user.id}-r32-${match.id}`,
+          usuario: user.nome,
+          etapa: '32-avos',
+          disputa: `Jogo ${match.id}`,
+          palpite: userMata.dezeszeseisavos?.[idx] || '—',
+          oficial: gabaritoMataMata.dezeszeseisavos?.[idx] || '—',
+          pontos: userMata.dezeszeseisavos?.[idx] && userMata.dezeszeseisavos?.[idx] === gabaritoMataMata.dezeszeseisavos?.[idx] ? PONTOS.MATA.R32 : 0
+        })),
+        ...MATA_MATA_CONFIG.r16.map((match, idx) => ({
+          id: `${user.id}-r16-${match.id}`,
+          usuario: user.nome,
+          etapa: 'Oitavas',
+          disputa: `Jogo ${match.id}`,
+          palpite: userMata.oitavas?.[idx] || '—',
+          oficial: gabaritoMataMata.oitavas?.[idx] || '—',
+          pontos: userMata.oitavas?.[idx] && userMata.oitavas?.[idx] === gabaritoMataMata.oitavas?.[idx] ? PONTOS.MATA.R16 : 0
+        })),
+        ...MATA_MATA_CONFIG.qf.map((match, idx) => ({
+          id: `${user.id}-qf-${match.id}`,
+          usuario: user.nome,
+          etapa: 'Quartas',
+          disputa: `Jogo ${match.id}`,
+          palpite: userMata.quartas?.[idx] || '—',
+          oficial: gabaritoMataMata.quartas?.[idx] || '—',
+          pontos: userMata.quartas?.[idx] && userMata.quartas?.[idx] === gabaritoMataMata.quartas?.[idx] ? PONTOS.MATA.QF : 0
+        })),
+        ...MATA_MATA_CONFIG.sf.map((match, idx) => ({
+          id: `${user.id}-sf-${match.id}`,
+          usuario: user.nome,
+          etapa: 'Semis',
+          disputa: `Jogo ${match.id}`,
+          palpite: userMata.semis?.[idx] || '—',
+          oficial: gabaritoMataMata.semis?.[idx] || '—',
+          pontos: userMata.semis?.[idx] && userMata.semis?.[idx] === gabaritoMataMata.semis?.[idx] ? PONTOS.MATA.SF : 0
+        })),
+        {
+          id: `${user.id}-campeao`,
+          usuario: user.nome,
+          etapa: 'Pódio',
+          disputa: 'Campeão',
+          palpite: userMata.campeao || '—',
+          oficial: gabaritoMataMata.campeao || '—',
+          pontos: userMata.campeao && userMata.campeao === gabaritoMataMata.campeao ? PONTOS.MATA.CAMPEAO : 0
+        },
+        {
+          id: `${user.id}-vice`,
+          usuario: user.nome,
+          etapa: 'Pódio',
+          disputa: 'Vice',
+          palpite: userMata.vice || '—',
+          oficial: gabaritoMataMata.vice || '—',
+          pontos: userMata.vice && userMata.vice === gabaritoMataMata.vice ? PONTOS.MATA.VICE : 0
+        },
+        {
+          id: `${user.id}-terceiro`,
+          usuario: user.nome,
+          etapa: 'Pódio',
+          disputa: '3º lugar',
+          palpite: userMata.terceiro || '—',
+          oficial: gabaritoMataMata.terceiro || '—',
+          pontos: userMata.terceiro && userMata.terceiro === gabaritoMataMata.terceiro ? PONTOS.MATA.TOP3 : 0
+        },
+        {
+          id: `${user.id}-quarto`,
+          usuario: user.nome,
+          etapa: 'Pódio',
+          disputa: '4º lugar',
+          palpite: userMata.quarto || '—',
+          oficial: gabaritoMataMata.quarto || '—',
+          pontos: userMata.quarto && userMata.quarto === gabaritoMataMata.quarto ? PONTOS.MATA.TOP4 : 0
+        }
+      ];
+
+      return phaseRows.map((row) => {
+        let status = { label: 'Sem palpite', tone: 'bg-slate-100 text-slate-500' };
+        if (row.palpite !== '—' && row.oficial === '—') status = { label: 'Aguardando oficial', tone: 'bg-amber-100 text-amber-700' };
+        if (row.pontos > 0) status = { label: 'Acertou', tone: 'bg-emerald-100 text-emerald-700' };
+        if (row.palpite !== '—' && row.oficial !== '—' && row.pontos === 0) status = { label: 'Errou', tone: 'bg-rose-100 text-rose-700' };
+        return {
+          ...row,
+          status,
+          envio: formatSubmissionDate(submissoes[user.id]?.[SUBMISSION_FIELDS.MATA])
+        };
+      });
+    });
+
+    const linhas = reviewMode === 'jogos' ? gameRows : knockoutRows;
+
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <div className={`${GLASS_CARD} p-5 space-y-4`}>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Planilha de Palpites</h3>
+              <p className={`text-xs mt-1 ${TEXT_MUTED}`}>Cada linha mostra um confronto, o placar real e os palpites dos participantes lado a lado.</p>
+            </div>
+            <div className="flex gap-2 rounded-full bg-slate-100 p-1">
+              <button onClick={() => setReviewMode('jogos')} className={`px-3 py-1.5 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'jogos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Jogos</button>
+              <button onClick={() => setReviewMode('mata')} className={`px-3 py-1.5 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'mata' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Mata-mata</button>
+            </div>
+          </div>
+          {reviewMode === 'jogos' && (
+            <div className="flex flex-wrap gap-2 text-[10px] font-semibold text-slate-500">
+              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span> Cravou</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1.5 text-sky-700"><span className="h-2.5 w-2.5 rounded-full bg-sky-500"></span> Acertou vencedor</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 text-rose-700"><span className="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Errou</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-amber-700"><span className="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Aguardando real</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-slate-400"></span> Sem palpite</span>
+            </div>
+          )}
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_150px]">
+            <input value={reviewSearch} onChange={(e) => setReviewSearch(e.target.value)} placeholder="Filtrar colunas por usuário" className={`${GLASS_INPUT} px-4 py-3 text-sm`} />
+            <select value={reviewGroupFilter} onChange={(e) => setReviewGroupFilter(e.target.value)} disabled={reviewMode !== 'jogos'} className={`${GLASS_INPUT} px-4 py-3 text-sm`}>
+              <option value="todos">Todos os grupos</option>
+              {Object.keys(GRUPOS_2026).map((grupo) => <option key={grupo} value={grupo}>Grupo {grupo}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className={`${GLASS_CARD} overflow-hidden`}>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px]">
+                {reviewMode === 'jogos' ? (
+                  <tr>
+                    <th className="px-4 py-3 text-left min-w-[140px]">Grupo / Data</th>
+                    <th className="px-4 py-3 text-left min-w-[220px]">Confronto</th>
+                    <th className="px-4 py-3 text-center min-w-[96px]">Real</th>
+                    {usersFiltrados.map((user) => (
+                      <th key={user.id} className="px-4 py-3 text-center min-w-[180px]">
+                        <div className="flex items-center justify-center gap-2">
+                          <AvatarBadge user={user} size="sm" />
+                          <div className="font-bold text-slate-700 normal-case text-[11px]">{user.nome}</div>
+                        </div>
+                        <div className="mt-1 text-[9px] font-medium text-slate-400">
+                          {submissoes[user.id]?.[SUBMISSION_FIELDS.JOGOS] ? 'Enviado' : 'Rascunho'}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                ) : (
+                  <tr>
+                    <th className="px-4 py-3 text-left">Usuário</th>
+                    <th className="px-4 py-3 text-left">Etapa</th>
+                    <th className="px-4 py-3 text-left">Disputa</th>
+                    <th className="px-4 py-3 text-left">Palpite</th>
+                    <th className="px-4 py-3 text-left">Oficial</th>
+                    <th className="px-4 py-3 text-center">Status</th>
+                    <th className="px-4 py-3 text-center">Pts</th>
+                    <th className="px-4 py-3 text-center">Envio</th>
+                  </tr>
+                )}
+              </thead>
+              <tbody>
+                {linhas.length === 0 && (
+                  <tr>
+                    <td colSpan={reviewMode === 'jogos' ? 3 + Math.max(usersFiltrados.length, 1) : 8} className="px-4 py-10 text-center text-slate-400">Nenhum registro encontrado com os filtros atuais.</td>
+                  </tr>
+                )}
+                {reviewMode === 'jogos' && gameRows.map((row) => (
+                  <tr key={row.id} className="border-b border-slate-100 last:border-0">
+                    <td className="px-4 py-3 text-slate-500">
+                      <div className="leading-tight">
+                        <div>{row.grupoMeta.top}</div>
+                        <div>{row.grupoMeta.bottom}</div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-700 font-semibold">{row.confronto}</td>
+                    <td className="px-4 py-3 text-center font-bold text-slate-900">{row.real}</td>
+                    {row.palpites.map((palpite) => (
+                      <td key={`${row.id}-${palpite.userId}`} className="px-4 py-3 align-top">
+                        <div className={`rounded-2xl border px-3 py-3 text-center ${
+                          palpite.status.label === 'Cravou'
+                            ? 'border-emerald-200 bg-emerald-50'
+                            : palpite.status.label === 'Vencedor'
+                              ? 'border-sky-200 bg-sky-50'
+                              : palpite.status.label === 'Errou'
+                                ? 'border-rose-200 bg-rose-50'
+                                : palpite.status.label === 'Aguardando real'
+                                  ? 'border-amber-200 bg-amber-50'
+                                  : 'border-slate-200 bg-slate-50'
+                        }`}>
+                          <div className="text-sm font-bold text-slate-900">{palpite.palpite}</div>
+                          <div className="mt-2 flex justify-center">
+                            <span className={`h-3 w-3 rounded-full ${
+                              palpite.status.label === 'Cravou'
+                                ? 'bg-emerald-500'
+                                : palpite.status.label === 'Vencedor'
+                                  ? 'bg-sky-500'
+                                  : palpite.status.label === 'Errou'
+                                    ? 'bg-rose-500'
+                                    : palpite.status.label === 'Aguardando real'
+                                      ? 'bg-amber-500'
+                                      : 'bg-slate-400'
+                            }`}></span>
+                          </div>
+                          <div className="mt-2 text-[10px] font-semibold text-sky-700">{palpite.pontos} pts</div>
+                          <div className="mt-1 text-[10px] text-slate-400">{palpite.envio}</div>
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                {reviewMode === 'mata' && knockoutRows.map((row) => (
+                  <tr key={row.id} className="border-b border-slate-100 last:border-0">
+                    <td className="px-4 py-3 font-semibold text-slate-800">
+                      <div className="flex items-center gap-2">
+                        <AvatarBadge user={usuarios.find((user) => user.nome === row.usuario)} size="sm" />
+                        <span>{row.usuario}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">{row.etapa}</td>
+                    <td className="px-4 py-3 text-slate-700">{row.disputa}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-800">{row.palpite}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-800">{row.oficial}</td>
+                    <td className="px-4 py-3 text-center"><span className={`inline-flex rounded-full px-2.5 py-1 font-bold ${row.status.tone}`}>{row.status.label}</span></td>
+                    <td className="px-4 py-3 text-center font-bold text-sky-700">{row.pontos}</td>
+                    <td className="px-4 py-3 text-center text-slate-500">{row.envio}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );
@@ -578,6 +1516,7 @@ export default function App() {
     const currentValue = modoAdmin ? gabaritoMataMata[phaseKey]?.[idx] : palpitesMataMata[currentUser.id]?.[phaseKey]?.[idx];
     const options = [timeA, timeB].filter(t => t && t !== 'A definir' && !t.includes("Aguardando") && !t.includes("Venc.") && !t.startsWith('3º de '));
     const isReady = options.length === 2;
+    const isLocked = !modoAdmin && palpitesTravadosMata;
     let feedback = null;
     if (!modoAdmin && gabaritoMataMata[phaseKey]?.[idx]) {
       const officialWinner = gabaritoMataMata[phaseKey][idx];
@@ -586,7 +1525,7 @@ export default function App() {
     }
 
     return (
-      <div className={`${GLASS_CARD} p-4 mb-3 ${!isReady && 'opacity-60'}`}>
+      <div className={`${GLASS_CARD} p-4 mb-3 ${(!isReady || isLocked) && 'opacity-60'}`}>
         <div className={`flex justify-between items-center text-[10px] font-bold uppercase mb-3 ${TEXT_MUTED}`}><span>{match.data} • {match.local}</span><span>JOGO {match.id}</span></div>
         <div className="flex items-center justify-between mb-3">
           <span className={`text-xs font-bold truncate max-w-[45%] text-right ${isReady ? 'text-white' : TEXT_MUTED}`}>{timeA}</span>
@@ -595,11 +1534,11 @@ export default function App() {
         </div>
         {feedback}
         <div className="relative">
-          {!isReady && <Lock size={12} className={`absolute left-3 top-3.5 ${TEXT_MUTED}`} />}
-          <select value={currentValue || ""} onChange={(e) => atualizarMataMata(phaseKey, e.target.value, idx)} disabled={!isReady} className={`${GLASS_INPUT} w-full p-3 text-xs font-medium appearance-none ${!isReady && 'pl-8 cursor-not-allowed text-white/30'}`}>
-            <option value="">{isReady ? "Quem vence?" : "Defina os anteriores"}</option>{isReady && <><option value={timeA}>{timeA}</option><option value={timeB}>{timeB}</option></>}
+          {(!isReady || isLocked) && <Lock size={12} className={`absolute left-3 top-3.5 ${TEXT_MUTED}`} />}
+          <select value={currentValue || ""} onChange={(e) => atualizarMataMata(phaseKey, e.target.value, idx)} disabled={!isReady || isLocked} className={`${GLASS_INPUT} w-full p-3 text-xs font-medium appearance-none ${(!isReady || isLocked) && 'pl-8 text-slate-400'}`}>
+            <option value="">{isLocked ? "Palpite enviado" : isReady ? "Quem vence?" : "Defina os anteriores"}</option>{isReady && <><option value={timeA}>{timeA}</option><option value={timeB}>{timeB}</option></>}
           </select>
-          {isReady && <ChevronDown size={14} className={`absolute right-3 top-3.5 pointer-events-none ${TEXT_MUTED}`} />}
+          {!isLocked && isReady && <ChevronDown size={14} className={`absolute right-3 top-3.5 pointer-events-none ${TEXT_MUTED}`} />}
         </div>
       </div>
     );
@@ -619,6 +1558,7 @@ export default function App() {
     const disputantes3 = [perdedor1, perdedor2].filter(Boolean);
     const isFinalReady = finalistas.length === 2;
     const is3rdReady = disputantes3.length === 2;
+    const isLocked = !modoAdmin && palpitesTravadosMata;
     const renderFeedback = (field) => {
       if (modoAdmin || !gabaritoMataMata[field]) return null;
       if (dataSource[field] === gabaritoMataMata[field]) return <span className="ml-2 text-[10px] text-green-400 font-bold">(Acertou!)</span>;
@@ -633,7 +1573,7 @@ export default function App() {
             <div className="space-y-2">
               <label className="text-[10px] text-yellow-400 font-bold uppercase block text-center mb-3">Grande Final {renderFeedback('campeao')}</label>
               <div className={`${GLASS_CARD} p-4 bg-black/20`}>
-                <select value={dataSource.campeao || ""} onChange={e => { atualizarMataMata('campeao', e.target.value, null); const vice = finalistas.find(f => f !== e.target.value); if (vice) atualizarMataMata('vice', vice, null); }} disabled={!isFinalReady} className={`${GLASS_INPUT} w-full p-3 text-xs border-yellow-500/30 focus:border-yellow-500 text-yellow-100`}>
+                <select value={dataSource.campeao || ""} onChange={e => { atualizarMataMata('campeao', e.target.value, null); const vice = finalistas.find(f => f !== e.target.value); if (vice) atualizarMataMata('vice', vice, null); }} disabled={!isFinalReady || isLocked} className={`${GLASS_INPUT} w-full p-3 text-xs border-yellow-500/30 focus:border-yellow-500 text-slate-800`}>
                   <option value="">Quem será Campeão?</option>{isFinalReady && finalistas.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
                 {dataSource.vice && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>Vice: <span className="text-white">{dataSource.vice}</span> {renderFeedback('vice')}</div>}
@@ -642,7 +1582,7 @@ export default function App() {
             <div className="space-y-2 pt-2">
               <label className="text-[10px] text-orange-400 font-bold uppercase block text-center mb-3">3º Lugar {renderFeedback('terceiro')}</label>
               <div className={`${GLASS_CARD} p-4 bg-black/20`}>
-                <select value={dataSource.terceiro || ""} onChange={e => { atualizarMataMata('terceiro', e.target.value, null); const quarto = disputantes3.find(t => t !== e.target.value); if (quarto) atualizarMataMata('quarto', quarto, null); }} disabled={!is3rdReady} className={`${GLASS_INPUT} w-full p-3 text-xs border-orange-500/30 focus:border-orange-500 text-orange-100`}>
+                <select value={dataSource.terceiro || ""} onChange={e => { atualizarMataMata('terceiro', e.target.value, null); const quarto = disputantes3.find(t => t !== e.target.value); if (quarto) atualizarMataMata('quarto', quarto, null); }} disabled={!is3rdReady || isLocked} className={`${GLASS_INPUT} w-full p-3 text-xs border-orange-500/30 focus:border-orange-500 text-slate-800`}>
                   <option value="">Quem fica em 3º?</option>{is3rdReady && disputantes3.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
                 {dataSource.quarto && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>4º Lugar: <span className="text-white">{dataSource.quarto}</span> {renderFeedback('quarto')}</div>}
@@ -654,22 +1594,108 @@ export default function App() {
     );
   };
 
-  if (!currentUser) return <LoginScreen onLogin={handleLogin} users={usuarios} />;
+  if (!currentUser) {
+    return (
+      <LoginScreen
+        onLogin={handleLogin}
+        users={usuarios}
+        syncStatus={syncStatus}
+        syncError={syncError}
+        isDemoMode={isDemoMode}
+      />
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white font-sans pb-28 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0a0a0a] to-black">
-      <header className="sticky top-0 z-20 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-white/5 px-5 py-4 flex justify-between items-center">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#f4f7fb_100%)] text-slate-900 font-sans pb-28">
+      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-xl border-b border-slate-200 px-5 py-4 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-sm font-bold text-white shadow-lg border border-white/10">{currentUser.nome.charAt(0).toUpperCase()}</div>
-          <div><h1 className="text-sm font-bold text-white leading-tight">{currentUser.nome}</h1><p className={`text-[10px] font-medium tracking-wide ${TEXT_MUTED}`}>{modoAdmin ? 'ADMINISTRADOR' : 'Participante'}</p></div>
+          <AvatarBadge user={currentUser} size="md" />
+          <div><h1 className="text-sm font-bold text-slate-900 leading-tight">{currentUser.nome}</h1><p className={`text-[10px] font-medium tracking-wide ${TEXT_MUTED}`}>{modoAdmin ? 'ADMINISTRADOR' : 'Participante'}</p></div>
         </div>
-        <button onClick={handleLogout} className={`p-2.5 rounded-full hover:bg-white/5 transition-colors ${TEXT_MUTED} hover:text-white`}><LogOut size={18} /></button>
+        <button onClick={handleLogout} className={`p-2.5 rounded-full hover:bg-slate-100 transition-colors ${TEXT_MUTED} hover:text-slate-800`}><LogOut size={18} /></button>
       </header>
 
       <main className="p-5 max-w-lg mx-auto">
+        {!isDemoMode && (
+          <div className={`${GLASS_CARD} mb-5 px-4 py-3`}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-xs font-semibold text-slate-700">Base online</div>
+              <div className={`text-[11px] font-bold ${
+                syncStatus === 'online'
+                  ? 'text-emerald-600'
+                  : syncStatus === 'syncing' || syncStatus === 'connecting'
+                    ? 'text-amber-600'
+                    : 'text-rose-600'
+              }`}>
+                {syncStatus === 'online' && 'Online'}
+                {syncStatus === 'syncing' && 'Sincronizando'}
+                {syncStatus === 'connecting' && 'Conectando'}
+                {syncStatus === 'offline' && 'Falha de sync'}
+              </div>
+            </div>
+            {syncError && <div className="mt-2 text-[11px] text-rose-600">{syncError}</div>}
+          </div>
+        )}
+        {!modoAdmin && (
+          <div className={`${GLASS_CARD} p-5 mb-5`}>
+            <div className="flex items-center gap-4">
+              <AvatarBadge user={currentUser} size="lg" />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold text-slate-900">Sua foto no bolão</div>
+                <div className={`mt-1 text-xs ${TEXT_MUTED}`}>JPG ou PNG, até 2 MB. A imagem é reduzida automaticamente.</div>
+                {avatarError && <div className="mt-2 text-xs text-rose-600">{avatarError}</div>}
+              </div>
+            </div>
+            <div className="mt-4 flex gap-3">
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/png,image/jpeg"
+                className="hidden"
+                onChange={handleAvatarSelected}
+              />
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={avatarLoading}
+                className={`${GLASS_BTN_PRIMARY} px-4 py-3 text-xs uppercase tracking-widest disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                {avatarLoading ? 'Enviando...' : currentUser.avatar ? 'Trocar imagem' : 'Enviar imagem'}
+              </button>
+              {currentUser.avatar && (
+                <button onClick={handleRemoveAvatar} className={`${GLASS_BTN_SECONDARY} px-4 py-3 text-xs uppercase tracking-widest`}>
+                  Remover
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         {abaAtiva === 'jogos' && (
           <div className="space-y-8 animate-fade-in">
-            {modoAdmin && <div className="bg-red-500/10 text-red-400 text-xs p-3 rounded-xl text-center border border-red-500/20 font-bold backdrop-blur-sm">MODO GABARITO ATIVO</div>}
+            {!modoAdmin && (
+              <div className={`${GLASS_CARD} p-5 flex flex-col gap-4`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Envio da fase de grupos</h3>
+                    <p className={`text-xs mt-1 ${TEXT_MUTED}`}>Depois de enviar, seus placares desta etapa ficam travados.</p>
+                  </div>
+                  {palpitesTravadosJogos && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700"><Check size={12} /> Enviado</span>}
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span className={`text-xs ${TEXT_MUTED}`}>{palpitesTravadosJogos ? `Enviado em ${formatSubmissionDate(jogosEnviadosAt)}` : 'Preencha todos os jogos antes de enviar.'}</span>
+                  {!palpitesTravadosJogos && (
+                    <button
+                      onClick={() => handleSubmitSection(SUBMISSION_FIELDS.JOGOS)}
+                      disabled={!usuarioPreencheuTodosOsJogos(jogosReais, palpitesUsuarioAtual)}
+                      className={`${GLASS_BTN_PRIMARY} px-4 py-3 text-xs uppercase tracking-widest disabled:cursor-not-allowed disabled:opacity-50`}
+                    >
+                      Enviar palpites
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            {modoAdmin && <div className="bg-red-50 text-red-500 text-xs p-3 rounded-xl text-center border border-red-200 font-bold">MODO GABARITO ATIVO</div>}
             {Object.keys(GRUPOS_2026).map(grupo => (
               <div key={grupo} className="relative">
                 <h3 className="text-sm font-bold text-white mb-4 pl-3 border-l-2 border-yellow-500 tracking-wide">GRUPO {grupo}</h3>
@@ -681,17 +1707,17 @@ export default function App() {
                     const valB = modoAdmin ? jogo.placarB : palpite.placarB;
                     return (
                       <div key={jogo.id} className={`${GLASS_CARD} p-4`}>
-                        <div className="flex justify-between items-center text-[10px] font-bold uppercase mb-4 text-white/30">
-                          <span className="flex items-center gap-1"><Calendar size={10} /> {jogo.data} • {jogo.hora}</span><span className="bg-white/5 px-2 py-0.5 rounded">{jogo.local}</span>
+                        <div className="flex justify-between items-center text-[10px] font-bold uppercase mb-4 text-slate-400">
+                          <span className="flex items-center gap-1"><Calendar size={10} /> {jogo.data} • {jogo.hora}</span><span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-500">{jogo.local}</span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="w-1/3 text-right text-xs font-bold truncate text-white/90">{jogo.timeA}</span>
+                          <span className="w-1/3 text-right text-xs font-bold truncate text-slate-800">{jogo.timeA}</span>
                           <div className="flex items-center gap-2">
-                            <input type="number" min="0" value={valA} onChange={e => modoAdmin ? atualizarJogo(jogo.id, 'placarA', e.target.value) : atualizarPalpite(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} w-10 h-10 text-center text-sm font-bold`} />
-                            <span className="text-xs text-white/30 font-light">X</span>
-                            <input type="number" min="0" value={valB} onChange={e => modoAdmin ? atualizarJogo(jogo.id, 'placarB', e.target.value) : atualizarPalpite(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} w-10 h-10 text-center text-sm font-bold`} />
+                            <input type="number" min="0" disabled={palpitesTravadosJogos && !modoAdmin} value={valA} onChange={e => modoAdmin ? atualizarJogo(jogo.id, 'placarA', e.target.value) : atualizarPalpite(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} w-10 h-10 text-center text-sm font-bold`} />
+                            <span className="text-xs text-slate-400 font-light">X</span>
+                            <input type="number" min="0" disabled={palpitesTravadosJogos && !modoAdmin} value={valB} onChange={e => modoAdmin ? atualizarJogo(jogo.id, 'placarB', e.target.value) : atualizarPalpite(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} w-10 h-10 text-center text-sm font-bold`} />
                           </div>
-                          <span className="w-1/3 text-left text-xs font-bold truncate text-white/90">{jogo.timeB}</span>
+                          <span className="w-1/3 text-left text-xs font-bold truncate text-slate-800">{jogo.timeB}</span>
                         </div>
                       </div>
                     );
@@ -704,9 +1730,32 @@ export default function App() {
 
         {abaAtiva === 'matamata' && (
           <div className="space-y-4 animate-fade-in">
-            <div className="flex items-center gap-3 bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20 mb-6 backdrop-blur-sm">
-              <div className="bg-blue-500/20 p-2 rounded-full"><Calculator className="text-blue-400" size={18} /></div>
-              <p className="text-[11px] text-blue-100 leading-snug">Seus palpites da fase de grupos preenchem automaticamente os confrontos abaixo.</p>
+            {!modoAdmin && (
+              <div className={`${GLASS_CARD} p-5 flex flex-col gap-4`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Envio do mata-mata</h3>
+                    <p className={`text-xs mt-1 ${TEXT_MUTED}`}>Quando você enviar, chaves e pódio final não poderão mais ser alterados.</p>
+                  </div>
+                  {palpitesTravadosMata && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700"><Check size={12} /> Enviado</span>}
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span className={`text-xs ${TEXT_MUTED}`}>{palpitesTravadosMata ? `Enviado em ${formatSubmissionDate(mataEnviadosAt)}` : jogosEnviadosAt ? 'Complete toda a chave e o pódio para enviar.' : 'Envie a fase de grupos antes de liberar o envio do mata-mata.'}</span>
+                  {!palpitesTravadosMata && (
+                    <button
+                      onClick={() => handleSubmitSection(SUBMISSION_FIELDS.MATA)}
+                      disabled={!jogosEnviadosAt || !usuarioPreencheuMataCompleta(palpitesMataUsuarioAtual)}
+                      className={`${GLASS_BTN_PRIMARY} px-4 py-3 text-xs uppercase tracking-widest disabled:cursor-not-allowed disabled:opacity-50`}
+                    >
+                      Enviar mata-mata
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="flex items-center gap-3 bg-sky-50 p-4 rounded-2xl border border-sky-200 mb-6">
+              <div className="bg-white p-2 rounded-full border border-sky-100"><Calculator className="text-sky-500" size={18} /></div>
+              <p className="text-[11px] text-sky-900 leading-snug">Seus palpites da fase de grupos preenchem automaticamente os confrontos abaixo.</p>
             </div>
             {[
               { id: 'r32', title: '32-avos (Top 32)', list: MATA_MATA_CONFIG.r32, key: 'dezeszeseisavos', pts: PONTOS.MATA.R32 },
@@ -729,6 +1778,7 @@ export default function App() {
         )}
 
         {abaAtiva === 'ranking' && <RankingTable />}
+        {abaAtiva === 'painel' && <ReviewSheet />}
         
         {abaAtiva === 'regras' && (
           <div className="space-y-6 animate-fade-in">
@@ -758,15 +1808,49 @@ export default function App() {
                </div>
                <button onClick={handleReset} className={`w-full mt-6 py-4 rounded-xl border flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-widest transition-all ${resetConfirm ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-900/40' : 'border-red-500/30 text-red-400 bg-red-500/5 hover:bg-red-500/10'}`}><Trash2 size={14} /> {resetConfirm ? 'CLIQUE PARA CONFIRMAR' : 'RESETAR TUDO'}</button>
              </div>
+             {modoAdmin && (
+               <div className={`${GLASS_CARD} p-6`}>
+                 <h3 className="font-bold text-sm mb-2 text-white flex items-center gap-2 uppercase tracking-wide"><User size={18} className="text-red-400" /> Gerenciar Usuários</h3>
+                 <p className={`text-xs mb-5 ${TEXT_MUTED}`}>Apague participantes e remova junto os palpites salvos deles. A conta Admin fica protegida.</p>
+                 <div className="space-y-3">
+                   {usuarios.map((user) => {
+                     const adminUser = isAdminUser(user);
+                     const isConfirming = userDeleteConfirmId === user.id;
+                     return (
+                       <div key={user.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-black/20 p-3">
+                         <div className="min-w-0">
+                           <div className="truncate text-sm font-bold text-white">{user.nome}</div>
+                           <div className={`text-[10px] uppercase tracking-wide ${TEXT_MUTED}`}>{adminUser ? 'Administrador protegido' : 'Participante'}</div>
+                         </div>
+                         <button
+                           onClick={() => handleDeleteUser(user.id)}
+                           disabled={adminUser}
+                           className={`shrink-0 rounded-lg border px-3 py-2 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                             adminUser
+                               ? 'cursor-not-allowed border-white/10 text-white/25'
+                                : isConfirming
+                                  ? 'border-red-500 bg-red-600 text-white shadow-lg shadow-red-900/40'
+                                  : 'border-red-500/30 bg-red-500/5 text-red-400 hover:bg-red-500/10'
+                           }`}
+                         >
+                           {adminUser ? 'Protegido' : isConfirming ? 'Confirmar exclusão' : 'Apagar'}
+                         </button>
+                       </div>
+                     );
+                   })}
+                 </div>
+               </div>
+             )}
           </div>
         )}
       </main>
 
-      <nav className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-[#0a0a0a]/90 backdrop-blur-xl border border-white/10 px-6 py-3 rounded-full flex justify-between gap-8 shadow-2xl z-50 max-w-[90%] w-auto">
-        <button onClick={() => setAbaAtiva('jogos')} className={`flex flex-col items-center gap-1 transition-all ${abaAtiva === 'jogos' ? 'text-blue-400 scale-110' : 'text-white/40 hover:text-white/60'}`}><Calendar size={20} strokeWidth={abaAtiva === 'jogos' ? 2.5 : 2} /></button>
-        <button onClick={() => setAbaAtiva('matamata')} className={`flex flex-col items-center gap-1 transition-all ${abaAtiva === 'matamata' ? 'text-blue-400 scale-110' : 'text-white/40 hover:text-white/60'}`}><Crown size={20} strokeWidth={abaAtiva === 'matamata' ? 2.5 : 2} /></button>
-        <button onClick={() => setAbaAtiva('ranking')} className={`flex flex-col items-center gap-1 transition-all ${abaAtiva === 'ranking' ? 'text-blue-400 scale-110' : 'text-white/40 hover:text-white/60'}`}><Trophy size={20} strokeWidth={abaAtiva === 'ranking' ? 2.5 : 2} /></button>
-        <button onClick={() => setAbaAtiva('regras')} className={`flex flex-col items-center gap-1 transition-all ${abaAtiva === 'regras' ? 'text-blue-400 scale-110' : 'text-white/40 hover:text-white/60'}`}><List size={20} strokeWidth={abaAtiva === 'regras' ? 2.5 : 2} /></button>
+      <nav className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-xl border border-slate-200 px-5 py-3 rounded-full flex justify-between gap-6 shadow-[0_20px_45px_-25px_rgba(15,23,42,0.35)] z-50 max-w-[94%] w-auto">
+        <button onClick={() => setAbaAtiva('jogos')} className={`flex flex-col items-center gap-1 transition-all ${abaAtiva === 'jogos' ? 'text-sky-600 scale-110' : 'text-slate-400 hover:text-slate-700'}`}><Calendar size={20} strokeWidth={abaAtiva === 'jogos' ? 2.5 : 2} /></button>
+        <button onClick={() => setAbaAtiva('matamata')} className={`flex flex-col items-center gap-1 transition-all ${abaAtiva === 'matamata' ? 'text-sky-600 scale-110' : 'text-slate-400 hover:text-slate-700'}`}><Crown size={20} strokeWidth={abaAtiva === 'matamata' ? 2.5 : 2} /></button>
+        <button onClick={() => setAbaAtiva('ranking')} className={`flex flex-col items-center gap-1 transition-all ${abaAtiva === 'ranking' ? 'text-sky-600 scale-110' : 'text-slate-400 hover:text-slate-700'}`}><Trophy size={20} strokeWidth={abaAtiva === 'ranking' ? 2.5 : 2} /></button>
+        <button onClick={() => setAbaAtiva('painel')} className={`flex flex-col items-center gap-1 transition-all ${abaAtiva === 'painel' ? 'text-sky-600 scale-110' : 'text-slate-400 hover:text-slate-700'}`}><Medal size={20} strokeWidth={abaAtiva === 'painel' ? 2.5 : 2} /></button>
+        <button onClick={() => setAbaAtiva('regras')} className={`flex flex-col items-center gap-1 transition-all ${abaAtiva === 'regras' ? 'text-sky-600 scale-110' : 'text-slate-400 hover:text-slate-700'}`}><List size={20} strokeWidth={abaAtiva === 'regras' ? 2.5 : 2} /></button>
       </nav>
     </div>
   );
