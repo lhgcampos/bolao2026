@@ -117,6 +117,16 @@ const REMOTE_STORE_BASE = 'https://mantledb.sh/v2';
 const REMOTE_NAMESPACE = 'lhgcampos-bolao2026-live-20260609';
 const REMOTE_STATE_PATH = 'state';
 const REMOTE_POLL_MS = 5000;
+const COUNTRY_SHORT_NAMES = {
+  'África do Sul': 'Afr. Sul',
+  'Coreia do Sul': 'Cor. Sul',
+  'Rep. Tcheca': 'Rep. Tch.',
+  'Costa do Marfim': 'C. Marfim',
+  'Nova Zelândia': 'Nova Zel.',
+  'Arábia Saudita': 'Arábia S.',
+  'Cabo Verde': 'C. Verde',
+  'RD Congo': 'RD Congo'
+};
 const AVATAR_MAX_FILE_BYTES = 2 * 1024 * 1024;
 const AVATAR_MAX_OUTPUT_BYTES = 180 * 1024;
 const AVATAR_MAX_DIMENSION = 160;
@@ -132,6 +142,8 @@ const findOfficialMatchForPair = (match) => {
     (officialMatch) => officialMatch.grupo === match.grupo && buildPairKey(officialMatch.timeA, officialMatch.timeB) === pairKey
   ) || null;
 };
+
+const getShortCountryName = (name) => COUNTRY_SHORT_NAMES[name] || name;
 
 const normalizePersistedGameData = (matches = [], betsGames = {}) => {
   const officialMatches = JOGOS_FASE_DE_GRUPOS.map((match) => ({ ...match, placarA: '', placarB: '' }));
@@ -818,7 +830,7 @@ const GLASS_CARD = "rounded-[28px] border border-slate-200/80 bg-white shadow-[0
 const GLASS_INPUT = "rounded-xl border border-slate-200 bg-slate-50 text-slate-800 placeholder:text-slate-400 focus:border-sky-400 focus:bg-white focus:outline-none transition-all disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400";
 const GLASS_BTN_PRIMARY = "bg-gradient-to-r from-sky-600 to-cyan-500 hover:from-sky-500 hover:to-cyan-400 text-white font-semibold shadow-[0_16px_40px_-18px_rgba(14,116,144,0.55)] rounded-xl transition-all active:scale-95";
 const GLASS_BTN_SECONDARY = "bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl transition-all active:scale-95";
-const TEXT_MUTED = "text-slate-500";
+const TEXT_MUTED = "text-slate-600";
 const TEXT_HIGHLIGHT = "text-slate-800";
 
 // --- SUB-COMPONENTES UI ---
@@ -1631,16 +1643,33 @@ export default function App() {
 
   const TabelaClassificacao = ({ grupo }) => {
     const tabela = calcularTabelaGrupo(grupo, jogosReais, palpitesJogos[currentUser.id], condutaGrupos);
+    const statColumns = [
+      { key: 'p', label: 'P' },
+      { key: 'j', label: 'J' },
+      { key: 'v', label: 'V' },
+      { key: 'e', label: 'E' },
+      { key: 'd', label: 'D' },
+      { key: 'gp', label: 'GP' },
+      { key: 'gc', label: 'GC' },
+      { key: 'sg', label: 'SG' }
+    ];
+
     return (
       <div className={`${GLASS_CARD} overflow-hidden mb-4`}>
-        <div className="bg-white/5 px-4 py-2.5 flex justify-between items-center border-b border-white/5">
-          <span className={`font-bold text-xs uppercase tracking-wider ${TEXT_MUTED}`}>Classificação - Grupo {grupo}</span>
-          <span className="text-[10px] text-blue-400 font-medium bg-blue-400/10 px-2 py-0.5 rounded-full">{modoAdmin ? 'Oficial' : 'Simulada'}</span>
+        <div className="bg-white/5 px-2.5 py-2.5 flex justify-between items-center border-b border-white/5 gap-2">
+          <span className="font-bold text-[12px] uppercase tracking-[0.16em] text-slate-700">Classificação - Grupo {grupo}</span>
+          <span className="shrink-0 rounded-full bg-blue-400/10 px-2 py-0.5 text-[10px] font-semibold text-blue-500">{modoAdmin ? 'Oficial' : 'Simulada'}</span>
         </div>
-        <table className="w-full text-xs">
+        <table className="w-full table-fixed text-[10px] text-slate-700 sm:text-[11px]">
           <thead>
-            <tr className={`text-white/40 border-b border-white/5`}>
-              <th className="p-2.5 text-center w-8">#</th><th className="p-2.5 text-left">Seleção</th><th className="p-2.5 text-center font-bold text-white w-8">P</th><th className="p-2.5 text-center w-8 hidden sm:table-cell">J</th><th className="p-2.5 text-center w-8 hidden sm:table-cell">SG</th><th className="p-2.5 text-center w-8 sm:hidden">S</th>
+            <tr className="border-b border-white/5 text-slate-500">
+              <th className="w-6 px-0.5 py-2 text-center">#</th>
+              <th className="px-1 py-2 text-left">Seleção</th>
+              {statColumns.map((column) => (
+                <th key={column.key} className="w-6 px-0.5 py-2 text-center font-semibold">
+                  {column.label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -1651,24 +1680,35 @@ export default function App() {
               else posColor = "border-l-2 border-l-transparent opacity-50";
               return (
                 <tr key={time.time} className={`border-b border-white/5 last:border-0 ${posColor}`}>
-                  <td className={`p-2.5 text-center font-bold ${TEXT_MUTED}`}>{idx + 1}</td><td className={`p-2.5 font-medium truncate max-w-[120px] ${TEXT_HIGHLIGHT}`}>{time.time}</td><td className="p-2.5 text-center font-bold text-white bg-white/5 rounded mx-1">{time.p}</td><td className={`p-2.5 text-center ${TEXT_MUTED} hidden sm:table-cell`}>{time.j}</td><td className={`p-2.5 text-center ${TEXT_MUTED} hidden sm:table-cell`}>{time.sg}</td><td className={`p-2.5 text-center ${TEXT_MUTED} sm:hidden`}>{time.sg}</td>
+                  <td className="px-0.5 py-2 text-center font-bold text-slate-600">{idx + 1}</td>
+                  <td className={`px-1 py-2 font-semibold leading-tight ${TEXT_HIGHLIGHT}`}>
+                    <span className="block truncate">{getShortCountryName(time.time)}</span>
+                  </td>
+                  {statColumns.map((column) => (
+                    <td
+                      key={column.key}
+                      className={`px-0.5 py-2 text-center ${column.key === 'p' ? 'font-bold text-slate-800' : 'text-slate-600'}`}
+                    >
+                      {time[column.key]}
+                    </td>
+                  ))}
                 </tr>
               );
             })}
           </tbody>
         </table>
         {modoAdmin && (
-          <div className="border-t border-white/5 p-3 space-y-2 bg-black/10">
-            <div className={`text-[10px] uppercase font-bold ${TEXT_MUTED}`}>Fair play / conduta FIFA</div>
+          <div className="border-t border-slate-200 p-3 space-y-2 bg-slate-50/90">
+            <div className="text-[11px] uppercase font-bold text-slate-700">Fair play / conduta FIFA</div>
             {GRUPOS_2026[grupo].map((time) => {
               const registro = condutaGrupos?.[grupo]?.[time] || {};
               return (
                 <div key={time} className="grid grid-cols-[minmax(0,1fr)_44px_44px_44px_44px] gap-2 items-center">
-                  <span className="truncate text-[11px] text-white/80">{time}</span>
-                  <input type="number" min="0" value={registro.amarelos ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'amarelos', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs`} placeholder="A" title="Amarelos" />
-                  <input type="number" min="0" value={registro.vermelhoIndireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'vermelhoIndireto', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs`} placeholder="2A" title="Vermelho indireto" />
-                  <input type="number" min="0" value={registro.vermelhoDireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'vermelhoDireto', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs`} placeholder="VD" title="Vermelho direto" />
-                  <input type="number" min="0" value={registro.amareloEVermelhoDireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'amareloEVermelhoDireto', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs`} placeholder="A+V" title="Amarelo + vermelho direto" />
+                  <span className="truncate text-[12px] font-medium text-slate-700">{time}</span>
+                  <input type="number" min="0" value={registro.amarelos ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'amarelos', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs text-slate-700`} placeholder="A" title="Amarelos" />
+                  <input type="number" min="0" value={registro.vermelhoIndireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'vermelhoIndireto', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs text-slate-700`} placeholder="2A" title="Vermelho indireto" />
+                  <input type="number" min="0" value={registro.vermelhoDireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'vermelhoDireto', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs text-slate-700`} placeholder="VD" title="Vermelho direto" />
+                  <input type="number" min="0" value={registro.amareloEVermelhoDireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'amareloEVermelhoDireto', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs text-slate-700`} placeholder="A+V" title="Amarelo + vermelho direto" />
                 </div>
               );
             })}
@@ -1906,7 +1946,7 @@ export default function App() {
             {modoAdmin && <div className="bg-red-50 text-red-500 text-xs p-3 rounded-xl text-center border border-red-200 font-bold">MODO GABARITO ATIVO</div>}
             {Object.keys(GRUPOS_2026).map(grupo => (
               <div key={grupo} className="relative">
-                <h3 className="text-sm font-bold text-white mb-4 pl-3 border-l-2 border-yellow-500 tracking-wide">GRUPO {grupo}</h3>
+                <h3 className="mb-4 pl-3 border-l-2 border-yellow-500 text-[15px] font-bold tracking-wide text-slate-700">GRUPO {grupo}</h3>
                 <TabelaClassificacao grupo={grupo} />
                 <div className="space-y-3">
                   {jogosReais.filter(j => j.grupo === grupo).map(jogo => {
@@ -1917,21 +1957,21 @@ export default function App() {
                     const officialKickoffHint = formatOfficialKickoffHint(jogo);
                     return (
                       <div key={jogo.id} className={`${GLASS_CARD} p-4`}>
-                        <div className="flex justify-between items-start text-[10px] font-bold uppercase mb-4 text-slate-400 gap-3">
+                        <div className="flex justify-between items-start text-[11px] font-bold uppercase mb-4 text-slate-500 gap-3">
                           <div className="flex flex-col gap-1">
                             <span className="flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
-                            {officialKickoffHint && <span className="text-[9px] font-semibold normal-case text-slate-400">{officialKickoffHint}</span>}
+                            {officialKickoffHint && <span className="text-[10px] font-semibold normal-case text-slate-500">{officialKickoffHint}</span>}
                           </div>
-                          <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-500 text-right">{jogo.local}</span>
+                          <span className="bg-slate-100 px-2 py-0.5 rounded-full text-[10px] text-slate-600 text-right">{jogo.local}</span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="w-1/3 text-right text-xs font-bold truncate text-slate-800">{jogo.timeA}</span>
+                          <span className="w-1/3 text-right text-[13px] font-bold truncate text-slate-800">{jogo.timeA}</span>
                           <div className="flex items-center gap-2">
                             <input type="number" min="0" disabled={palpitesTravadosJogos && !modoAdmin} value={valA} onChange={e => modoAdmin ? atualizarJogo(jogo.id, 'placarA', e.target.value) : atualizarPalpite(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} w-10 h-10 text-center text-sm font-bold`} />
-                            <span className="text-xs text-slate-400 font-light">X</span>
+                            <span className="text-sm text-slate-500 font-light">X</span>
                             <input type="number" min="0" disabled={palpitesTravadosJogos && !modoAdmin} value={valB} onChange={e => modoAdmin ? atualizarJogo(jogo.id, 'placarB', e.target.value) : atualizarPalpite(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} w-10 h-10 text-center text-sm font-bold`} />
                           </div>
-                          <span className="w-1/3 text-left text-xs font-bold truncate text-slate-800">{jogo.timeB}</span>
+                          <span className="w-1/3 text-left text-[13px] font-bold truncate text-slate-800">{jogo.timeB}</span>
                         </div>
                       </div>
                     );
