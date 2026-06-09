@@ -17,80 +17,81 @@ const GRUPOS_2026 = {
   L: ['Inglaterra', 'Croácia', 'Gana', 'Panamá']
 };
 
-// Horarios oficiais publicados pela FIFA em 10/04/2026 (ET).
+// Agenda oficial da fase de grupos publicada pela FIFA em 10/04/2026.
+// `kickoffEt` preserva o horario oficial em Eastern Time; `data`/`hora` sao exibidos no horario do Brasil.
 const JOGOS_FASE_DE_GRUPOS = [
-  { id: 1, grupo: 'A', timeA: 'México', timeB: 'África do Sul', data: '11/06', hora: '15:00', local: 'Cid. México' },
-  { id: 2, grupo: 'A', timeA: 'Coreia do Sul', timeB: 'Rep. Tcheca', data: '11/06', hora: '20:00', local: 'Guadalajara' },
-  { id: 3, grupo: 'A', timeA: 'Rep. Tcheca', timeB: 'África do Sul', data: '18/06', hora: '12:00', local: 'Atlanta' },
-  { id: 4, grupo: 'A', timeA: 'México', timeB: 'Coreia do Sul', data: '18/06', hora: '21:00', local: 'Guadalajara' },
-  { id: 5, grupo: 'A', timeA: 'Rep. Tcheca', timeB: 'México', data: '24/06', hora: '21:00', local: 'Cid. México' },
-  { id: 6, grupo: 'A', timeA: 'África do Sul', timeB: 'Coreia do Sul', data: '24/06', hora: '21:00', local: 'Monterrey' },
-  { id: 7, grupo: 'B', timeA: 'Canadá', timeB: 'Bósnia', data: '12/06', hora: '15:00', local: 'Toronto' },
-  { id: 8, grupo: 'B', timeA: 'Catar', timeB: 'Suíça', data: '13/06', hora: '15:00', local: 'San Francisco Bay Area' },
-  { id: 9, grupo: 'B', timeA: 'Suíça', timeB: 'Bósnia', data: '18/06', hora: '15:00', local: 'Los Angeles' },
-  { id: 10, grupo: 'B', timeA: 'Canadá', timeB: 'Catar', data: '18/06', hora: '18:00', local: 'Vancouver' },
-  { id: 11, grupo: 'B', timeA: 'Suíça', timeB: 'Canadá', data: '24/06', hora: '15:00', local: 'Vancouver' },
-  { id: 12, grupo: 'B', timeA: 'Bósnia', timeB: 'Catar', data: '24/06', hora: '15:00', local: 'Seattle' },
-  { id: 13, grupo: 'C', timeA: 'Haiti', timeB: 'Escócia', data: '13/06', hora: '21:00', local: 'Boston' },
-  { id: 14, grupo: 'C', timeA: 'Brasil', timeB: 'Marrocos', data: '13/06', hora: '18:00', local: 'Nova York/Nova Jersey' },
-  { id: 15, grupo: 'C', timeA: 'Escócia', timeB: 'Marrocos', data: '19/06', hora: '18:00', local: 'Boston' },
-  { id: 16, grupo: 'C', timeA: 'Brasil', timeB: 'Haiti', data: '19/06', hora: '20:30', local: 'Filadélfia' },
-  { id: 17, grupo: 'C', timeA: 'Escócia', timeB: 'Brasil', data: '24/06', hora: '18:00', local: 'Miami' },
-  { id: 18, grupo: 'C', timeA: 'Marrocos', timeB: 'Haiti', data: '24/06', hora: '18:00', local: 'Atlanta' },
-  { id: 19, grupo: 'D', timeA: 'EUA', timeB: 'Paraguai', data: '12/06', hora: '21:00', local: 'Los Angeles' },
-  { id: 20, grupo: 'D', timeA: 'Austrália', timeB: 'Turquia', data: '13/06', hora: '00:00', local: 'Vancouver' },
-  { id: 21, grupo: 'D', timeA: 'Turquia', timeB: 'Paraguai', data: '19/06', hora: '23:00', local: 'San Francisco Bay Area' },
-  { id: 22, grupo: 'D', timeA: 'EUA', timeB: 'Austrália', data: '19/06', hora: '15:00', local: 'Seattle' },
-  { id: 23, grupo: 'D', timeA: 'Turquia', timeB: 'EUA', data: '25/06', hora: '22:00', local: 'Los Angeles' },
-  { id: 24, grupo: 'D', timeA: 'Paraguai', timeB: 'Austrália', data: '25/06', hora: '22:00', local: 'San Francisco Bay Area' },
-  { id: 25, grupo: 'E', timeA: 'Costa do Marfim', timeB: 'Equador', data: '14/06', hora: '19:00', local: 'Filadélfia' },
-  { id: 26, grupo: 'E', timeA: 'Alemanha', timeB: 'Curaçao', data: '14/06', hora: '13:00', local: 'Houston' },
-  { id: 27, grupo: 'E', timeA: 'Alemanha', timeB: 'Costa do Marfim', data: '20/06', hora: '16:00', local: 'Toronto' },
-  { id: 28, grupo: 'E', timeA: 'Equador', timeB: 'Curaçao', data: '20/06', hora: '20:00', local: 'Kansas City' },
-  { id: 29, grupo: 'E', timeA: 'Curaçao', timeB: 'Costa do Marfim', data: '25/06', hora: '16:00', local: 'Filadélfia' },
-  { id: 30, grupo: 'E', timeA: 'Equador', timeB: 'Alemanha', data: '25/06', hora: '21:00', local: 'Nova York/Nova Jersey' },
-  { id: 31, grupo: 'F', timeA: 'Holanda', timeB: 'Japão', data: '14/06', hora: '16:00', local: 'Dallas' },
-  { id: 32, grupo: 'F', timeA: 'Suécia', timeB: 'Tunísia', data: '14/06', hora: '22:00', local: 'Monterrey' },
-  { id: 33, grupo: 'F', timeA: 'Holanda', timeB: 'Suécia', data: '20/06', hora: '13:00', local: 'Houston' },
-  { id: 34, grupo: 'F', timeA: 'Tunísia', timeB: 'Japão', data: '20/06', hora: '00:00', local: 'Monterrey' },
-  { id: 35, grupo: 'F', timeA: 'Japão', timeB: 'Suécia', data: '25/06', hora: '19:00', local: 'Dallas' },
-  { id: 36, grupo: 'F', timeA: 'Tunísia', timeB: 'Holanda', data: '25/06', hora: '19:00', local: 'Kansas City' },
-  { id: 37, grupo: 'G', timeA: 'Bélgica', timeB: 'Egito', data: '15/06', hora: '15:00', local: 'Seattle' },
-  { id: 38, grupo: 'G', timeA: 'Irã', timeB: 'Nova Zelândia', data: '15/06', hora: '21:00', local: 'Los Angeles' },
-  { id: 39, grupo: 'G', timeA: 'Bélgica', timeB: 'Irã', data: '21/06', hora: '15:00', local: 'Los Angeles' },
-  { id: 40, grupo: 'G', timeA: 'Nova Zelândia', timeB: 'Egito', data: '21/06', hora: '21:00', local: 'Vancouver' },
-  { id: 41, grupo: 'G', timeA: 'Egito', timeB: 'Irã', data: '26/06', hora: '23:00', local: 'Seattle' },
-  { id: 42, grupo: 'G', timeA: 'Nova Zelândia', timeB: 'Bélgica', data: '26/06', hora: '23:00', local: 'Vancouver' },
-  { id: 43, grupo: 'H', timeA: 'Arábia Saudita', timeB: 'Uruguai', data: '14/06', hora: '18:00', local: 'Miami' },
-  { id: 44, grupo: 'H', timeA: 'Espanha', timeB: 'Cabo Verde', data: '14/06', hora: '12:00', local: 'Atlanta' },
-  { id: 45, grupo: 'H', timeA: 'Uruguai', timeB: 'Cabo Verde', data: '21/06', hora: '18:00', local: 'Miami' },
-  { id: 46, grupo: 'H', timeA: 'Espanha', timeB: 'Arábia Saudita', data: '21/06', hora: '12:00', local: 'Atlanta' },
-  { id: 47, grupo: 'H', timeA: 'Cabo Verde', timeB: 'Arábia Saudita', data: '26/06', hora: '20:00', local: 'Houston' },
-  { id: 48, grupo: 'H', timeA: 'Uruguai', timeB: 'Espanha', data: '26/06', hora: '20:00', local: 'Guadalajara' },
-  { id: 49, grupo: 'I', timeA: 'Iraque', timeB: 'Noruega', data: '16/06', hora: '18:00', local: 'Boston' },
-  { id: 50, grupo: 'I', timeA: 'França', timeB: 'Senegal', data: '16/06', hora: '21:00', local: 'Nova York/Nova Jersey' },
-  { id: 51, grupo: 'I', timeA: 'Noruega', timeB: 'Senegal', data: '21/06', hora: '21:00', local: 'Dallas' },
-  { id: 52, grupo: 'I', timeA: 'França', timeB: 'Iraque', data: '21/06', hora: '17:00', local: 'Nova York/Nova Jersey' },
-  { id: 53, grupo: 'I', timeA: 'Noruega', timeB: 'França', data: '26/06', hora: '15:00', local: 'Boston' },
-  { id: 54, grupo: 'I', timeA: 'Senegal', timeB: 'Iraque', data: '26/06', hora: '15:00', local: 'Toronto' },
-  { id: 55, grupo: 'J', timeA: 'Áustria', timeB: 'Jordânia', data: '16/06', hora: '00:00', local: 'San Francisco Bay Area' },
-  { id: 56, grupo: 'J', timeA: 'Argentina', timeB: 'Argélia', data: '16/06', hora: '21:00', local: 'Kansas City' },
-  { id: 57, grupo: 'J', timeA: 'Argentina', timeB: 'Áustria', data: '22/06', hora: '13:00', local: 'Dallas' },
-  { id: 58, grupo: 'J', timeA: 'Jordânia', timeB: 'Argélia', data: '22/06', hora: '23:00', local: 'San Francisco Bay Area' },
-  { id: 59, grupo: 'J', timeA: 'Argélia', timeB: 'Áustria', data: '27/06', hora: '22:00', local: 'Kansas City' },
-  { id: 60, grupo: 'J', timeA: 'Jordânia', timeB: 'Argentina', data: '27/06', hora: '22:00', local: 'Dallas' },
-  { id: 61, grupo: 'K', timeA: 'Portugal', timeB: 'RD Congo', data: '17/06', hora: '13:00', local: 'Houston' },
-  { id: 62, grupo: 'K', timeA: 'Uzbequistão', timeB: 'Colômbia', data: '17/06', hora: '22:00', local: 'Cid. México' },
-  { id: 63, grupo: 'K', timeA: 'Portugal', timeB: 'Uzbequistão', data: '23/06', hora: '13:00', local: 'Houston' },
-  { id: 64, grupo: 'K', timeA: 'Colômbia', timeB: 'RD Congo', data: '23/06', hora: '22:00', local: 'Guadalajara' },
-  { id: 65, grupo: 'K', timeA: 'Colômbia', timeB: 'Portugal', data: '27/06', hora: '19:30', local: 'Miami' },
-  { id: 66, grupo: 'K', timeA: 'RD Congo', timeB: 'Uzbequistão', data: '27/06', hora: '19:30', local: 'Atlanta' },
-  { id: 67, grupo: 'L', timeA: 'Gana', timeB: 'Panamá', data: '17/06', hora: '19:00', local: 'Toronto' },
-  { id: 68, grupo: 'L', timeA: 'Inglaterra', timeB: 'Croácia', data: '17/06', hora: '16:00', local: 'Dallas' },
-  { id: 69, grupo: 'L', timeA: 'Inglaterra', timeB: 'Gana', data: '22/06', hora: '16:00', local: 'Boston' },
-  { id: 70, grupo: 'L', timeA: 'Panamá', timeB: 'Croácia', data: '22/06', hora: '19:00', local: 'Toronto' },
-  { id: 71, grupo: 'L', timeA: 'Panamá', timeB: 'Inglaterra', data: '27/06', hora: '17:00', local: 'Nova York/Nova Jersey' },
-  { id: 72, grupo: 'L', timeA: 'Croácia', timeB: 'Gana', data: '27/06', hora: '17:00', local: 'Filadélfia' }
+  { id: 1, grupo: 'A', timeA: 'México', timeB: 'África do Sul', kickoffEt: '2026-06-11T15:00:00-04:00', data: '11/06', hora: '16:00', horaEt: '15:00', local: 'Cid. México' },
+  { id: 2, grupo: 'A', timeA: 'Coreia do Sul', timeB: 'Rep. Tcheca', kickoffEt: '2026-06-11T20:00:00-04:00', data: '11/06', hora: '21:00', horaEt: '20:00', local: 'Guadalajara' },
+  { id: 3, grupo: 'A', timeA: 'Rep. Tcheca', timeB: 'África do Sul', kickoffEt: '2026-06-18T12:00:00-04:00', data: '18/06', hora: '13:00', horaEt: '12:00', local: 'Atlanta' },
+  { id: 4, grupo: 'A', timeA: 'México', timeB: 'Coreia do Sul', kickoffEt: '2026-06-18T21:00:00-04:00', data: '18/06', hora: '22:00', horaEt: '21:00', local: 'Guadalajara' },
+  { id: 5, grupo: 'A', timeA: 'Rep. Tcheca', timeB: 'México', kickoffEt: '2026-06-24T21:00:00-04:00', data: '24/06', hora: '22:00', horaEt: '21:00', local: 'Cid. México' },
+  { id: 6, grupo: 'A', timeA: 'África do Sul', timeB: 'Coreia do Sul', kickoffEt: '2026-06-24T21:00:00-04:00', data: '24/06', hora: '22:00', horaEt: '21:00', local: 'Monterrey' },
+  { id: 7, grupo: 'B', timeA: 'Canadá', timeB: 'Bósnia', kickoffEt: '2026-06-12T15:00:00-04:00', data: '12/06', hora: '16:00', horaEt: '15:00', local: 'Toronto' },
+  { id: 8, grupo: 'B', timeA: 'Catar', timeB: 'Suíça', kickoffEt: '2026-06-13T15:00:00-04:00', data: '13/06', hora: '16:00', horaEt: '15:00', local: 'San Francisco Bay Area' },
+  { id: 9, grupo: 'B', timeA: 'Suíça', timeB: 'Bósnia', kickoffEt: '2026-06-18T15:00:00-04:00', data: '18/06', hora: '16:00', horaEt: '15:00', local: 'Los Angeles' },
+  { id: 10, grupo: 'B', timeA: 'Canadá', timeB: 'Catar', kickoffEt: '2026-06-18T18:00:00-04:00', data: '18/06', hora: '19:00', horaEt: '18:00', local: 'Vancouver' },
+  { id: 11, grupo: 'B', timeA: 'Suíça', timeB: 'Canadá', kickoffEt: '2026-06-24T15:00:00-04:00', data: '24/06', hora: '16:00', horaEt: '15:00', local: 'Vancouver' },
+  { id: 12, grupo: 'B', timeA: 'Bósnia', timeB: 'Catar', kickoffEt: '2026-06-24T15:00:00-04:00', data: '24/06', hora: '16:00', horaEt: '15:00', local: 'Seattle' },
+  { id: 13, grupo: 'C', timeA: 'Haiti', timeB: 'Escócia', kickoffEt: '2026-06-13T21:00:00-04:00', data: '13/06', hora: '22:00', horaEt: '21:00', local: 'Boston' },
+  { id: 14, grupo: 'C', timeA: 'Brasil', timeB: 'Marrocos', kickoffEt: '2026-06-13T18:00:00-04:00', data: '13/06', hora: '19:00', horaEt: '18:00', local: 'Nova York/Nova Jersey' },
+  { id: 15, grupo: 'C', timeA: 'Escócia', timeB: 'Marrocos', kickoffEt: '2026-06-19T18:00:00-04:00', data: '19/06', hora: '19:00', horaEt: '18:00', local: 'Boston' },
+  { id: 16, grupo: 'C', timeA: 'Brasil', timeB: 'Haiti', kickoffEt: '2026-06-19T20:30:00-04:00', data: '19/06', hora: '21:30', horaEt: '20:30', local: 'Filadélfia' },
+  { id: 17, grupo: 'C', timeA: 'Escócia', timeB: 'Brasil', kickoffEt: '2026-06-24T18:00:00-04:00', data: '24/06', hora: '19:00', horaEt: '18:00', local: 'Miami' },
+  { id: 18, grupo: 'C', timeA: 'Marrocos', timeB: 'Haiti', kickoffEt: '2026-06-24T18:00:00-04:00', data: '24/06', hora: '19:00', horaEt: '18:00', local: 'Atlanta' },
+  { id: 19, grupo: 'D', timeA: 'EUA', timeB: 'Paraguai', kickoffEt: '2026-06-12T21:00:00-04:00', data: '12/06', hora: '22:00', horaEt: '21:00', local: 'Los Angeles' },
+  { id: 20, grupo: 'D', timeA: 'Austrália', timeB: 'Turquia', kickoffEt: '2026-06-13T00:00:00-04:00', data: '13/06', hora: '01:00', horaEt: '00:00', local: 'Vancouver' },
+  { id: 21, grupo: 'D', timeA: 'Turquia', timeB: 'Paraguai', kickoffEt: '2026-06-19T23:00:00-04:00', data: '20/06', hora: '00:00', horaEt: '23:00', local: 'San Francisco Bay Area' },
+  { id: 22, grupo: 'D', timeA: 'EUA', timeB: 'Austrália', kickoffEt: '2026-06-19T15:00:00-04:00', data: '19/06', hora: '16:00', horaEt: '15:00', local: 'Seattle' },
+  { id: 23, grupo: 'D', timeA: 'Turquia', timeB: 'EUA', kickoffEt: '2026-06-25T22:00:00-04:00', data: '25/06', hora: '23:00', horaEt: '22:00', local: 'Los Angeles' },
+  { id: 24, grupo: 'D', timeA: 'Paraguai', timeB: 'Austrália', kickoffEt: '2026-06-25T22:00:00-04:00', data: '25/06', hora: '23:00', horaEt: '22:00', local: 'San Francisco Bay Area' },
+  { id: 25, grupo: 'E', timeA: 'Costa do Marfim', timeB: 'Equador', kickoffEt: '2026-06-14T19:00:00-04:00', data: '14/06', hora: '20:00', horaEt: '19:00', local: 'Filadélfia' },
+  { id: 26, grupo: 'E', timeA: 'Alemanha', timeB: 'Curaçao', kickoffEt: '2026-06-14T13:00:00-04:00', data: '14/06', hora: '14:00', horaEt: '13:00', local: 'Houston' },
+  { id: 27, grupo: 'E', timeA: 'Alemanha', timeB: 'Costa do Marfim', kickoffEt: '2026-06-20T16:00:00-04:00', data: '20/06', hora: '17:00', horaEt: '16:00', local: 'Toronto' },
+  { id: 28, grupo: 'E', timeA: 'Equador', timeB: 'Curaçao', kickoffEt: '2026-06-20T20:00:00-04:00', data: '20/06', hora: '21:00', horaEt: '20:00', local: 'Kansas City' },
+  { id: 29, grupo: 'E', timeA: 'Curaçao', timeB: 'Costa do Marfim', kickoffEt: '2026-06-25T16:00:00-04:00', data: '25/06', hora: '17:00', horaEt: '16:00', local: 'Filadélfia' },
+  { id: 30, grupo: 'E', timeA: 'Equador', timeB: 'Alemanha', kickoffEt: '2026-06-25T21:00:00-04:00', data: '25/06', hora: '22:00', horaEt: '21:00', local: 'Nova York/Nova Jersey' },
+  { id: 31, grupo: 'F', timeA: 'Holanda', timeB: 'Japão', kickoffEt: '2026-06-14T16:00:00-04:00', data: '14/06', hora: '17:00', horaEt: '16:00', local: 'Dallas' },
+  { id: 32, grupo: 'F', timeA: 'Suécia', timeB: 'Tunísia', kickoffEt: '2026-06-14T22:00:00-04:00', data: '14/06', hora: '23:00', horaEt: '22:00', local: 'Monterrey' },
+  { id: 33, grupo: 'F', timeA: 'Holanda', timeB: 'Suécia', kickoffEt: '2026-06-20T13:00:00-04:00', data: '20/06', hora: '14:00', horaEt: '13:00', local: 'Houston' },
+  { id: 34, grupo: 'F', timeA: 'Tunísia', timeB: 'Japão', kickoffEt: '2026-06-20T00:00:00-04:00', data: '20/06', hora: '01:00', horaEt: '00:00', local: 'Monterrey' },
+  { id: 35, grupo: 'F', timeA: 'Japão', timeB: 'Suécia', kickoffEt: '2026-06-25T19:00:00-04:00', data: '25/06', hora: '20:00', horaEt: '19:00', local: 'Dallas' },
+  { id: 36, grupo: 'F', timeA: 'Tunísia', timeB: 'Holanda', kickoffEt: '2026-06-25T19:00:00-04:00', data: '25/06', hora: '20:00', horaEt: '19:00', local: 'Kansas City' },
+  { id: 37, grupo: 'G', timeA: 'Bélgica', timeB: 'Egito', kickoffEt: '2026-06-15T15:00:00-04:00', data: '15/06', hora: '16:00', horaEt: '15:00', local: 'Seattle' },
+  { id: 38, grupo: 'G', timeA: 'Irã', timeB: 'Nova Zelândia', kickoffEt: '2026-06-15T21:00:00-04:00', data: '15/06', hora: '22:00', horaEt: '21:00', local: 'Los Angeles' },
+  { id: 39, grupo: 'G', timeA: 'Bélgica', timeB: 'Irã', kickoffEt: '2026-06-21T15:00:00-04:00', data: '21/06', hora: '16:00', horaEt: '15:00', local: 'Los Angeles' },
+  { id: 40, grupo: 'G', timeA: 'Nova Zelândia', timeB: 'Egito', kickoffEt: '2026-06-21T21:00:00-04:00', data: '21/06', hora: '22:00', horaEt: '21:00', local: 'Vancouver' },
+  { id: 41, grupo: 'G', timeA: 'Egito', timeB: 'Irã', kickoffEt: '2026-06-26T23:00:00-04:00', data: '27/06', hora: '00:00', horaEt: '23:00', local: 'Seattle' },
+  { id: 42, grupo: 'G', timeA: 'Nova Zelândia', timeB: 'Bélgica', kickoffEt: '2026-06-26T23:00:00-04:00', data: '27/06', hora: '00:00', horaEt: '23:00', local: 'Vancouver' },
+  { id: 43, grupo: 'H', timeA: 'Arábia Saudita', timeB: 'Uruguai', kickoffEt: '2026-06-14T18:00:00-04:00', data: '14/06', hora: '19:00', horaEt: '18:00', local: 'Miami' },
+  { id: 44, grupo: 'H', timeA: 'Espanha', timeB: 'Cabo Verde', kickoffEt: '2026-06-14T12:00:00-04:00', data: '14/06', hora: '13:00', horaEt: '12:00', local: 'Atlanta' },
+  { id: 45, grupo: 'H', timeA: 'Uruguai', timeB: 'Cabo Verde', kickoffEt: '2026-06-21T18:00:00-04:00', data: '21/06', hora: '19:00', horaEt: '18:00', local: 'Miami' },
+  { id: 46, grupo: 'H', timeA: 'Espanha', timeB: 'Arábia Saudita', kickoffEt: '2026-06-21T12:00:00-04:00', data: '21/06', hora: '13:00', horaEt: '12:00', local: 'Atlanta' },
+  { id: 47, grupo: 'H', timeA: 'Cabo Verde', timeB: 'Arábia Saudita', kickoffEt: '2026-06-26T20:00:00-04:00', data: '26/06', hora: '21:00', horaEt: '20:00', local: 'Houston' },
+  { id: 48, grupo: 'H', timeA: 'Uruguai', timeB: 'Espanha', kickoffEt: '2026-06-26T20:00:00-04:00', data: '26/06', hora: '21:00', horaEt: '20:00', local: 'Guadalajara' },
+  { id: 49, grupo: 'I', timeA: 'Iraque', timeB: 'Noruega', kickoffEt: '2026-06-16T18:00:00-04:00', data: '16/06', hora: '19:00', horaEt: '18:00', local: 'Boston' },
+  { id: 50, grupo: 'I', timeA: 'França', timeB: 'Senegal', kickoffEt: '2026-06-16T21:00:00-04:00', data: '16/06', hora: '22:00', horaEt: '21:00', local: 'Nova York/Nova Jersey' },
+  { id: 51, grupo: 'I', timeA: 'Noruega', timeB: 'Senegal', kickoffEt: '2026-06-21T21:00:00-04:00', data: '21/06', hora: '22:00', horaEt: '21:00', local: 'Dallas' },
+  { id: 52, grupo: 'I', timeA: 'França', timeB: 'Iraque', kickoffEt: '2026-06-21T17:00:00-04:00', data: '21/06', hora: '18:00', horaEt: '17:00', local: 'Nova York/Nova Jersey' },
+  { id: 53, grupo: 'I', timeA: 'Noruega', timeB: 'França', kickoffEt: '2026-06-26T15:00:00-04:00', data: '26/06', hora: '16:00', horaEt: '15:00', local: 'Boston' },
+  { id: 54, grupo: 'I', timeA: 'Senegal', timeB: 'Iraque', kickoffEt: '2026-06-26T15:00:00-04:00', data: '26/06', hora: '16:00', horaEt: '15:00', local: 'Toronto' },
+  { id: 55, grupo: 'J', timeA: 'Áustria', timeB: 'Jordânia', kickoffEt: '2026-06-16T00:00:00-04:00', data: '16/06', hora: '01:00', horaEt: '00:00', local: 'San Francisco Bay Area' },
+  { id: 56, grupo: 'J', timeA: 'Argentina', timeB: 'Argélia', kickoffEt: '2026-06-16T21:00:00-04:00', data: '16/06', hora: '22:00', horaEt: '21:00', local: 'Kansas City' },
+  { id: 57, grupo: 'J', timeA: 'Argentina', timeB: 'Áustria', kickoffEt: '2026-06-22T13:00:00-04:00', data: '22/06', hora: '14:00', horaEt: '13:00', local: 'Dallas' },
+  { id: 58, grupo: 'J', timeA: 'Jordânia', timeB: 'Argélia', kickoffEt: '2026-06-22T23:00:00-04:00', data: '23/06', hora: '00:00', horaEt: '23:00', local: 'San Francisco Bay Area' },
+  { id: 59, grupo: 'J', timeA: 'Argélia', timeB: 'Áustria', kickoffEt: '2026-06-27T22:00:00-04:00', data: '27/06', hora: '23:00', horaEt: '22:00', local: 'Kansas City' },
+  { id: 60, grupo: 'J', timeA: 'Jordânia', timeB: 'Argentina', kickoffEt: '2026-06-27T22:00:00-04:00', data: '27/06', hora: '23:00', horaEt: '22:00', local: 'Dallas' },
+  { id: 61, grupo: 'K', timeA: 'Portugal', timeB: 'RD Congo', kickoffEt: '2026-06-17T13:00:00-04:00', data: '17/06', hora: '14:00', horaEt: '13:00', local: 'Houston' },
+  { id: 62, grupo: 'K', timeA: 'Uzbequistão', timeB: 'Colômbia', kickoffEt: '2026-06-17T22:00:00-04:00', data: '17/06', hora: '23:00', horaEt: '22:00', local: 'Cid. México' },
+  { id: 63, grupo: 'K', timeA: 'Portugal', timeB: 'Uzbequistão', kickoffEt: '2026-06-23T13:00:00-04:00', data: '23/06', hora: '14:00', horaEt: '13:00', local: 'Houston' },
+  { id: 64, grupo: 'K', timeA: 'Colômbia', timeB: 'RD Congo', kickoffEt: '2026-06-23T22:00:00-04:00', data: '23/06', hora: '23:00', horaEt: '22:00', local: 'Guadalajara' },
+  { id: 65, grupo: 'K', timeA: 'Colômbia', timeB: 'Portugal', kickoffEt: '2026-06-27T19:30:00-04:00', data: '27/06', hora: '20:30', horaEt: '19:30', local: 'Miami' },
+  { id: 66, grupo: 'K', timeA: 'RD Congo', timeB: 'Uzbequistão', kickoffEt: '2026-06-27T19:30:00-04:00', data: '27/06', hora: '20:30', horaEt: '19:30', local: 'Atlanta' },
+  { id: 67, grupo: 'L', timeA: 'Gana', timeB: 'Panamá', kickoffEt: '2026-06-17T19:00:00-04:00', data: '17/06', hora: '20:00', horaEt: '19:00', local: 'Toronto' },
+  { id: 68, grupo: 'L', timeA: 'Inglaterra', timeB: 'Croácia', kickoffEt: '2026-06-17T16:00:00-04:00', data: '17/06', hora: '17:00', horaEt: '16:00', local: 'Dallas' },
+  { id: 69, grupo: 'L', timeA: 'Inglaterra', timeB: 'Gana', kickoffEt: '2026-06-22T16:00:00-04:00', data: '22/06', hora: '17:00', horaEt: '16:00', local: 'Boston' },
+  { id: 70, grupo: 'L', timeA: 'Panamá', timeB: 'Croácia', kickoffEt: '2026-06-22T19:00:00-04:00', data: '22/06', hora: '20:00', horaEt: '19:00', local: 'Toronto' },
+  { id: 71, grupo: 'L', timeA: 'Panamá', timeB: 'Inglaterra', kickoffEt: '2026-06-27T17:00:00-04:00', data: '27/06', hora: '18:00', horaEt: '17:00', local: 'Nova York/Nova Jersey' },
+  { id: 72, grupo: 'L', timeA: 'Croácia', timeB: 'Gana', kickoffEt: '2026-06-27T17:00:00-04:00', data: '27/06', hora: '18:00', horaEt: '17:00', local: 'Filadélfia' }
 ];
 
 const TODOS_TIMES = Object.values(GRUPOS_2026).flat().sort();
@@ -721,17 +722,36 @@ const formatSubmissionDate = (timestamp) => {
   }).format(new Date(timestamp));
 };
 
+const formatBrazilMatchSchedule = (match) => {
+  const [day = '01', month = '01'] = String(match?.data || '01/01').split('/');
+  return {
+    day: Number(day),
+    month: Number(month),
+    time: match?.hora || '00:00',
+    label: `${Number(day)}/${Number(month)} - ${match?.hora || '00:00'} BR`
+  };
+};
+
+const formatOfficialKickoffHint = (match) => {
+  if (!match?.kickoffEt || !match?.horaEt) return null;
+  return `Oficial FIFA: ${match.horaEt} ET`;
+};
+
 const parseMatchDateTime = (match) => {
+  if (match?.kickoffEt) {
+    return new Date(match.kickoffEt).getTime();
+  }
+
   const [day, month] = String(match.data || '01/01').split('/').map(Number);
   const [hour, minute] = String(match.hora || '00:00').split(':').map(Number);
   return new Date(2026, (month || 1) - 1, day || 1, hour || 0, minute || 0).getTime();
 };
 
 const formatMatchMeta = (match) => {
-  const [day, month] = String(match.data || '01/01').split('/');
+  const schedule = formatBrazilMatchSchedule(match);
   return {
     top: `Grupo ${match.grupo}`,
-    bottom: `${Number(day)}/${Number(month)} - ${match.hora || '00:00'}`
+    bottom: schedule.label
   };
 };
 
@@ -1831,10 +1851,16 @@ export default function App() {
                     const palpite = palpitesJogos[currentUser.id]?.[jogo.id] || { placarA: '', placarB: '' };
                     const valA = modoAdmin ? jogo.placarA : palpite.placarA;
                     const valB = modoAdmin ? jogo.placarB : palpite.placarB;
+                    const schedule = formatBrazilMatchSchedule(jogo);
+                    const officialKickoffHint = formatOfficialKickoffHint(jogo);
                     return (
                       <div key={jogo.id} className={`${GLASS_CARD} p-4`}>
-                        <div className="flex justify-between items-center text-[10px] font-bold uppercase mb-4 text-slate-400">
-                          <span className="flex items-center gap-1"><Calendar size={10} /> {jogo.data} • {jogo.hora}</span><span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-500">{jogo.local}</span>
+                        <div className="flex justify-between items-start text-[10px] font-bold uppercase mb-4 text-slate-400 gap-3">
+                          <div className="flex flex-col gap-1">
+                            <span className="flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
+                            {officialKickoffHint && <span className="text-[9px] font-semibold normal-case text-slate-400">{officialKickoffHint}</span>}
+                          </div>
+                          <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-500 text-right">{jogo.local}</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="w-1/3 text-right text-xs font-bold truncate text-slate-800">{jogo.timeA}</span>
