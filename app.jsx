@@ -3,17 +3,17 @@ import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, Che
 
 // --- DADOS ESTRUTURAIS ---
 const GRUPOS_2026 = {
-  A: ['México', 'África do Sul', 'Coreia do Sul', 'Repescagem Eur D'],
-  B: ['Canadá', 'Suíça', 'Catar', 'Repescagem Eur A'],
+  A: ['México', 'África do Sul', 'Coreia do Sul', 'Rep. Tcheca'],
+  B: ['Canadá', 'Suíça', 'Catar', 'Bósnia'],
   C: ['Brasil', 'Marrocos', 'Escócia', 'Haiti'],
-  D: ['EUA', 'Paraguai', 'Austrália', 'Repescagem Eur C'],
+  D: ['EUA', 'Paraguai', 'Austrália', 'Turquia'],
   E: ['Alemanha', 'Equador', 'Curaçao', 'Costa do Marfim'],
-  F: ['Holanda', 'Japão', 'Tunísia', 'Repescagem Eur B'],
+  F: ['Holanda', 'Japão', 'Tunísia', 'Suécia'],
   G: ['Bélgica', 'Egito', 'Irã', 'Nova Zelândia'],
   H: ['Espanha', 'Uruguai', 'Arábia Saudita', 'Cabo Verde'],
-  I: ['França', 'Senegal', 'Noruega', 'Repescagem Mun 2'],
+  I: ['França', 'Senegal', 'Noruega', 'RD Congo'],
   J: ['Argentina', 'Áustria', 'Argélia', 'Jordânia'],
-  K: ['Portugal', 'Colômbia', 'Uzbequistão', 'Repescagem Mun 1'],
+  K: ['Portugal', 'Colômbia', 'Uzbequistão', 'Iraque'],
   L: ['Inglaterra', 'Croácia', 'Gana', 'Panamá']
 };
 
