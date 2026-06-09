@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff } from 'lucide-react';
+import { THIRD_PLACE_ASSIGNMENTS } from './thirdPlaceAssignments';
 
 // --- DADOS ESTRUTURAIS ---
 const GRUPOS_2026 = {
@@ -397,8 +398,27 @@ const calcularTabelaGrupo = (grupo, jogos, palpitesUsuario, condutaGrupos = {}) 
 const ordenarTerceirosFifa = (terceiros) => [...terceiros].sort((a, b) => compararCritBase(a, b));
 
 const resolverConfrontosTerceiros = (melhoresTerceiros, slotsDisponiveis) => {
-  let solucao = null;
   const ordenados = ordenarTerceirosFifa(melhoresTerceiros);
+  const gruposQualificados = ordenados
+    .map((time) => time.grupo)
+    .sort()
+    .join('');
+  const combinacaoOficial = THIRD_PLACE_ASSIGNMENTS[gruposQualificados];
+
+  if (combinacaoOficial) {
+    const terceiroPorGrupo = Object.fromEntries(
+      ordenados.map((time) => [`3${time.grupo}`, time.time])
+    );
+
+    return Object.fromEntries(
+      slotsDisponiveis
+        .filter((slot) => combinacaoOficial[String(slot.id)])
+        .map((slot) => [slot.id, terceiroPorGrupo[combinacaoOficial[String(slot.id)]] || null])
+        .filter(([, time]) => Boolean(time))
+    );
+  }
+
+  let solucao = null;
   const backtrack = (index, alocados, usados) => {
     if (solucao) return;
     if (index === slotsDisponiveis.length) { solucao = alocados; return; }
