@@ -177,45 +177,52 @@ const normalizePersistedGameData = (matches = [], betsGames = {}) => {
 
 const gerarJogosIniciais = () => JOGOS_FASE_DE_GRUPOS.map((match) => ({ ...match, placarA: '', placarB: '' }));
 
-// --- CONFIGURAÇÃO MATA-MATA ---
+// Agenda oficial do mata-mata publicada pela FIFA em 10/04/2026.
+// `kickoffEt` preserva o horario oficial em Eastern Time; a exibicao em tela usa o horario do Brasil.
 const MATA_MATA_CONFIG = {
   r32: [
-    { id: 73, label: "2A x 2B", data: "28/06", local: "Los Angeles", refA: "2A", refB: "2B" },
-    { id: 74, label: "1E x 3A/B/C/D/F", data: "29/06", local: "Boston", refA: "1E", refThirdGroups: ['A', 'B', 'C', 'D', 'F'] },
-    { id: 75, label: "1F x 2C", data: "29/06", local: "Monterrey", refA: "1F", refB: "2C" },
-    { id: 76, label: "1C x 2F", data: "29/06", local: "Houston", refA: "1C", refB: "2F" },
-    { id: 77, label: "1I x 3C/D/F/G/H", data: "30/06", local: "Nova York/Nova Jersey", refA: "1I", refThirdGroups: ['C', 'D', 'F', 'G', 'H'] },
-    { id: 78, label: "2E x 2I", data: "30/06", local: "Dallas", refA: "2E", refB: "2I" },
-    { id: 79, label: "1A x 3C/E/F/H/I", data: "30/06", local: "Cid. México", refA: "1A", refThirdGroups: ['C', 'E', 'F', 'H', 'I'] },
-    { id: 80, label: "1L x 3E/H/I/J/K", data: "01/07", local: "Atlanta", refA: "1L", refThirdGroups: ['E', 'H', 'I', 'J', 'K'] },
-    { id: 81, label: "1D x 3B/E/F/I/J", data: "01/07", local: "San Francisco", refA: "1D", refThirdGroups: ['B', 'E', 'F', 'I', 'J'] },
-    { id: 82, label: "1G x 3A/E/H/I/J", data: "01/07", local: "Seattle", refA: "1G", refThirdGroups: ['A', 'E', 'H', 'I', 'J'] },
-    { id: 83, label: "2K x 2L", data: "02/07", local: "Toronto", refA: "2K", refB: "2L" },
-    { id: 84, label: "1H x 2J", data: "02/07", local: "Los Angeles", refA: "1H", refB: "2J" },
-    { id: 85, label: "1B x 3E/F/G/I/J", data: "02/07", local: "Vancouver", refA: "1B", refThirdGroups: ['E', 'F', 'G', 'I', 'J'] },
-    { id: 86, label: "1J x 2H", data: "03/07", local: "Miami", refA: "1J", refB: "2H" },
-    { id: 87, label: "1K x 3D/E/I/J/L", data: "03/07", local: "Kansas City", refA: "1K", refThirdGroups: ['D', 'E', 'I', 'J', 'L'] },
-    { id: 88, label: "2D x 2G", data: "03/07", local: "Dallas", refA: "2D", refB: "2G" },
+    { id: 73, label: "2A x 2B", kickoffEt: "2026-06-28T15:00:00-04:00", horaEt: "15:00", local: "Los Angeles", refA: "2A", refB: "2B" },
+    { id: 74, label: "1E x 3A/B/C/D/F", kickoffEt: "2026-06-28T16:30:00-04:00", horaEt: "16:30", local: "Boston", refA: "1E", refThirdGroups: ['A', 'B', 'C', 'D', 'F'] },
+    { id: 75, label: "1F x 2C", kickoffEt: "2026-06-29T21:00:00-04:00", horaEt: "21:00", local: "Monterrey", refA: "1F", refB: "2C" },
+    { id: 76, label: "1C x 2F", kickoffEt: "2026-06-29T13:00:00-04:00", horaEt: "13:00", local: "Houston", refA: "1C", refB: "2F" },
+    { id: 77, label: "1I x 3C/D/F/G/H", kickoffEt: "2026-06-30T17:00:00-04:00", horaEt: "17:00", local: "Filadélfia", refA: "1I", refThirdGroups: ['C', 'D', 'F', 'G', 'H'] },
+    { id: 78, label: "2E x 2I", kickoffEt: "2026-06-30T13:00:00-04:00", horaEt: "13:00", local: "Dallas", refA: "2E", refB: "2I" },
+    { id: 79, label: "1A x 3C/E/F/H/I", kickoffEt: "2026-06-30T21:00:00-04:00", horaEt: "21:00", local: "Cid. México", refA: "1A", refThirdGroups: ['C', 'E', 'F', 'H', 'I'] },
+    { id: 80, label: "1L x 3E/H/I/J/K", kickoffEt: "2026-07-01T12:00:00-04:00", horaEt: "12:00", local: "Atlanta", refA: "1L", refThirdGroups: ['E', 'H', 'I', 'J', 'K'] },
+    { id: 81, label: "1D x 3B/E/F/I/J", kickoffEt: "2026-07-01T20:00:00-04:00", horaEt: "20:00", local: "San Francisco Bay Area", refA: "1D", refThirdGroups: ['B', 'E', 'F', 'I', 'J'] },
+    { id: 82, label: "1G x 3A/E/H/I/J", kickoffEt: "2026-07-01T16:00:00-04:00", horaEt: "16:00", local: "Seattle", refA: "1G", refThirdGroups: ['A', 'E', 'H', 'I', 'J'] },
+    { id: 83, label: "2K x 2L", kickoffEt: "2026-07-02T19:00:00-04:00", horaEt: "19:00", local: "Toronto", refA: "2K", refB: "2L" },
+    { id: 84, label: "1H x 2J", kickoffEt: "2026-07-02T15:00:00-04:00", horaEt: "15:00", local: "Los Angeles", refA: "1H", refB: "2J" },
+    { id: 85, label: "1B x 3E/F/G/I/J", kickoffEt: "2026-07-02T23:00:00-04:00", horaEt: "23:00", local: "Vancouver", refA: "1B", refThirdGroups: ['E', 'F', 'G', 'I', 'J'] },
+    { id: 86, label: "1J x 2H", kickoffEt: "2026-07-03T18:00:00-04:00", horaEt: "18:00", local: "Miami", refA: "1J", refB: "2H" },
+    { id: 87, label: "1K x 3D/E/I/J/L", kickoffEt: "2026-07-03T21:30:00-04:00", horaEt: "21:30", local: "Kansas City", refA: "1K", refThirdGroups: ['D', 'E', 'I', 'J', 'L'] },
+    { id: 88, label: "2D x 2G", kickoffEt: "2026-07-03T14:00:00-04:00", horaEt: "14:00", local: "Dallas", refA: "2D", refB: "2G" },
   ],
   r16: [
-    { id: 89, feedA: 73, feedB: 74, data: "04/07", local: "Houston" },
-    { id: 90, feedA: 75, feedB: 76, data: "04/07", local: "Seattle" },
-    { id: 91, feedA: 77, feedB: 78, data: "05/07", local: "Atlanta" },
-    { id: 92, feedA: 79, feedB: 80, data: "05/07", local: "Cid. México" },
-    { id: 93, feedA: 81, feedB: 82, data: "06/07", local: "Vancouver" },
-    { id: 94, feedA: 83, feedB: 84, data: "06/07", local: "Filadélfia" },
-    { id: 95, feedA: 85, feedB: 86, data: "07/07", local: "Miami" },
-    { id: 96, feedA: 87, feedB: 88, data: "07/07", local: "Nova York" }
+    { id: 89, feedA: 74, feedB: 77, kickoffEt: "2026-07-04T17:00:00-04:00", horaEt: "17:00", local: "Filadélfia" },
+    { id: 90, feedA: 73, feedB: 75, kickoffEt: "2026-07-04T13:00:00-04:00", horaEt: "13:00", local: "Houston" },
+    { id: 91, feedA: 76, feedB: 78, kickoffEt: "2026-07-05T16:00:00-04:00", horaEt: "16:00", local: "Nova York/Nova Jersey" },
+    { id: 92, feedA: 79, feedB: 80, kickoffEt: "2026-07-05T20:00:00-04:00", horaEt: "20:00", local: "Cid. México" },
+    { id: 93, feedA: 83, feedB: 84, kickoffEt: "2026-07-06T15:00:00-04:00", horaEt: "15:00", local: "Dallas" },
+    { id: 94, feedA: 81, feedB: 82, kickoffEt: "2026-07-06T20:00:00-04:00", horaEt: "20:00", local: "Seattle" },
+    { id: 95, feedA: 86, feedB: 88, kickoffEt: "2026-07-07T12:00:00-04:00", horaEt: "12:00", local: "Atlanta" },
+    { id: 96, feedA: 85, feedB: 87, kickoffEt: "2026-07-07T16:00:00-04:00", horaEt: "16:00", local: "Vancouver" }
   ],
   qf: [
-    { id: 97, feedA: 89, feedB: 90, data: "09/07", local: "Boston" },
-    { id: 98, feedA: 91, feedB: 92, data: "10/07", local: "Los Angeles" },
-    { id: 99, feedA: 93, feedB: 94, data: "11/07", local: "Miami" },
-    { id: 100, feedA: 95, feedB: 96, data: "11/07", local: "Kansas City" }
+    { id: 97, feedA: 89, feedB: 90, kickoffEt: "2026-07-09T16:00:00-04:00", horaEt: "16:00", local: "Boston" },
+    { id: 98, feedA: 93, feedB: 94, kickoffEt: "2026-07-10T15:00:00-04:00", horaEt: "15:00", local: "Los Angeles" },
+    { id: 99, feedA: 91, feedB: 92, kickoffEt: "2026-07-11T17:00:00-04:00", horaEt: "17:00", local: "Miami" },
+    { id: 100, feedA: 95, feedB: 96, kickoffEt: "2026-07-11T21:00:00-04:00", horaEt: "21:00", local: "Kansas City" }
   ],
   sf: [
-    { id: 101, feedA: 97, feedB: 98, data: "14/07", local: "Dallas" },
-    { id: 102, feedA: 99, feedB: 100, data: "15/07", local: "Atlanta" }
+    { id: 101, feedA: 97, feedB: 98, kickoffEt: "2026-07-14T15:00:00-04:00", horaEt: "15:00", local: "Dallas" },
+    { id: 102, feedA: 99, feedB: 100, kickoffEt: "2026-07-15T15:00:00-04:00", horaEt: "15:00", local: "Atlanta" }
+  ],
+  bronzeFinal: [
+    { id: 103, kickoffEt: "2026-07-18T17:00:00-04:00", horaEt: "17:00", local: "Miami", titulo: "Disputa do 3º lugar" }
+  ],
+  final: [
+    { id: 104, kickoffEt: "2026-07-19T15:00:00-04:00", horaEt: "15:00", local: "Nova York/Nova Jersey", titulo: "Final" }
   ]
 };
 
@@ -723,6 +730,30 @@ const formatSubmissionDate = (timestamp) => {
 };
 
 const formatBrazilMatchSchedule = (match) => {
+  if (match?.kickoffEt) {
+    const kickoff = new Date(match.kickoffEt);
+    const parts = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).formatToParts(kickoff);
+
+    const getPart = (type) => parts.find((part) => part.type === type)?.value || '00';
+    const day = Number(getPart('day'));
+    const month = Number(getPart('month'));
+    const time = `${getPart('hour')}:${getPart('minute')}`;
+
+    return {
+      day,
+      month,
+      time,
+      label: `${day}/${month} - ${time} BR`
+    };
+  }
+
   const [day = '01', month = '01'] = String(match?.data || '01/01').split('/');
   return {
     day: Number(day),
@@ -1669,10 +1700,21 @@ export default function App() {
       if (currentValue === officialWinner) { feedback = <div className="text-center text-[10px] bg-green-500/20 text-green-400 font-bold border border-green-500/30 rounded-lg p-1.5 mb-3 backdrop-blur-sm">Acertou!</div>; } 
       else { feedback = <div className="text-center text-[10px] bg-red-500/20 text-red-400 font-bold border border-red-500/30 rounded-lg p-1.5 mb-3 backdrop-blur-sm">Errou (Era {officialWinner})</div>; }
     }
+    const schedule = formatBrazilMatchSchedule(match);
+    const officialKickoffHint = formatOfficialKickoffHint(match);
 
     return (
       <div className={`${GLASS_CARD} p-4 mb-3 ${(!isReady || isLocked) && 'opacity-60'}`}>
-        <div className={`flex justify-between items-center text-[10px] font-bold uppercase mb-3 ${TEXT_MUTED}`}><span>{match.data} • {match.local}</span><span>JOGO {match.id}</span></div>
+        <div className={`flex justify-between items-start text-[10px] font-bold uppercase mb-3 ${TEXT_MUTED} gap-3`}>
+          <div className="flex flex-col gap-1">
+            <span>{schedule.day}/{schedule.month} • {schedule.time} BR</span>
+            {officialKickoffHint && <span className="text-[9px] font-semibold normal-case text-slate-400">{officialKickoffHint}</span>}
+          </div>
+          <div className="text-right">
+            <div>{match.local}</div>
+            <div className="mt-1 text-[9px] font-semibold text-slate-400">Jogo {match.id}</div>
+          </div>
+        </div>
         <div className="flex items-center justify-between mb-3">
           <span className={`text-xs font-bold truncate max-w-[45%] text-right ${isReady ? 'text-white' : TEXT_MUTED}`}>{timeA}</span>
           <span className={`text-[10px] px-2 ${TEXT_MUTED}`}>vs</span>
@@ -1705,6 +1747,12 @@ export default function App() {
     const isFinalReady = finalistas.length === 2;
     const is3rdReady = disputantes3.length === 2;
     const isLocked = !modoAdmin && palpitesTravadosMata;
+    const finalInfo = MATA_MATA_CONFIG.final[0];
+    const bronzeInfo = MATA_MATA_CONFIG.bronzeFinal[0];
+    const finalSchedule = formatBrazilMatchSchedule(finalInfo);
+    const bronzeSchedule = formatBrazilMatchSchedule(bronzeInfo);
+    const finalKickoffHint = formatOfficialKickoffHint(finalInfo);
+    const bronzeKickoffHint = formatOfficialKickoffHint(bronzeInfo);
     const renderFeedback = (field) => {
       if (modoAdmin || !gabaritoMataMata[field]) return null;
       if (dataSource[field] === gabaritoMataMata[field]) return <span className="ml-2 text-[10px] text-green-400 font-bold">(Acertou!)</span>;
@@ -1716,6 +1764,20 @@ export default function App() {
         <button onClick={() => setSecaoExpandida(secaoExpandida === 'podium' ? null : 'podium')} className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-yellow-500/10 to-transparent"><div className="flex items-center gap-3"><Crown className="text-yellow-400" size={18} /><span className="font-bold text-sm text-white uppercase tracking-wide">Pódio Final</span></div>{secaoExpandida === 'podium' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
         {secaoExpandida === 'podium' && (
           <div className="p-4 space-y-4 border-t border-white/5">
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className={`${GLASS_CARD} p-3 bg-black/20`}>
+                <div className="text-[10px] font-bold uppercase text-yellow-400">Final oficial</div>
+                <div className="mt-2 text-xs font-semibold text-white">{finalSchedule.day}/{finalSchedule.month} • {finalSchedule.time} BR</div>
+                <div className={`mt-1 text-[10px] ${TEXT_MUTED}`}>{finalInfo.local}</div>
+                {finalKickoffHint && <div className="mt-1 text-[10px] text-slate-400">{finalKickoffHint}</div>}
+              </div>
+              <div className={`${GLASS_CARD} p-3 bg-black/20`}>
+                <div className="text-[10px] font-bold uppercase text-orange-400">3º lugar oficial</div>
+                <div className="mt-2 text-xs font-semibold text-white">{bronzeSchedule.day}/{bronzeSchedule.month} • {bronzeSchedule.time} BR</div>
+                <div className={`mt-1 text-[10px] ${TEXT_MUTED}`}>{bronzeInfo.local}</div>
+                {bronzeKickoffHint && <div className="mt-1 text-[10px] text-slate-400">{bronzeKickoffHint}</div>}
+              </div>
+            </div>
             <div className="space-y-2">
               <label className="text-[10px] text-yellow-400 font-bold uppercase block text-center mb-3">Grande Final {renderFeedback('campeao')}</label>
               <div className={`${GLASS_CARD} p-4 bg-black/20`}>
