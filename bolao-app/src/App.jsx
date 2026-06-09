@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff } from 'lucide-react';
 import { THIRD_PLACE_ASSIGNMENTS } from './thirdPlaceAssignments';
+import { TEAM_FIFA_RANKINGS } from './fifaTeamRankings';
 
 // --- DADOS ESTRUTURAIS ---
 const GRUPOS_2026 = {
@@ -283,12 +284,18 @@ const calcularMiniTabela = (timesEmpatados, jogosProcessados) => {
   return mini;
 };
 
-const compararCritBase = (a, b, rankKey = 'rankFifa') => (
+const getTeamOfficialRank = (team) => TEAM_FIFA_RANKINGS[team]?.officialRank ?? Number.MAX_SAFE_INTEGER;
+
+const compareOfficialRanking = (a, b) => (
+  getTeamOfficialRank(a.time) - getTeamOfficialRank(b.time)
+);
+
+const compararCritBase = (a, b) => (
   b.p - a.p ||
   b.sg - a.sg ||
   b.gp - a.gp ||
   b.conduta - a.conduta ||
-  (a[rankKey] ?? Number.MAX_SAFE_INTEGER) - (b[rankKey] ?? Number.MAX_SAFE_INTEGER) ||
+  compareOfficialRanking(a, b) ||
   a.time.localeCompare(b.time, 'pt-BR')
 );
 
@@ -491,6 +498,124 @@ const getThirdPlaceCandidate = (match, alocacaoTerceiros, gruposCompletos) => {
   if (!match.refThirdGroups) return null;
   if (!gruposCompletos) return "A definir";
   return alocacaoTerceiros[match.id] || `3º de ${match.refThirdGroups.join('/')}`;
+};
+
+const createEmptyKnockoutBracket = () => ({
+  dezeszeseisavos: Array(MATA_MATA_CONFIG.r32.length).fill(''),
+  oitavas: Array(MATA_MATA_CONFIG.r16.length).fill(''),
+  quartas: Array(MATA_MATA_CONFIG.qf.length).fill(''),
+  semis: Array(MATA_MATA_CONFIG.sf.length).fill(''),
+  campeao: '',
+  vice: '',
+  terceiro: '',
+  quarto: ''
+});
+
+const isResolvedKnockoutTeam = (team) => (
+  Boolean(team) &&
+  team !== 'A definir' &&
+  team !== '???' &&
+  !team.startsWith('3º de ') &&
+  !team.includes('Venc.') &&
+  !team.includes('Aguardando')
+);
+
+const buildThirdPlaceAllocation = (jogos, palpitesUsuario, condutaGrupos, gruposCompletos = faseDeGruposCompleta(jogos, palpitesUsuario)) => {
+  if (!gruposCompletos) return {};
+  const tabelaGeral = {};
+  Object.keys(GRUPOS_2026).forEach((grupo) => {
+    tabelaGeral[grupo] = calcularTabelaGrupo(grupo, jogos, palpitesUsuario, condutaGrupos);
+  });
+  const terceiros = [];
+  Object.values(tabelaGeral).forEach((tabela) => {
+    if (tabela[2]) terceiros.push(tabela[2]);
+  });
+  terceiros.sort((a, b) => compararCritBase(a, b));
+  return resolverConfrontosTerceiros(
+    terceiros.slice(0, 8),
+    MATA_MATA_CONFIG.r32.filter((match) => match.refThirdGroups)
+  );
+};
+
+const getKnockoutMatchOptions = ({
+  match,
+  phaseKey,
+  source,
+  jogos,
+  palpitesUsuario,
+  condutaGrupos,
+  gruposCompletos,
+  alocacaoTerceiros
+}) => {
+  if (phaseKey === 'dezeszeseisavos') {
+    const teamA = getR32Team(match.refA, jogos, palpitesUsuario, condutaGrupos, gruposCompletos);
+    const teamB = match.refThirdGroups
+      ? getThirdPlaceCandidate(match, alocacaoTerceiros, gruposCompletos)
+      : getR32Team(match.refB, jogos, palpitesUsuario, condutaGrupos, gruposCompletos);
+    return [teamA, teamB].filter((team, index, list) => (
+      isResolvedKnockoutTeam(team) && list.indexOf(team) === index
+    ));
+  }
+
+  return [getWinnerOfMatch(match.feedA, source), getWinnerOfMatch(match.feedB, source)].filter((team, index, list) => (
+    isResolvedKnockoutTeam(team) && list.indexOf(team) === index
+  ));
+};
+
+const getRunnerUp = (winner, teamA, teamB) => {
+  if (!winner || !teamA || !teamB) return '';
+  if (winner === teamA) return teamB;
+  if (winner === teamB) return teamA;
+  return '';
+};
+
+const sanitizeKnockoutBracket = ({ bracket = {}, jogos, palpitesUsuario, condutaGrupos = {} }) => {
+  const sanitized = createEmptyKnockoutBracket();
+  const gruposCompletos = faseDeGruposCompleta(jogos, palpitesUsuario);
+  if (!gruposCompletos) return sanitized;
+
+  const alocacaoTerceiros = buildThirdPlaceAllocation(jogos, palpitesUsuario, condutaGrupos, gruposCompletos);
+  const phaseConfigs = [
+    ['dezeszeseisavos', MATA_MATA_CONFIG.r32],
+    ['oitavas', MATA_MATA_CONFIG.r16],
+    ['quartas', MATA_MATA_CONFIG.qf],
+    ['semis', MATA_MATA_CONFIG.sf]
+  ];
+
+  phaseConfigs.forEach(([phaseKey, matches]) => {
+    matches.forEach((match, idx) => {
+      const options = getKnockoutMatchOptions({
+        match,
+        phaseKey,
+        source: sanitized,
+        jogos,
+        palpitesUsuario,
+        condutaGrupos,
+        gruposCompletos,
+        alocacaoTerceiros
+      });
+
+      sanitized[phaseKey][idx] = options.length === 2 && options.includes(bracket[phaseKey]?.[idx])
+        ? bracket[phaseKey][idx]
+        : '';
+    });
+  });
+
+  const finalistas = sanitized.semis.filter(Boolean);
+  if (finalistas.length === 2 && finalistas.includes(bracket.campeao)) {
+    sanitized.campeao = bracket.campeao;
+    sanitized.vice = finalistas.find((time) => time !== bracket.campeao) || '';
+  }
+
+  const runnerUpSemi1 = getRunnerUp(sanitized.semis[0], sanitized.quartas[0], sanitized.quartas[1]);
+  const runnerUpSemi2 = getRunnerUp(sanitized.semis[1], sanitized.quartas[2], sanitized.quartas[3]);
+  const disputantes3 = [runnerUpSemi1, runnerUpSemi2].filter(Boolean);
+  if (disputantes3.length === 2 && disputantes3.includes(bracket.terceiro)) {
+    sanitized.terceiro = bracket.terceiro;
+    sanitized.quarto = disputantes3.find((time) => time !== bracket.terceiro) || '';
+  }
+
+  return sanitized;
 };
 
 const calcularPontosJogo = (palpiteA, palpiteB, realA, realB) => {
@@ -1173,7 +1298,10 @@ export default function App() {
   const mataEnviadosAt = currentUser ? submissoes[currentUser.id]?.[SUBMISSION_FIELDS.MATA] : null;
   const palpitesTravadosJogos = !modoAdmin && Boolean(jogosEnviadosAt);
   const palpitesTravadosMata = !modoAdmin && Boolean(mataEnviadosAt);
-  const participanteUsuarios = usuarios.filter((user) => !isAdminUser(user));
+  const participanteUsuarios = useMemo(
+    () => usuarios.filter((user) => !isAdminUser(user)),
+    [usuarios]
+  );
 
   useEffect(() => {
     if (!currentUser) return;
@@ -1181,16 +1309,51 @@ export default function App() {
       setAlocacaoTerceiros({});
       return;
     }
-    const tabelaGeral = {};
-    Object.keys(GRUPOS_2026).forEach(g => { tabelaGeral[g] = calcularTabelaGrupo(g, jogosReais, palpitesUsuarioAtual, condutaGrupos); });
-    const terceiros = [];
-    Object.values(tabelaGeral).forEach(t => { if(t[2]) terceiros.push(t[2]); });
-    terceiros.sort((a, b) => compararCritBase(a, b));
-    const top8 = terceiros.slice(0, 8);
-    const slots = MATA_MATA_CONFIG.r32.filter(match => match.refThirdGroups);
-    const resultado = resolverConfrontosTerceiros(top8, slots);
-    setAlocacaoTerceiros(resultado);
+    setAlocacaoTerceiros(
+      buildThirdPlaceAllocation(
+        jogosReais,
+        modoAdmin ? undefined : palpitesUsuarioAtual,
+        condutaGrupos,
+        gruposCompletos
+      )
+    );
   }, [jogosReais, palpitesUsuarioAtual, condutaGrupos, currentUser, gruposCompletos]);
+
+  useEffect(() => {
+    setPalpitesMataMata((current) => {
+      let changed = false;
+      const next = { ...current };
+
+      participanteUsuarios.forEach((user) => {
+        const sanitized = sanitizeKnockoutBracket({
+          bracket: current[user.id] || {},
+          jogos: jogosReais,
+          palpitesUsuario: palpitesJogos[user.id],
+          condutaGrupos
+        });
+
+        if (JSON.stringify(current[user.id] || createEmptyKnockoutBracket()) !== JSON.stringify(sanitized)) {
+          next[user.id] = sanitized;
+          changed = true;
+        }
+      });
+
+      return changed ? next : current;
+    });
+  }, [participanteUsuarios, jogosReais, palpitesJogos, condutaGrupos]);
+
+  useEffect(() => {
+    setGabaritoMataMata((current) => {
+      const sanitized = sanitizeKnockoutBracket({
+        bracket: current,
+        jogos: jogosReais,
+        palpitesUsuario: undefined,
+        condutaGrupos
+      });
+
+      return JSON.stringify(current) === JSON.stringify(sanitized) ? current : sanitized;
+    });
+  }, [jogosReais, condutaGrupos]);
 
   const handleLogin = (id, nome, senha, extraUser = {}) => {
     const normalizedUser = normalizeUser({ id, nome, senha, ...extraUser });
@@ -1258,7 +1421,15 @@ export default function App() {
       const root = modoAdmin ? p : (p[currentUser.id] || {});
       const val = i !== null ? [...(root[c] || [])] : v;
       if (i !== null) val[i] = v;
-      return modoAdmin ? { ...p, [c]: val } : { ...p, [currentUser.id]: { ...root, [c]: val } };
+      const updatedRoot = { ...root, [c]: val };
+      const sanitizedRoot = sanitizeKnockoutBracket({
+        bracket: updatedRoot,
+        jogos: jogosReais,
+        palpitesUsuario: modoAdmin ? undefined : palpitesJogos[currentUser.id],
+        condutaGrupos
+      });
+
+      return modoAdmin ? sanitizedRoot : { ...p, [currentUser.id]: sanitizedRoot };
     });
   };
 
@@ -1798,10 +1969,10 @@ export default function App() {
     const finalista2 = getWinnerOfMatch(102, dataSource);
     const semi1A = getWinnerOfMatch(97, dataSource);
     const semi1B = getWinnerOfMatch(98, dataSource);
-    const perdedor1 = finalista1 === semi1A ? semi1B : semi1A;
+    const perdedor1 = getRunnerUp(finalista1, semi1A, semi1B);
     const semi2A = getWinnerOfMatch(99, dataSource);
     const semi2B = getWinnerOfMatch(100, dataSource);
-    const perdedor2 = finalista2 === semi2A ? semi2B : semi2A;
+    const perdedor2 = getRunnerUp(finalista2, semi2A, semi2B);
     const finalistas = [finalista1, finalista2].filter(Boolean);
     const disputantes3 = [perdedor1, perdedor2].filter(Boolean);
     const isFinalReady = finalistas.length === 2;
@@ -1844,7 +2015,7 @@ export default function App() {
                 <select value={dataSource.campeao || ""} onChange={e => { atualizarMataMata('campeao', e.target.value, null); const vice = finalistas.find(f => f !== e.target.value); if (vice) atualizarMataMata('vice', vice, null); }} disabled={!isFinalReady || isLocked} className={`${GLASS_INPUT} w-full p-3 text-xs border-yellow-500/30 focus:border-yellow-500 text-slate-800`}>
                   <option value="">Quem será Campeão?</option>{isFinalReady && finalistas.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
-                {dataSource.vice && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>Vice: <span className="text-white">{dataSource.vice}</span> {renderFeedback('vice')}</div>}
+                {dataSource.vice && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>Vice: <span className="text-slate-800">{dataSource.vice}</span> {renderFeedback('vice')}</div>}
               </div>
             </div>
             <div className="space-y-2 pt-2">
@@ -1853,7 +2024,7 @@ export default function App() {
                 <select value={dataSource.terceiro || ""} onChange={e => { atualizarMataMata('terceiro', e.target.value, null); const quarto = disputantes3.find(t => t !== e.target.value); if (quarto) atualizarMataMata('quarto', quarto, null); }} disabled={!is3rdReady || isLocked} className={`${GLASS_INPUT} w-full p-3 text-xs border-orange-500/30 focus:border-orange-500 text-slate-800`}>
                   <option value="">Quem fica em 3º?</option>{is3rdReady && disputantes3.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
-                {dataSource.quarto && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>4º Lugar: <span className="text-white">{dataSource.quarto}</span> {renderFeedback('quarto')}</div>}
+                {dataSource.quarto && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>4º Lugar: <span className="text-slate-800">{dataSource.quarto}</span> {renderFeedback('quarto')}</div>}
               </div>
             </div>
           </div>
