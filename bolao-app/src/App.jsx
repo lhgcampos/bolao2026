@@ -1776,9 +1776,9 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center justify-between mb-3">
-          <span className={`text-xs font-bold truncate max-w-[45%] text-right ${isReady ? 'text-white' : TEXT_MUTED}`}>{timeA}</span>
+          <span className={`text-xs font-bold truncate max-w-[45%] text-right ${isReady ? 'text-slate-800' : TEXT_MUTED}`}>{timeA}</span>
           <span className={`text-[10px] px-2 ${TEXT_MUTED}`}>vs</span>
-          <span className={`text-xs font-bold truncate max-w-[45%] text-left ${isReady ? 'text-white' : TEXT_MUTED}`}>{timeB}</span>
+          <span className={`text-xs font-bold truncate max-w-[45%] text-left ${isReady ? 'text-slate-800' : TEXT_MUTED}`}>{timeB}</span>
         </div>
         {feedback}
         <div className="relative">
