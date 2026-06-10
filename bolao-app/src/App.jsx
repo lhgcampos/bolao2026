@@ -483,6 +483,11 @@ const usuarioPreencheuTodosOsJogos = (jogos, palpitesUsuario) => jogos.every((jo
   return placarPreenchido(palpite?.placarA, palpite?.placarB);
 });
 
+const contarJogosPendentes = (jogos, palpitesUsuario) => jogos.reduce((total, jogo) => {
+  const palpite = palpitesUsuario?.[jogo.id];
+  return placarPreenchido(palpite?.placarA, palpite?.placarB) ? total : total + 1;
+}, 0);
+
 const usuarioPreencheuMataCompleta = (palpitesUsuario = {}) => (
   Array.isArray(palpitesUsuario.dezeszeseisavos) &&
   palpitesUsuario.dezeszeseisavos.length === MATA_MATA_CONFIG.r32.length &&
@@ -1686,6 +1691,7 @@ export default function App() {
   const mataEnviadosAt = currentUser ? submissoes[currentUser.id]?.[SUBMISSION_FIELDS.MATA] : null;
   const palpitesTravadosJogos = !modoAdmin && Boolean(jogosEnviadosAt);
   const palpitesTravadosMata = !modoAdmin && Boolean(mataEnviadosAt);
+  const jogosPendentesUsuario = currentUser ? contarJogosPendentes(jogosReais, palpitesUsuarioAtual) : 0;
   const participanteUsuarios = useMemo(
     () => usuarios.filter((user) => !isAdminUser(user)),
     [usuarios]
@@ -1840,16 +1846,41 @@ export default function App() {
     });
   };
 
-  const handleSubmitSection = (field) => {
+  const handleSubmitSection = async (field) => {
     if (!currentUser || modoAdmin) return;
     if (field === SUBMISSION_FIELDS.MATA && !jogosEnviadosAt) return;
-    setSubmissoes((current) => ({
-      ...current,
+
+    const nextSubmissoes = {
+      ...submissoes,
       [currentUser.id]: {
-        ...(current[currentUser.id] || {}),
+        ...(submissoes[currentUser.id] || {}),
         [field]: Date.now()
       }
-    }));
+    };
+
+    const nextState = {
+      users: usuarios,
+      matches: jogosReais,
+      betsGames: palpitesJogos,
+      betsKnockout: palpitesMataMata,
+      officialKnockout: gabaritoMataMata,
+      conduct: condutaGrupos,
+      submissions: nextSubmissoes
+    };
+
+    try {
+      setSyncStatus('syncing');
+      setSyncError('');
+      const syncResult = await syncRemoteStateWithPatch(nextState, { currentUserId: currentUser.id, isAdmin: modoAdmin });
+      remoteUpdatedAtRef.current = syncResult.updatedAt || Date.now();
+      remoteSnapshotRef.current = buildStateSnapshot(syncResult.mergedState || nextState);
+      clearPendingSync();
+      setSubmissoes(nextSubmissoes);
+      setSyncStatus('online');
+    } catch (error) {
+      setSyncStatus('offline');
+      setSyncError(error.message || 'Falha ao salvar dados online.');
+    }
   };
 
   const handleReset = async () => {
@@ -2579,7 +2610,13 @@ export default function App() {
                   {palpitesTravadosJogos && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700"><Check size={12} /> Enviado</span>}
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <span className={`text-xs ${TEXT_MUTED}`}>{palpitesTravadosJogos ? `Enviado em ${formatSubmissionDate(jogosEnviadosAt)}` : 'Preencha todos os jogos antes de enviar.'}</span>
+                  <span className={`text-xs ${TEXT_MUTED}`}>
+                    {palpitesTravadosJogos
+                      ? `Enviado em ${formatSubmissionDate(jogosEnviadosAt)}`
+                      : jogosPendentesUsuario > 0
+                        ? `Faltam ${jogosPendentesUsuario} jogo${jogosPendentesUsuario === 1 ? '' : 's'} para liberar o envio.`
+                        : 'Tudo pronto para enviar.'}
+                  </span>
                   {!palpitesTravadosJogos && (
                     <button
                       onClick={() => handleSubmitSection(SUBMISSION_FIELDS.JOGOS)}
