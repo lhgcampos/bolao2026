@@ -858,6 +858,72 @@ const patchRemoteState = async (patch) => {
   }
 };
 
+const buildParticipantPatch = (remotePayload, localState, currentUserId) => {
+  if (!currentUserId) return null;
+  const currentUser = (localState.users || []).find((user) => user.id === currentUserId);
+  const remoteUsersById = { ...(remotePayload?.usersById || {}) };
+  const remoteBetsGames = { ...(remotePayload?.betsGames || {}) };
+  const remoteBetsKnockout = { ...(remotePayload?.betsKnockout || {}) };
+  const remoteSubmissions = { ...(remotePayload?.submissions || {}) };
+  const patch = {};
+
+  if (currentUser) {
+    remoteUsersById[currentUserId] = normalizeUser(currentUser);
+    patch.usersById = remoteUsersById;
+  }
+  if (localState.betsGames?.[currentUserId]) {
+    remoteBetsGames[currentUserId] = localState.betsGames[currentUserId];
+    patch.betsGames = remoteBetsGames;
+  }
+  if (localState.betsKnockout?.[currentUserId]) {
+    remoteBetsKnockout[currentUserId] = localState.betsKnockout[currentUserId];
+    patch.betsKnockout = remoteBetsKnockout;
+  }
+  if (localState.submissions?.[currentUserId]) {
+    remoteSubmissions[currentUserId] = localState.submissions[currentUserId];
+    patch.submissions = remoteSubmissions;
+  }
+
+  return Object.keys(patch).length ? patch : null;
+};
+
+const buildAdminPatch = (remotePayload, localState) => {
+  const patch = {
+    matches: localState.matches || [],
+    officialKnockout: localState.officialKnockout || {},
+    conduct: localState.conduct || {}
+  };
+
+  if (localState.users?.length) {
+    patch.usersById = Object.fromEntries(localState.users.map((user) => [user.id, normalizeUser(user)]));
+  }
+
+  if (localState.betsGames) {
+    patch.betsGames = localState.betsGames;
+  }
+
+  if (localState.betsKnockout) {
+    patch.betsKnockout = localState.betsKnockout;
+  }
+
+  if (localState.submissions) {
+    patch.submissions = localState.submissions;
+  }
+
+  return patch;
+};
+
+const syncRemoteStateWithPatch = async (localState, { currentUserId = null, isAdmin = false } = {}) => {
+  const remotePayload = await fetchRemoteState();
+  const patch = isAdmin
+    ? buildAdminPatch(remotePayload, localState)
+    : buildParticipantPatch(remotePayload, localState, currentUserId);
+
+  if (!patch) return false;
+  await patchRemoteState(patch);
+  return true;
+};
+
 const syncRemoteStateSafely = async (localState, options = {}) => {
   const remotePayload = await fetchRemoteState();
   const mergedState = mergeRemoteState(
@@ -1302,10 +1368,16 @@ export default function App() {
     try {
       setSyncStatus('syncing');
       setSyncError('');
-      const mergedState = await syncRemoteStateSafely(pending.state, pending.options || {});
-      const mergedPayload = buildRemotePayload(mergedState);
-      remoteUpdatedAtRef.current = mergedPayload.updatedAt;
-      remoteSnapshotRef.current = buildStateSnapshot(mergedState);
+      const didPatch = await syncRemoteStateWithPatch(pending.state, pending.options || {});
+      if (!didPatch) {
+        const mergedState = await syncRemoteStateSafely(pending.state, pending.options || {});
+        const mergedPayload = buildRemotePayload(mergedState);
+        remoteUpdatedAtRef.current = mergedPayload.updatedAt;
+        remoteSnapshotRef.current = buildStateSnapshot(mergedState);
+      } else {
+        remoteUpdatedAtRef.current = Date.now();
+        remoteSnapshotRef.current = pending.snapshot || buildStateSnapshot(pending.state);
+      }
       clearPendingSync();
       setSyncStatus('online');
     } catch (error) {
