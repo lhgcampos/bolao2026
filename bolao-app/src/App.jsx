@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff } from 'lucide-react';
+import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle } from 'lucide-react';
 import { THIRD_PLACE_ASSIGNMENTS } from './thirdPlaceAssignments';
 import { TEAM_FIFA_RANKINGS } from './fifaTeamRankings';
 
@@ -118,6 +118,7 @@ const SUBMISSION_FIELDS = {
 const REMOTE_STORE_BASE = 'https://mantledb.sh/v2';
 const REMOTE_NAMESPACE = 'lhgcampos-bolao2026-live-20260609';
 const REMOTE_STATE_PATH = 'state';
+const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/K3WYefFWkzY09iK1csJtZA?mode=gi_t';
 const REMOTE_POLL_MS = 5000;
 const COUNTRY_SHORT_NAMES = {
   'África do Sul': 'Afr. Sul',
@@ -1036,6 +1037,15 @@ const LoginScreen = ({ onLogin, users, syncStatus = 'online', syncError = '', is
           </div>
         </div>
         <h1 className="text-3xl font-bold text-center mb-8 tracking-tight text-slate-900">BOLÃO 2026</h1>
+        <a
+          href={WHATSAPP_GROUP_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="mb-5 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 transition-colors hover:bg-emerald-100"
+        >
+          <MessageCircle size={16} />
+          Entrar no grupo do WhatsApp
+        </a>
         {!isDemoMode && (
           <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
             <div className="flex items-center justify-between gap-3">
@@ -2228,27 +2238,27 @@ export default function App() {
         {abaAtiva === 'regras' && (
           <div className="space-y-6 animate-fade-in">
              <div className={`${GLASS_CARD} p-6`}>
-               <h3 className="font-bold text-sm mb-6 text-white flex items-center gap-2 uppercase tracking-wide"><List size={18} className="text-blue-400"/> Pontuação Detalhada</h3>
+               <h3 className="font-bold text-sm mb-6 text-slate-900 flex items-center gap-2 uppercase tracking-wide"><List size={18} className="text-sky-600"/> Pontuação Detalhada</h3>
                <div className="space-y-4">
                  <div className="space-y-2">
-                    <div className={`text-[10px] font-bold ${TEXT_MUTED} border-b border-white/5 pb-1 mb-2`}>FASE DE GRUPOS</div>
-                    <div className="flex justify-between text-xs p-3 bg-black/20 rounded-lg border border-white/5"><span>Placar Exato</span><span className="font-bold text-green-400">{PONTOS.JOGO.CHEIO} pts</span></div>
-                    <div className="flex justify-between text-xs p-3 bg-black/20 rounded-lg border border-white/5"><span>Apenas Vencedor</span><span className="font-bold text-yellow-400">{PONTOS.JOGO.VITORIA} pts</span></div>
-                    <div className="mt-2 text-[10px] text-white/50 italic p-2 border-l-2 border-red-400 pl-3">Não há pontos por saldo de gols.</div>
+                    <div className="text-[10px] font-bold text-slate-500 border-b border-slate-200 pb-1 mb-2">FASE DE GRUPOS</div>
+                    <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Placar Exato</span><span className="font-bold text-emerald-700">{PONTOS.JOGO.CHEIO} pts</span></div>
+                    <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Apenas Vencedor</span><span className="font-bold text-amber-700">{PONTOS.JOGO.VITORIA} pts</span></div>
+                    <div className="mt-2 text-[10px] text-slate-500 italic p-2 border-l-2 border-rose-300 pl-3">Não há pontos por saldo de gols.</div>
                  </div>
                  <div className="space-y-2 pt-2">
-                    <div className={`text-[10px] font-bold ${TEXT_MUTED} border-b border-white/5 pb-1 mb-2`}>MATA-MATA (POR ACERTO)</div>
-                    <div className="flex justify-between text-xs p-3 bg-black/20 rounded-lg border border-white/5"><span>Acertar Time 16-avos</span><span className="font-bold text-white">{PONTOS.MATA.R32} pts</span></div>
-                    <div className="flex justify-between text-xs p-3 bg-black/20 rounded-lg border border-white/5"><span>Acertar Time Oitavas</span><span className="font-bold text-white">{PONTOS.MATA.R16} pts</span></div>
-                    <div className="flex justify-between text-xs p-3 bg-black/20 rounded-lg border border-white/5"><span>Acertar Time Quartas</span><span className="font-bold text-white">{PONTOS.MATA.QF} pts</span></div>
-                    <div className="flex justify-between text-xs p-3 bg-black/20 rounded-lg border border-white/5"><span>Acertar Time Semis</span><span className="font-bold text-purple-400">{PONTOS.MATA.SF} pts</span></div>
+                    <div className="text-[10px] font-bold text-slate-500 border-b border-slate-200 pb-1 mb-2">MATA-MATA (POR ACERTO)</div>
+                    <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time 16-avos</span><span className="font-bold text-slate-900">{PONTOS.MATA.R32} pts</span></div>
+                    <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time Oitavas</span><span className="font-bold text-slate-900">{PONTOS.MATA.R16} pts</span></div>
+                    <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time Quartas</span><span className="font-bold text-slate-900">{PONTOS.MATA.QF} pts</span></div>
+                    <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time Semis</span><span className="font-bold text-indigo-700">{PONTOS.MATA.SF} pts</span></div>
                  </div>
                  <div className="space-y-2 pt-2">
-                    <div className={`text-[10px] font-bold ${TEXT_MUTED} border-b border-white/5 pb-1 mb-2`}>PÓDIO FINAL</div>
-                    <div className="flex justify-between text-xs p-3 bg-black/20 rounded-lg border border-white/5"><span>Campeão</span><span className="font-bold text-yellow-400">{PONTOS.MATA.CAMPEAO} pts</span></div>
-                    <div className="flex justify-between text-xs p-3 bg-black/20 rounded-lg border border-white/5"><span>Vice</span><span className="font-bold text-slate-300">{PONTOS.MATA.VICE} pts</span></div>
-                    <div className="flex justify-between text-xs p-3 bg-black/20 rounded-lg border border-white/5"><span>3º Lugar</span><span className="font-bold text-orange-400">{PONTOS.MATA.TOP3} pts</span></div>
-                    <div className="flex justify-between text-xs p-3 bg-black/20 rounded-lg border border-white/5"><span>4º Lugar</span><span className="font-bold text-white/70">{PONTOS.MATA.TOP4} pts</span></div>
+                    <div className="text-[10px] font-bold text-slate-500 border-b border-slate-200 pb-1 mb-2">PÓDIO FINAL</div>
+                    <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Campeão</span><span className="font-bold text-amber-700">{PONTOS.MATA.CAMPEAO} pts</span></div>
+                    <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Vice</span><span className="font-bold text-slate-700">{PONTOS.MATA.VICE} pts</span></div>
+                    <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>3º Lugar</span><span className="font-bold text-orange-700">{PONTOS.MATA.TOP3} pts</span></div>
+                    <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>4º Lugar</span><span className="font-bold text-slate-600">{PONTOS.MATA.TOP4} pts</span></div>
                  </div>
                </div>
                <button onClick={handleReset} className={`w-full mt-6 py-4 rounded-xl border flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-widest transition-all ${resetConfirm ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-900/40' : 'border-red-500/30 text-red-400 bg-red-500/5 hover:bg-red-500/10'}`}><Trash2 size={14} /> {resetConfirm ? 'CLIQUE PARA CONFIRMAR' : 'RESETAR TUDO'}</button>
