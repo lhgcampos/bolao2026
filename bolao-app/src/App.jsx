@@ -118,6 +118,8 @@ const SUBMISSION_FIELDS = {
 const REMOTE_STORE_BASE = 'https://mantledb.sh/v2';
 const REMOTE_NAMESPACE = 'lhgcampos-bolao2026-live-20260609';
 const REMOTE_STATE_PATH = 'state';
+const PENDING_SYNC_KEY = 'bolao26_pending_sync_v1';
+const SYNC_DEBOUNCE_MS = 900;
 const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/K3WYefFWkzY09iK1csJtZA?mode=gi_t';
 const REMOTE_POLL_MS = 5000;
 const COUNTRY_SHORT_NAMES = {
@@ -738,7 +740,7 @@ const createInitialAppState = () => ({
   submissions: {}
 });
 
-const buildRemotePayload = ({
+const buildStateDocument = ({
   users,
   matches,
   betsGames,
@@ -756,6 +758,13 @@ const buildRemotePayload = ({
   officialKnockout,
   conduct,
   submissions
+});
+
+const buildStateSnapshot = (state) => JSON.stringify(buildStateDocument(state));
+
+const buildRemotePayload = (state) => ({
+  ...buildStateDocument(state),
+  updatedAt: Date.now()
 });
 
 const parseRemotePayload = (payload) => {
@@ -860,6 +869,25 @@ const syncRemoteStateSafely = async (localState, options = {}) => {
   return mergedState;
 };
 
+const readPendingSync = () => {
+  try {
+    return JSON.parse(localStorage.getItem(PENDING_SYNC_KEY) || 'null');
+  } catch {
+    return null;
+  }
+};
+
+const savePendingSync = (pending) => {
+  localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify({
+    ...pending,
+    savedAt: Date.now()
+  }));
+};
+
+const clearPendingSync = () => {
+  localStorage.removeItem(PENDING_SYNC_KEY);
+};
+
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => resolve(reader.result);
@@ -912,14 +940,23 @@ const processAvatarFile = async (file) => {
   return output;
 };
 
+const normalizeUserNameKey = (value = '') => value
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .toLowerCase();
+
 const normalizeUser = (user) => {
   if (!user) return user;
   const nome = user.nome || '';
-  const role = user.role || ((user.id === ADMIN_USER_ID || nome.toLowerCase() === 'admin') ? 'admin' : 'participant');
-  return { ...user, role };
+  const nomeKey = user.nomeKey || normalizeUserNameKey(nome);
+  const role = user.role || ((user.id === ADMIN_USER_ID || nomeKey === 'admin') ? 'admin' : 'participant');
+  return { ...user, nomeKey, role };
 };
 
 const isAdminUser = (user) => user?.role === 'admin' || user?.id === ADMIN_USER_ID;
+const findUserByName = (users, inputName) => users.find((user) => user.nomeKey === normalizeUserNameKey(inputName));
 
 const formatSubmissionDate = (timestamp) => {
   if (!timestamp) return 'Rascunho';
@@ -1022,7 +1059,7 @@ const TEXT_MUTED = "text-slate-600";
 const TEXT_HIGHLIGHT = "text-slate-800";
 
 // --- SUB-COMPONENTES UI ---
-const LoginScreen = ({ onLogin, users, syncStatus = 'online', syncError = '', isDemoMode = false }) => {
+const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', syncError = '', isDemoMode = false }) => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
@@ -1030,16 +1067,33 @@ const LoginScreen = ({ onLogin, users, syncStatus = 'online', syncError = '', is
   const [error, setError] = useState('');
   const [avatarPreview, setAvatarPreview] = useState('');
   const [avatarLoading, setAvatarLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     if (!name.trim() || !password.trim()) { setError('Preencha nome e senha'); return; }
-    if (name.toLowerCase() === 'admin') {
+    if (normalizeUserNameKey(name) === 'admin') {
       if (password === 'qwer') { onLogin(999, 'Admin', 'qwer'); return; } 
       else { setError('Senha de Administrador incorreta.'); return; }
     }
-    const existingUser = users.find(u => u.nome.toLowerCase() === name.trim().toLowerCase());
+
+    let availableUsers = users;
+    let existingUser = findUserByName(availableUsers, name);
+
+    if ((!existingUser || isRegistering) && onRefreshUsers) {
+      setAuthLoading(true);
+      try {
+        availableUsers = await onRefreshUsers();
+        existingUser = findUserByName(availableUsers, name);
+      } catch (refreshError) {
+        setError(refreshError.message || 'Não foi possível atualizar a lista de usuários.');
+        setAuthLoading(false);
+        return;
+      }
+      setAuthLoading(false);
+    }
+
     if (isRegistering) {
       if (existingUser) { setError('Nome já existe. Tente fazer login.'); } 
       else { onLogin(Date.now(), name.trim(), password.trim(), { avatar: avatarPreview }); }
@@ -1133,7 +1187,7 @@ const LoginScreen = ({ onLogin, users, syncStatus = 'online', syncError = '', is
             </div>
           )}
           {error && <div className="flex items-center gap-2 text-red-500 text-xs bg-red-50 p-3 rounded-lg border border-red-200"><AlertCircle size={14} /> {error}</div>}
-          <button type="submit" className={`${GLASS_BTN_PRIMARY} w-full py-3.5 mt-2 flex items-center justify-center gap-2`}>{isRegistering ? 'Criar Conta' : 'Entrar'} <ArrowRight size={18} /></button>
+          <button type="submit" disabled={authLoading} className={`${GLASS_BTN_PRIMARY} w-full py-3.5 mt-2 flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60`}>{authLoading ? 'Verificando...' : isRegistering ? 'Criar Conta' : 'Entrar'} <ArrowRight size={18} /></button>
         </form>
         <div className="mt-8 text-center"><button onClick={() => { setIsRegistering(!isRegistering); setError(''); setAvatarPreview(''); }} className="text-xs text-slate-500 hover:text-slate-800 transition-colors underline decoration-slate-300 hover:decoration-slate-700">{isRegistering ? 'Já tenho conta. Fazer Login.' : 'Não tem conta? Criar nova.'}</button></div>
       </div>
@@ -1161,6 +1215,8 @@ export default function App() {
   const remoteUpdatedAtRef = useRef(0);
   const skipNextRemoteSyncRef = useRef(false);
   const remoteSnapshotRef = useRef('');
+  const pendingSyncTimeoutRef = useRef(null);
+  const syncInFlightRef = useRef(false);
 
   const [bootstrapState] = useState(() => {
     const savedUsers = JSON.parse(localStorage.getItem('bolao26_users')) || [];
@@ -1201,7 +1257,7 @@ export default function App() {
     setCondutaGrupos(nextState.conduct || {});
     setSubmissoes(nextState.submissions || {});
     remoteUpdatedAtRef.current = nextUpdatedAt;
-    remoteSnapshotRef.current = JSON.stringify(buildRemotePayload({
+    remoteSnapshotRef.current = buildStateSnapshot({
       users: (nextState.users || []).map(normalizeUser),
       matches: nextState.matches || gerarJogosIniciais(),
       betsGames: nextState.betsGames || {},
@@ -1209,7 +1265,7 @@ export default function App() {
       officialKnockout: nextState.officialKnockout || {},
       conduct: nextState.conduct || {},
       submissions: nextState.submissions || {}
-    }));
+    });
     setCurrentUser((current) => {
       if (!current) return current;
       const updatedUser = (nextState.users || []).find((user) => user.id === current.id);
@@ -1236,6 +1292,29 @@ export default function App() {
     setReviewGroupFilter('todos');
     setSyncStatus('demo');
   }, [isDemoMode]);
+
+  const flushPendingSync = async () => {
+    if (isDemoMode || syncInFlightRef.current) return;
+    const pending = readPendingSync();
+    if (!pending?.state) return;
+
+    syncInFlightRef.current = true;
+    try {
+      setSyncStatus('syncing');
+      setSyncError('');
+      const mergedState = await syncRemoteStateSafely(pending.state, pending.options || {});
+      const mergedPayload = buildRemotePayload(mergedState);
+      remoteUpdatedAtRef.current = mergedPayload.updatedAt;
+      remoteSnapshotRef.current = buildStateSnapshot(mergedState);
+      clearPendingSync();
+      setSyncStatus('online');
+    } catch (error) {
+      setSyncStatus('offline');
+      setSyncError(error.message || 'Falha ao salvar dados online.');
+    } finally {
+      syncInFlightRef.current = false;
+    }
+  };
 
   useEffect(() => {
     if (isDemoMode) return;
@@ -1264,12 +1343,14 @@ export default function App() {
           applyAppState(initialState, Date.now());
           remoteReadyRef.current = true;
           setSyncStatus('online');
+          if (readPendingSync()) flushPendingSync();
           return;
         }
 
         applyAppState(parseRemotePayload(remotePayload), remotePayload.updatedAt || Date.now());
         remoteReadyRef.current = true;
         setSyncStatus('online');
+        if (readPendingSync()) flushPendingSync();
       } catch (error) {
         if (cancelled) return;
         setSyncStatus('offline');
@@ -1289,6 +1370,7 @@ export default function App() {
 
     const intervalId = window.setInterval(async () => {
       try {
+        if (readPendingSync()) return;
         const remotePayload = await fetchRemoteState();
         if (!remotePayload) return;
         const remoteUpdatedAt = remotePayload.updatedAt || 0;
@@ -1303,6 +1385,23 @@ export default function App() {
     }, REMOTE_POLL_MS);
 
     return () => window.clearInterval(intervalId);
+  }, [isDemoMode]);
+
+  useEffect(() => {
+    if (isDemoMode) return undefined;
+
+    const handleOnline = () => { flushPendingSync(); };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') flushPendingSync();
+    };
+
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [isDemoMode]);
 
   useEffect(() => {
@@ -1321,41 +1420,47 @@ export default function App() {
       conduct: condutaGrupos,
       submissions: submissoes
     });
-    const snapshot = JSON.stringify(payload);
+    const snapshot = buildStateSnapshot({
+      users: usuarios,
+      matches: jogosReais,
+      betsGames: palpitesJogos,
+      betsKnockout: palpitesMataMata,
+      officialKnockout: gabaritoMataMata,
+      conduct: condutaGrupos,
+      submissions: submissoes
+    });
 
     if (snapshot === remoteSnapshotRef.current) return;
 
-    let cancelled = false;
-
-    const syncRemoteState = async () => {
-      try {
-        setSyncStatus('syncing');
-        setSyncError('');
-        const mergedState = await syncRemoteStateSafely({
-          users: usuarios,
-          matches: jogosReais,
-          betsGames: palpitesJogos,
-          betsKnockout: palpitesMataMata,
-          officialKnockout: gabaritoMataMata,
-          conduct: condutaGrupos,
-          submissions: submissoes
-        }, { currentUserId: currentUser?.id || null, isAdmin: modoAdmin });
-        if (cancelled) return;
-        const mergedPayload = buildRemotePayload(mergedState);
-        remoteUpdatedAtRef.current = mergedPayload.updatedAt;
-        remoteSnapshotRef.current = JSON.stringify(mergedPayload);
-        setSyncStatus('online');
-      } catch (error) {
-        if (cancelled) return;
-        setSyncStatus('offline');
-        setSyncError(error.message || 'Falha ao salvar dados online.');
-      }
+    const pending = {
+      state: {
+        users: usuarios,
+        matches: jogosReais,
+        betsGames: palpitesJogos,
+        betsKnockout: palpitesMataMata,
+        officialKnockout: gabaritoMataMata,
+        conduct: condutaGrupos,
+        submissions: submissoes
+      },
+      options: { currentUserId: currentUser?.id || null, isAdmin: modoAdmin },
+      snapshot
     };
 
-    syncRemoteState();
+    savePendingSync(pending);
+
+    if (pendingSyncTimeoutRef.current) {
+      window.clearTimeout(pendingSyncTimeoutRef.current);
+    }
+
+    pendingSyncTimeoutRef.current = window.setTimeout(() => {
+      flushPendingSync();
+    }, SYNC_DEBOUNCE_MS);
 
     return () => {
-      cancelled = true;
+      if (pendingSyncTimeoutRef.current) {
+        window.clearTimeout(pendingSyncTimeoutRef.current);
+        pendingSyncTimeoutRef.current = null;
+      }
     };
   }, [isDemoMode, usuarios, jogosReais, palpitesJogos, palpitesMataMata, gabaritoMataMata, condutaGrupos, submissoes]);
 
@@ -1433,6 +1538,14 @@ export default function App() {
       setUsuarios([...usuarios, normalizedUser]); 
     }
     setCurrentUser(normalizedUser);
+  };
+
+  const refreshUsersForLogin = async () => {
+    const remotePayload = await fetchRemoteState();
+    if (!remotePayload) return usuarios;
+    const nextState = parseRemotePayload(remotePayload);
+    applyAppState(nextState, remotePayload.updatedAt || Date.now());
+    return nextState.users || [];
   };
 
   const handleLogout = () => setCurrentUser(null);
@@ -2106,6 +2219,7 @@ export default function App() {
     return (
       <LoginScreen
         onLogin={handleLogin}
+        onRefreshUsers={refreshUsersForLogin}
         users={usuarios}
         syncStatus={syncStatus}
         syncError={syncError}
