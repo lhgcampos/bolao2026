@@ -785,6 +785,37 @@ const fetchRemoteState = async () => {
   return response.json();
 };
 
+const mergeRemoteState = (baseState, localState, { currentUserId = null, isAdmin = false } = {}) => {
+  const baseUsers = Object.fromEntries((baseState.users || []).map((user) => [user.id, normalizeUser(user)]));
+  const localUsers = Object.fromEntries((localState.users || []).map((user) => [user.id, normalizeUser(user)]));
+
+  const mergedUsers = isAdmin
+    ? Object.values(localUsers)
+    : Object.values({
+        ...baseUsers,
+        ...(currentUserId ? { [currentUserId]: localUsers[currentUserId] || baseUsers[currentUserId] } : {})
+      }).filter(Boolean);
+
+  const mergeOwnedRecordMap = (baseMap = {}, localMap = {}) => {
+    if (isAdmin) return { ...baseMap };
+    const next = { ...baseMap };
+    if (currentUserId && localMap[currentUserId]) {
+      next[currentUserId] = localMap[currentUserId];
+    }
+    return next;
+  };
+
+  return {
+    users: mergedUsers,
+    matches: isAdmin ? (localState.matches || baseState.matches || gerarJogosIniciais()) : (baseState.matches || gerarJogosIniciais()),
+    betsGames: mergeOwnedRecordMap(baseState.betsGames, localState.betsGames),
+    betsKnockout: mergeOwnedRecordMap(baseState.betsKnockout, localState.betsKnockout),
+    officialKnockout: isAdmin ? (localState.officialKnockout || baseState.officialKnockout || {}) : (baseState.officialKnockout || {}),
+    conduct: isAdmin ? (localState.conduct || baseState.conduct || {}) : (baseState.conduct || {}),
+    submissions: mergeOwnedRecordMap(baseState.submissions, localState.submissions)
+  };
+};
+
 const writeRemoteState = async (payload) => {
   const response = await fetch(remoteStateUrl, {
     method: 'POST',
@@ -816,6 +847,17 @@ const patchRemoteState = async (patch) => {
   if (!response.ok) {
     throw new Error(`Falha ao sincronizar base online (${response.status})`);
   }
+};
+
+const syncRemoteStateSafely = async (localState, options = {}) => {
+  const remotePayload = await fetchRemoteState();
+  const mergedState = mergeRemoteState(
+    remotePayload ? parseRemotePayload(remotePayload) : createInitialAppState(),
+    localState,
+    options
+  );
+  await writeRemoteState(buildRemotePayload(mergedState));
+  return mergedState;
 };
 
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
@@ -1208,7 +1250,15 @@ export default function App() {
         if (cancelled) return;
 
         if (!remotePayload) {
-          const initialState = createInitialAppState();
+          const initialState = mergeRemoteState(createInitialAppState(), {
+            users: bootstrapState.users,
+            matches: bootstrapState.matches,
+            betsGames: bootstrapState.betsGames,
+            betsKnockout: JSON.parse(localStorage.getItem('bolao26_bets_knockout_v2')) || {},
+            officialKnockout: JSON.parse(localStorage.getItem('bolao26_official_knockout_v2')) || {},
+            conduct: JSON.parse(localStorage.getItem('bolao26_group_conduct')) || {},
+            submissions: JSON.parse(localStorage.getItem('bolao26_submissions')) || {}
+          });
           await writeRemoteState(buildRemotePayload(initialState));
           if (cancelled) return;
           applyAppState(initialState, Date.now());
@@ -1281,10 +1331,19 @@ export default function App() {
       try {
         setSyncStatus('syncing');
         setSyncError('');
-        await writeRemoteState(payload);
+        const mergedState = await syncRemoteStateSafely({
+          users: usuarios,
+          matches: jogosReais,
+          betsGames: palpitesJogos,
+          betsKnockout: palpitesMataMata,
+          officialKnockout: gabaritoMataMata,
+          conduct: condutaGrupos,
+          submissions: submissoes
+        }, { currentUserId: currentUser?.id || null, isAdmin: modoAdmin });
         if (cancelled) return;
-        remoteUpdatedAtRef.current = payload.updatedAt;
-        remoteSnapshotRef.current = snapshot;
+        const mergedPayload = buildRemotePayload(mergedState);
+        remoteUpdatedAtRef.current = mergedPayload.updatedAt;
+        remoteSnapshotRef.current = JSON.stringify(mergedPayload);
         setSyncStatus('online');
       } catch (error) {
         if (cancelled) return;
@@ -2055,9 +2114,17 @@ export default function App() {
     );
   }
 
+  const navItems = [
+    { id: 'jogos', icon: Calendar, label: 'Jogos' },
+    { id: 'matamata', icon: Crown, label: 'Mata-mata' },
+    { id: 'ranking', icon: Trophy, label: 'Ranking' },
+    { id: 'painel', icon: Medal, label: 'Painel' },
+    { id: 'regras', icon: List, label: 'Pontuação' }
+  ];
+
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#f4f7fb_100%)] text-slate-900 font-sans pb-28">
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-xl border-b border-slate-200 px-5 py-4 flex justify-between items-center shadow-sm">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#f4f7fb_100%)] text-slate-900 font-sans pb-28 lg:pb-10">
+      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-xl border-b border-slate-200 px-5 py-4 flex justify-between items-center shadow-sm lg:hidden">
         <div className="flex items-center gap-3">
           <AvatarBadge user={currentUser} size="md" />
           <div><h1 className="text-sm font-bold text-slate-900 leading-tight">{currentUser.nome}</h1><p className={`text-[10px] font-medium tracking-wide ${TEXT_MUTED}`}>{modoAdmin ? 'ADMINISTRADOR' : 'Participante'}</p></div>
@@ -2065,7 +2132,49 @@ export default function App() {
         <button onClick={handleLogout} className={`p-2.5 rounded-full hover:bg-slate-100 transition-colors ${TEXT_MUTED} hover:text-slate-800`}><LogOut size={18} /></button>
       </header>
 
-      <main className="p-5 max-w-lg mx-auto">
+      <main className="mx-auto max-w-7xl p-5 lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8 lg:px-8 lg:py-8">
+        <aside className="hidden lg:block">
+          <div className="sticky top-8 space-y-5">
+            <div className={`${GLASS_CARD} p-5`}>
+              <div className="flex items-center gap-4">
+                <AvatarBadge user={currentUser} size="lg" />
+                <div className="min-w-0">
+                  <h1 className="truncate text-base font-bold text-slate-900">{currentUser.nome}</h1>
+                  <p className={`mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${TEXT_MUTED}`}>{modoAdmin ? 'Administrador' : 'Participante'}</p>
+                </div>
+              </div>
+              <button onClick={handleLogout} className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900">
+                <LogOut size={14} />
+                Sair
+              </button>
+            </div>
+
+            <div className={`${GLASS_CARD} p-3`}>
+              <div className="space-y-2">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = abaAtiva === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setAbaAtiva(item.id)}
+                      className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all ${
+                        active
+                          ? 'bg-sky-600 text-white shadow-[0_18px_40px_-24px_rgba(2,132,199,0.9)]'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      }`}
+                    >
+                      <Icon size={18} strokeWidth={active ? 2.5 : 2} />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <section className="min-w-0 max-w-lg mx-auto w-full lg:max-w-none">
         {!isDemoMode && (
           <div className={`${GLASS_CARD} mb-5 px-4 py-3`}>
             <div className="flex items-center justify-between gap-3">
@@ -2298,14 +2407,19 @@ export default function App() {
              )}
           </div>
         )}
+        </section>
       </main>
 
-      <nav className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-xl border border-slate-200 px-5 py-3 rounded-full flex justify-between gap-6 shadow-[0_20px_45px_-25px_rgba(15,23,42,0.35)] z-50 max-w-[94%] w-auto">
-        <button onClick={() => setAbaAtiva('jogos')} className={`flex flex-col items-center gap-1 transition-all ${abaAtiva === 'jogos' ? 'text-sky-600 scale-110' : 'text-slate-400 hover:text-slate-700'}`}><Calendar size={20} strokeWidth={abaAtiva === 'jogos' ? 2.5 : 2} /></button>
-        <button onClick={() => setAbaAtiva('matamata')} className={`flex flex-col items-center gap-1 transition-all ${abaAtiva === 'matamata' ? 'text-sky-600 scale-110' : 'text-slate-400 hover:text-slate-700'}`}><Crown size={20} strokeWidth={abaAtiva === 'matamata' ? 2.5 : 2} /></button>
-        <button onClick={() => setAbaAtiva('ranking')} className={`flex flex-col items-center gap-1 transition-all ${abaAtiva === 'ranking' ? 'text-sky-600 scale-110' : 'text-slate-400 hover:text-slate-700'}`}><Trophy size={20} strokeWidth={abaAtiva === 'ranking' ? 2.5 : 2} /></button>
-        <button onClick={() => setAbaAtiva('painel')} className={`flex flex-col items-center gap-1 transition-all ${abaAtiva === 'painel' ? 'text-sky-600 scale-110' : 'text-slate-400 hover:text-slate-700'}`}><Medal size={20} strokeWidth={abaAtiva === 'painel' ? 2.5 : 2} /></button>
-        <button onClick={() => setAbaAtiva('regras')} className={`flex flex-col items-center gap-1 transition-all ${abaAtiva === 'regras' ? 'text-sky-600 scale-110' : 'text-slate-400 hover:text-slate-700'}`}><List size={20} strokeWidth={abaAtiva === 'regras' ? 2.5 : 2} /></button>
+      <nav className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-xl border border-slate-200 px-5 py-3 rounded-full flex justify-between gap-6 shadow-[0_20px_45px_-25px_rgba(15,23,42,0.35)] z-50 max-w-[94%] w-auto lg:hidden">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const active = abaAtiva === item.id;
+          return (
+            <button key={item.id} onClick={() => setAbaAtiva(item.id)} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-sky-600 scale-110' : 'text-slate-400 hover:text-slate-700'}`}>
+              <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+            </button>
+          );
+        })}
       </nav>
     </div>
   );
