@@ -117,7 +117,19 @@ const SUBMISSION_FIELDS = {
 };
 const REMOTE_STORE_BASE = 'https://mantledb.sh/v2';
 const REMOTE_NAMESPACE = 'lhgcampos-bolao2026-live-20260609';
-const REMOTE_STATE_PATH = 'state';
+const REMOTE_SCHEMA_VERSION = 3;
+const REMOTE_LEGACY_STATE_PATH = 'state';
+const REMOTE_PATHS = {
+  meta: 'meta',
+  usersIndex: 'users-index',
+  matches: 'matches',
+  officialKnockout: 'official-knockout',
+  conduct: 'conduct',
+  betsGames: 'bets-games',
+  betsKnockout: 'bets-knockout',
+  submissions: 'submissions',
+  userProfiles: 'user-profiles'
+};
 const PENDING_SYNC_KEY = 'bolao26_pending_sync_v1';
 const SYNC_DEBOUNCE_MS = 900;
 const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/K3WYefFWkzY09iK1csJtZA?mode=gi_t';
@@ -133,8 +145,10 @@ const COUNTRY_SHORT_NAMES = {
   'RD Congo': 'RD Congo'
 };
 const AVATAR_MAX_FILE_BYTES = 2 * 1024 * 1024;
-const AVATAR_MAX_OUTPUT_BYTES = 180 * 1024;
+const AVATAR_MAX_OUTPUT_BYTES = 48 * 1024;
 const AVATAR_MAX_DIMENSION = 160;
+const AVATAR_UPLOAD_URL = import.meta.env.VITE_AVATAR_UPLOAD_URL || 'https://bolao2026-avatar-upload.linoscheduling.workers.dev';
+const AVATAR_PUBLIC_BASE_URL = import.meta.env.VITE_AVATAR_PUBLIC_BASE_URL || 'https://pub-56fbf4716fdc4ab69e70b4c56f28fccf.r2.dev';
 const DEMO_AVATAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAABv7bNHAAABpUlEQVR4nO3QwQ3CMBQFQYz//8u2g0QdW0dManIeZDV4SSQdlqzTeWYIAAAAAAAAAAB4m7vN3Wf9eR9n3rV7h9t7n5f4q2w8b0v2m2vV8f9bKf9t8m9bM4QGg9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rer8BX3kD6XhSx8AAAAASUVORK5CYII=';
 
 // --- CONFIGURAÇÃO INICIAL ---
@@ -748,9 +762,9 @@ const buildStateDocument = ({
   officialKnockout,
   conduct,
   submissions
-}) => ({
-  schemaVersion: 2,
-  updatedAt: Date.now(),
+}, { includeUpdatedAt = true } = {}) => ({
+  schemaVersion: REMOTE_SCHEMA_VERSION,
+  ...(includeUpdatedAt ? { updatedAt: Date.now() } : {}),
   usersById: Object.fromEntries(users.map((user) => [user.id, user])),
   matches,
   betsGames,
@@ -760,12 +774,31 @@ const buildStateDocument = ({
   submissions
 });
 
-const buildStateSnapshot = (state) => JSON.stringify(buildStateDocument(state));
+const buildStateSnapshot = (state) => JSON.stringify(buildStateDocument(state, { includeUpdatedAt: false }));
 
-const buildRemotePayload = (state) => ({
-  ...buildStateDocument(state),
-  updatedAt: Date.now()
+const buildRemotePayload = (state) => buildStateDocument(state);
+
+const buildRemoteUserIndexRecord = (user) => {
+  const normalized = normalizeUser(user);
+  return {
+    id: normalized.id,
+    nome: normalized.nome || '',
+    nomeKey: normalized.nomeKey || normalizeUserNameKey(normalized.nome || ''),
+    senha: normalized.senha || '',
+    role: normalized.role || 'participant'
+  };
+};
+
+const buildRemoteUserProfileRecord = (user) => ({
+  avatar: user?.avatar || ''
 });
+
+const buildRemoteUsersIndex = (users = []) => Object.fromEntries(
+  users.map((user) => {
+    const normalized = normalizeUser(user);
+    return [String(normalized.id), buildRemoteUserIndexRecord(normalized)];
+  })
+);
 
 const parseRemotePayload = (payload) => {
   const fallback = createInitialAppState();
@@ -785,13 +818,125 @@ const parseRemotePayload = (payload) => {
   };
 };
 
-const remoteStateUrl = `${REMOTE_STORE_BASE}/${REMOTE_NAMESPACE}/${REMOTE_STATE_PATH}`;
+const getRemotePathUrl = (path) => `${REMOTE_STORE_BASE}/${REMOTE_NAMESPACE}/${path}`;
+const getRemoteUserShardPath = (prefix, userId) => `${prefix}/${userId}`;
 
-const fetchRemoteState = async () => {
-  const response = await fetch(remoteStateUrl);
+const fetchRemoteEntry = async (path) => {
+  const response = await fetch(getRemotePathUrl(path));
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`Falha ao ler base online (${response.status})`);
   return response.json();
+};
+
+const fetchLegacyRemoteState = async () => fetchRemoteEntry(REMOTE_LEGACY_STATE_PATH);
+
+const fetchShardedRemoteState = async () => {
+  const [metaDoc, usersIndexDoc, matchesDoc, officialKnockoutDoc, conductDoc] = await Promise.all([
+    fetchRemoteEntry(REMOTE_PATHS.meta),
+    fetchRemoteEntry(REMOTE_PATHS.usersIndex),
+    fetchRemoteEntry(REMOTE_PATHS.matches),
+    fetchRemoteEntry(REMOTE_PATHS.officialKnockout),
+    fetchRemoteEntry(REMOTE_PATHS.conduct)
+  ]);
+
+  const hasShardState = [metaDoc, usersIndexDoc, matchesDoc, officialKnockoutDoc, conductDoc].some((entry) => entry !== null);
+  if (!hasShardState) return null;
+
+  const usersIndex = usersIndexDoc && typeof usersIndexDoc === 'object' && !Array.isArray(usersIndexDoc) ? usersIndexDoc : {};
+  const userIds = Array.from(new Set([
+    ...Object.keys(usersIndex),
+    ...((metaDoc?.userIds || []).map((userId) => String(userId)))
+  ]));
+
+  const [userProfiles, betsGamesDocs, betsKnockoutDocs, submissionsDocs] = await Promise.all([
+    Promise.all(userIds.map((userId) => fetchRemoteEntry(getRemoteUserShardPath(REMOTE_PATHS.userProfiles, userId)))),
+    Promise.all(userIds.map((userId) => fetchRemoteEntry(getRemoteUserShardPath(REMOTE_PATHS.betsGames, userId)))),
+    Promise.all(userIds.map((userId) => fetchRemoteEntry(getRemoteUserShardPath(REMOTE_PATHS.betsKnockout, userId)))),
+    Promise.all(userIds.map((userId) => fetchRemoteEntry(getRemoteUserShardPath(REMOTE_PATHS.submissions, userId))))
+  ]);
+
+  const usersById = {};
+  const betsGames = {};
+  const betsKnockout = {};
+  const submissions = {};
+
+  userIds.forEach((userId, index) => {
+    const userCore = usersIndex[userId];
+    if (userCore) {
+      usersById[userId] = normalizeUser({
+        ...userCore,
+        ...(userProfiles[index] || {})
+      });
+    }
+    if (betsGamesDocs[index] && typeof betsGamesDocs[index] === 'object') {
+      betsGames[userId] = betsGamesDocs[index];
+    }
+    if (betsKnockoutDocs[index] && typeof betsKnockoutDocs[index] === 'object') {
+      betsKnockout[userId] = betsKnockoutDocs[index];
+    }
+    if (submissionsDocs[index] && typeof submissionsDocs[index] === 'object') {
+      submissions[userId] = submissionsDocs[index];
+    }
+  });
+
+  return {
+    schemaVersion: metaDoc?.schemaVersion || REMOTE_SCHEMA_VERSION,
+    updatedAt: metaDoc?.updatedAt || 0,
+    usersById,
+    matches: Array.isArray(matchesDoc) ? matchesDoc : [],
+    betsGames,
+    betsKnockout,
+    officialKnockout: officialKnockoutDoc || {},
+    conduct: conductDoc || {},
+    submissions,
+    __authoritative: {
+      users: usersIndexDoc !== null,
+      matches: matchesDoc !== null,
+      officialKnockout: officialKnockoutDoc !== null,
+      conduct: conductDoc !== null
+    }
+  };
+};
+
+const mergeRemoteRecordMap = (baseMap = {}, overrideMap = {}) => ({
+  ...(baseMap && typeof baseMap === 'object' ? baseMap : {}),
+  ...(overrideMap && typeof overrideMap === 'object' ? overrideMap : {})
+});
+
+const mergeRemotePayloads = (legacyPayload, shardedPayload) => {
+  if (!legacyPayload) return shardedPayload;
+  if (!shardedPayload) return legacyPayload;
+
+  const authoritative = shardedPayload.__authoritative || {};
+
+  return {
+    schemaVersion: shardedPayload.schemaVersion || legacyPayload.schemaVersion || REMOTE_SCHEMA_VERSION,
+    updatedAt: Math.max(legacyPayload.updatedAt || 0, shardedPayload.updatedAt || 0),
+    usersById: authoritative.users
+      ? (shardedPayload.usersById || {})
+      : mergeRemoteRecordMap(legacyPayload.usersById, shardedPayload.usersById),
+    matches: authoritative.matches
+      ? (Array.isArray(shardedPayload.matches) ? shardedPayload.matches : [])
+      : (Array.isArray(shardedPayload.matches) && shardedPayload.matches.length ? shardedPayload.matches : legacyPayload.matches),
+    betsGames: mergeRemoteRecordMap(legacyPayload.betsGames, shardedPayload.betsGames),
+    betsKnockout: mergeRemoteRecordMap(legacyPayload.betsKnockout, shardedPayload.betsKnockout),
+    officialKnockout: authoritative.officialKnockout
+      ? (shardedPayload.officialKnockout || {})
+      : (shardedPayload.officialKnockout || legacyPayload.officialKnockout || {}),
+    conduct: authoritative.conduct
+      ? (shardedPayload.conduct || {})
+      : (shardedPayload.conduct || legacyPayload.conduct || {}),
+    submissions: mergeRemoteRecordMap(legacyPayload.submissions, shardedPayload.submissions)
+  };
+};
+
+const fetchRemoteState = async () => {
+  const [legacyPayload, shardedPayload] = await Promise.all([
+    fetchLegacyRemoteState(),
+    fetchShardedRemoteState()
+  ]);
+
+  return mergeRemotePayloads(legacyPayload, shardedPayload);
 };
 
 const mergeRemoteState = (baseState, localState, { currentUserId = null, isAdmin = false } = {}) => {
@@ -808,7 +953,7 @@ const mergeRemoteState = (baseState, localState, { currentUserId = null, isAdmin
   const mergeOwnedRecordMap = (baseMap = {}, localMap = {}) => {
     if (isAdmin) return { ...baseMap };
     const next = { ...baseMap };
-    if (currentUserId && localMap[currentUserId]) {
+    if (currentUserId && Object.prototype.hasOwnProperty.call(localMap || {}, currentUserId)) {
       next[currentUserId] = localMap[currentUserId];
     }
     return next;
@@ -825,8 +970,8 @@ const mergeRemoteState = (baseState, localState, { currentUserId = null, isAdmin
   };
 };
 
-const writeRemoteState = async (payload) => {
-  const response = await fetch(remoteStateUrl, {
+const writeRemoteEntry = async (path, payload) => {
+  const response = await fetch(getRemotePathUrl(path), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -837,102 +982,58 @@ const writeRemoteState = async (payload) => {
   }
 };
 
-const patchRemoteState = async (patch) => {
-  const response = await fetch(remoteStateUrl, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      ...patch,
-      updatedAt: Date.now()
-    })
-  });
+const writeRemoteState = async (state, { currentUserId = null, isAdmin = false } = {}) => {
+  const normalizedUsers = (state.users || []).map(normalizeUser);
+  const updatedAt = Date.now();
+  const entries = [
+    [
+      REMOTE_PATHS.meta,
+      {
+        schemaVersion: REMOTE_SCHEMA_VERSION,
+        updatedAt,
+        userIds: normalizedUsers.map((user) => user.id)
+      }
+    ],
+    [REMOTE_PATHS.usersIndex, buildRemoteUsersIndex(normalizedUsers)]
+  ];
 
-  if (response.status === 404) {
-    const current = createInitialAppState();
-    await writeRemoteState(buildRemotePayload(current));
-    return patchRemoteState(patch);
+  if (isAdmin || !currentUserId) {
+    entries.push(
+      [REMOTE_PATHS.matches, state.matches || []],
+      [REMOTE_PATHS.officialKnockout, state.officialKnockout || {}],
+      [REMOTE_PATHS.conduct, state.conduct || {}]
+    );
   }
 
-  if (!response.ok) {
-    throw new Error(`Falha ao sincronizar base online (${response.status})`);
+  if (!isAdmin || !currentUserId) {
+    const scopedUserIds = currentUserId ? [currentUserId] : normalizedUsers.map((user) => user.id);
+    scopedUserIds.forEach((userId) => {
+      const normalizedId = String(userId);
+      const user = normalizedUsers.find((candidate) => String(candidate.id) === normalizedId);
+      if (!user) return;
+
+      entries.push(
+        [getRemoteUserShardPath(REMOTE_PATHS.userProfiles, normalizedId), buildRemoteUserProfileRecord(user)],
+        [getRemoteUserShardPath(REMOTE_PATHS.betsGames, normalizedId), state.betsGames?.[userId] || {}],
+        [getRemoteUserShardPath(REMOTE_PATHS.betsKnockout, normalizedId), state.betsKnockout?.[userId] || {}],
+        [getRemoteUserShardPath(REMOTE_PATHS.submissions, normalizedId), state.submissions?.[userId] || {}]
+      );
+    });
   }
+
+  await Promise.all(entries.map(([path, payload]) => writeRemoteEntry(path, payload)));
+  return updatedAt;
 };
 
-const buildParticipantPatch = (remotePayload, localState, currentUserId) => {
-  if (!currentUserId) return null;
-  const currentUser = (localState.users || []).find((user) => user.id === currentUserId);
-  const remoteUsersById = { ...(remotePayload?.usersById || {}) };
-  const remoteBetsGames = { ...(remotePayload?.betsGames || {}) };
-  const remoteBetsKnockout = { ...(remotePayload?.betsKnockout || {}) };
-  const remoteSubmissions = { ...(remotePayload?.submissions || {}) };
-  const patch = {};
-
-  if (currentUser) {
-    remoteUsersById[currentUserId] = normalizeUser(currentUser);
-    patch.usersById = remoteUsersById;
-  }
-  if (localState.betsGames?.[currentUserId]) {
-    remoteBetsGames[currentUserId] = localState.betsGames[currentUserId];
-    patch.betsGames = remoteBetsGames;
-  }
-  if (localState.betsKnockout?.[currentUserId]) {
-    remoteBetsKnockout[currentUserId] = localState.betsKnockout[currentUserId];
-    patch.betsKnockout = remoteBetsKnockout;
-  }
-  if (localState.submissions?.[currentUserId]) {
-    remoteSubmissions[currentUserId] = localState.submissions[currentUserId];
-    patch.submissions = remoteSubmissions;
-  }
-
-  return Object.keys(patch).length ? patch : null;
-};
-
-const buildAdminPatch = (remotePayload, localState) => {
-  const patch = {
-    matches: localState.matches || [],
-    officialKnockout: localState.officialKnockout || {},
-    conduct: localState.conduct || {}
-  };
-
-  if (localState.users?.length) {
-    patch.usersById = Object.fromEntries(localState.users.map((user) => [user.id, normalizeUser(user)]));
-  }
-
-  if (localState.betsGames) {
-    patch.betsGames = localState.betsGames;
-  }
-
-  if (localState.betsKnockout) {
-    patch.betsKnockout = localState.betsKnockout;
-  }
-
-  if (localState.submissions) {
-    patch.submissions = localState.submissions;
-  }
-
-  return patch;
-};
-
-const syncRemoteStateWithPatch = async (localState, { currentUserId = null, isAdmin = false } = {}) => {
-  const remotePayload = await fetchRemoteState();
-  const patch = isAdmin
-    ? buildAdminPatch(remotePayload, localState)
-    : buildParticipantPatch(remotePayload, localState, currentUserId);
-
-  if (!patch) return false;
-  await patchRemoteState(patch);
-  return true;
-};
-
-const syncRemoteStateSafely = async (localState, options = {}) => {
+const syncRemoteStateWithPatch = async (localState, options = {}) => {
   const remotePayload = await fetchRemoteState();
   const mergedState = mergeRemoteState(
     remotePayload ? parseRemotePayload(remotePayload) : createInitialAppState(),
     localState,
     options
   );
-  await writeRemoteState(buildRemotePayload(mergedState));
-  return mergedState;
+  const updatedAt = await writeRemoteState(mergedState, options);
+  return { mergedState, updatedAt };
 };
 
 const readPendingSync = () => {
@@ -960,6 +1061,8 @@ const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
   reader.onerror = () => reject(new Error('Não foi possível ler o arquivo.'));
   reader.readAsDataURL(file);
 });
+
+const getSerializedSize = (value) => new TextEncoder().encode(String(value || '')).length;
 
 const loadImage = (src) => new Promise((resolve, reject) => {
   const image = new Image();
@@ -994,16 +1097,53 @@ const processAvatarFile = async (file) => {
   let quality = 0.88;
   let output = canvas.toDataURL('image/webp', quality);
 
-  while (output.length > AVATAR_MAX_OUTPUT_BYTES && quality > 0.45) {
+  while (getSerializedSize(output) > AVATAR_MAX_OUTPUT_BYTES && quality > 0.45) {
     quality -= 0.08;
     output = canvas.toDataURL('image/webp', quality);
   }
 
-  if (output.length > AVATAR_MAX_OUTPUT_BYTES) {
+  if (getSerializedSize(output) > AVATAR_MAX_OUTPUT_BYTES) {
     throw new Error('A imagem ficou grande demais mesmo após compactar.');
   }
 
   return output;
+};
+
+const uploadAvatarAsset = async ({ dataUrl, userId, userName }) => {
+  if (!dataUrl) return { avatar: '', avatarKey: '' };
+  if (!AVATAR_UPLOAD_URL) {
+    return { avatar: dataUrl, avatarKey: '' };
+  }
+
+  const response = await fetch(AVATAR_UPLOAD_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      userName,
+      contentType: 'image/webp',
+      fileName: `avatar-${userId || Date.now()}.webp`,
+      imageDataUrl: dataUrl
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Falha ao enviar imagem (${response.status})`);
+  }
+
+  const payload = await response.json();
+  const avatarUrl = payload.avatarUrl
+    || payload.url
+    || (payload.key && AVATAR_PUBLIC_BASE_URL ? `${AVATAR_PUBLIC_BASE_URL.replace(/\/$/, '')}/${payload.key}` : '');
+
+  if (!avatarUrl) {
+    throw new Error('Upload concluído sem URL do avatar.');
+  }
+
+  return {
+    avatar: avatarUrl,
+    avatarKey: payload.avatarKey || payload.key || ''
+  };
 };
 
 const normalizeUserNameKey = (value = '') => value
@@ -1161,8 +1301,26 @@ const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', sy
     }
 
     if (isRegistering) {
-      if (existingUser) { setError('Nome já existe. Tente fazer login.'); } 
-      else { onLogin(Date.now(), name.trim(), password.trim(), { avatar: avatarPreview }); }
+      if (existingUser) {
+        setError('Nome já existe. Tente fazer login.');
+      } else {
+        const newUserId = Date.now();
+        setAuthLoading(true);
+        try {
+          const uploadedAvatar = avatarPreview
+            ? await uploadAvatarAsset({ dataUrl: avatarPreview, userId: newUserId, userName: name.trim() })
+            : { avatar: '', avatarKey: '' };
+
+          onLogin(newUserId, name.trim(), password.trim(), {
+            avatar: uploadedAvatar.avatar,
+            avatarKey: uploadedAvatar.avatarKey
+          });
+        } catch (uploadError) {
+          setError(uploadError.message || 'Não foi possível enviar a imagem.');
+        } finally {
+          setAuthLoading(false);
+        }
+      }
     } else {
       if (existingUser) {
         if (existingUser.senha === password.trim()) { onLogin(existingUser.id, existingUser.nome, existingUser.senha, existingUser); } 
@@ -1368,16 +1526,9 @@ export default function App() {
     try {
       setSyncStatus('syncing');
       setSyncError('');
-      const didPatch = await syncRemoteStateWithPatch(pending.state, pending.options || {});
-      if (!didPatch) {
-        const mergedState = await syncRemoteStateSafely(pending.state, pending.options || {});
-        const mergedPayload = buildRemotePayload(mergedState);
-        remoteUpdatedAtRef.current = mergedPayload.updatedAt;
-        remoteSnapshotRef.current = buildStateSnapshot(mergedState);
-      } else {
-        remoteUpdatedAtRef.current = Date.now();
-        remoteSnapshotRef.current = pending.snapshot || buildStateSnapshot(pending.state);
-      }
+      const syncResult = await syncRemoteStateWithPatch(pending.state, pending.options || {});
+      remoteUpdatedAtRef.current = syncResult.updatedAt || Date.now();
+      remoteSnapshotRef.current = pending.snapshot || buildStateSnapshot(syncResult.mergedState || pending.state);
       clearPendingSync();
       setSyncStatus('online');
     } catch (error) {
@@ -1410,9 +1561,9 @@ export default function App() {
             conduct: JSON.parse(localStorage.getItem('bolao26_group_conduct')) || {},
             submissions: JSON.parse(localStorage.getItem('bolao26_submissions')) || {}
           });
-          await writeRemoteState(buildRemotePayload(initialState));
+          const initialUpdatedAt = await writeRemoteState(initialState);
           if (cancelled) return;
-          applyAppState(initialState, Date.now());
+          applyAppState(initialState, initialUpdatedAt);
           remoteReadyRef.current = true;
           setSyncStatus('online');
           if (readPendingSync()) flushPendingSync();
@@ -1483,15 +1634,6 @@ export default function App() {
       return;
     }
 
-    const payload = buildRemotePayload({
-      users: usuarios,
-      matches: jogosReais,
-      betsGames: palpitesJogos,
-      betsKnockout: palpitesMataMata,
-      officialKnockout: gabaritoMataMata,
-      conduct: condutaGrupos,
-      submissions: submissoes
-    });
     const snapshot = buildStateSnapshot({
       users: usuarios,
       matches: jogosReais,
@@ -1630,11 +1772,22 @@ export default function App() {
     setAvatarError('');
 
     try {
-      const avatar = await processAvatarFile(file);
-      const updatedUser = { ...currentUser, avatar };
+      const preparedAvatar = await processAvatarFile(file);
+      const uploadedAvatar = await uploadAvatarAsset({
+        dataUrl: preparedAvatar,
+        userId: currentUser.id,
+        userName: currentUser.nome
+      });
+      const updatedUser = {
+        ...currentUser,
+        avatar: uploadedAvatar.avatar,
+        avatarKey: uploadedAvatar.avatarKey || currentUser.avatarKey || ''
+      };
 
       setUsuarios((current) => current.map((user) => (
-        user.id === currentUser.id ? { ...user, avatar } : user
+        user.id === currentUser.id
+          ? { ...user, avatar: uploadedAvatar.avatar, avatarKey: uploadedAvatar.avatarKey || user.avatarKey || '' }
+          : user
       )));
       setCurrentUser(updatedUser);
     } catch (error) {
@@ -1647,9 +1800,9 @@ export default function App() {
     if (!currentUser) return;
     setAvatarError('');
     setUsuarios((current) => current.map((user) => (
-      user.id === currentUser.id ? { ...user, avatar: '' } : user
+      user.id === currentUser.id ? { ...user, avatar: '', avatarKey: '' } : user
     )));
-    setCurrentUser((current) => ({ ...current, avatar: '' }));
+    setCurrentUser((current) => ({ ...current, avatar: '', avatarKey: '' }));
   };
   const atualizarJogo = (id, c, v) => setJogosReais(p => p.map(j => j.id === id ? { ...j, [c]: v } : j));
   const atualizarPalpite = (id, c, v) => {
@@ -1709,7 +1862,7 @@ export default function App() {
     const initialState = createInitialAppState();
     if (!isDemoMode) {
       try {
-        await writeRemoteState(buildRemotePayload(initialState));
+        await writeRemoteState(initialState);
       } catch (error) {
         setSyncStatus('offline');
         setSyncError(error.message || 'Falha ao resetar a base online.');

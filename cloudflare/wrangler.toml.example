@@ -1,0 +1,12 @@
+name = "bolao2026-avatar-upload"
+main = "avatar-upload-worker.js"
+compatibility_date = "2026-06-10"
+account_id = "e8617b066fa6d5275555be09fd366d52"
+
+[[r2_buckets]]
+binding = "AVATARS_BUCKET"
+bucket_name = "bolao2026-avatars"
+
+[vars]
+ALLOWED_ORIGINS = "https://lhgcampos.github.io,http://localhost:5174,http://127.0.0.1:4175"
+PUBLIC_AVATAR_BASE_URL = "https://pub-your-bucket-id.r2.dev"
