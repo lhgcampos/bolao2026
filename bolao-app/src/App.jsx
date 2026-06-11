@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle } from 'lucide-react';
 import { THIRD_PLACE_ASSIGNMENTS } from './thirdPlaceAssignments';
 import { TEAM_FIFA_RANKINGS } from './fifaTeamRankings';
+import crismarinhoAvatar from './assets/crismarinho-avatar.jpg';
 
 // --- DADOS ESTRUTURAIS ---
 const GRUPOS_2026 = {
@@ -1156,12 +1157,17 @@ const normalizeUserNameKey = (value = '') => value
   .trim()
   .toLowerCase();
 
+const USER_AVATAR_OVERRIDES = {
+  crismarinho: crismarinhoAvatar
+};
+
 const normalizeUser = (user) => {
   if (!user) return user;
   const nome = user.nome || '';
   const nomeKey = user.nomeKey || normalizeUserNameKey(nome);
   const role = user.role || ((user.id === ADMIN_USER_ID || nomeKey === 'admin') ? 'admin' : 'participant');
-  return { ...user, nomeKey, role };
+  const avatarOverride = USER_AVATAR_OVERRIDES[nomeKey];
+  return { ...user, nomeKey, role, avatar: avatarOverride || user.avatar || '' };
 };
 
 const isAdminUser = (user) => user?.role === 'admin' || user?.id === ADMIN_USER_ID;
