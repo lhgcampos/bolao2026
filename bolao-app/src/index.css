@@ -8,20 +8,82 @@
   -moz-osx-font-smoothing: grayscale;
   color: #0f172a;
   background: #f8fbff;
+  color-scheme: light;
 }
 
 * {
   box-sizing: border-box;
 }
 
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html,
 body,
 #root {
+  width: 100%;
   min-width: 320px;
   min-height: 100%;
+}
+
+html {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
   background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+  overflow-x: hidden;
+}
+
+body,
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+#root {
+  isolation: isolate;
+}
+
+.app-shell {
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+}
+
+.app-topbar {
+  top: 0;
+  padding-top: calc(0.75rem + env(safe-area-inset-top));
+}
+
+.mobile-bottom-nav {
+  bottom: calc(0.75rem + env(safe-area-inset-bottom));
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+  }
 }

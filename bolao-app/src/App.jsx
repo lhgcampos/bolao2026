@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle } from 'lucide-react';
+import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle, Smartphone, Download, Share2, Copy, CheckCheck } from 'lucide-react';
 import { THIRD_PLACE_ASSIGNMENTS } from './thirdPlaceAssignments';
 import { TEAM_FIFA_RANKINGS } from './fifaTeamRankings';
 import RankingConsensusPanel from './RankingConsensusPanel';
@@ -152,6 +152,25 @@ const AVATAR_MAX_DIMENSION = 160;
 const AVATAR_UPLOAD_URL = import.meta.env.VITE_AVATAR_UPLOAD_URL || 'https://bolao2026-avatar-upload.linoscheduling.workers.dev';
 const AVATAR_PUBLIC_BASE_URL = import.meta.env.VITE_AVATAR_PUBLIC_BASE_URL || 'https://pub-56fbf4716fdc4ab69e70b4c56f28fccf.r2.dev';
 const DEMO_AVATAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAABv7bNHAAABpUlEQVR4nO3QwQ3CMBQFQYz//8u2g0QdW0dManIeZDV4SSQdlqzTeWYIAAAAAAAAAAB4m7vN3Wf9eR9n3rV7h9t7n5f4q2w8b0v2m2vV8f9bKf9t8m9bM4QGg9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rer8BX3kD6XhSx8AAAAASUVORK5CYII=';
+const GROUP_SHARE_URL = 'https://lhgcampos.github.io/bolao2026/';
+const GROUP_SHARE_TEXT = `Bolão da Copa 2026 no ar: ${GROUP_SHARE_URL}
+
+Abre no celular e, se quiser, instala na tela inicial como app.
+
+iPhone: Compartilhar > Adicionar à Tela de Início
+Android: menu do navegador > Instalar app / Adicionar à tela inicial`;
+const INSTALLATION_TIPS = {
+  android: [
+    'Abra o link no Chrome ou navegador compatível.',
+    'Toque em "Instalar app" ou no menu do navegador.',
+    'Se não aparecer, use "Adicionar à tela inicial".'
+  ],
+  ios: [
+    'Abra o link no Safari.',
+    'Toque em Compartilhar.',
+    'Escolha "Adicionar à Tela de Início".'
+  ]
+};
 
 // --- CONFIGURAÇÃO INICIAL ---
 const buildPairKey = (timeA, timeB) => [timeA, timeB].sort().join('||');
@@ -1262,7 +1281,67 @@ const TEXT_MUTED = "text-slate-600";
 const TEXT_HIGHLIGHT = "text-slate-800";
 
 // --- SUB-COMPONENTES UI ---
-const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', syncError = '', isDemoMode = false }) => {
+const InstallGuideCard = ({ installAvailable = false, onInstall, onShare, installLabel = 'Instalar app', copied = false }) => (
+  <div className={`${GLASS_CARD} p-4 sm:p-5`}>
+    <div className="flex items-start gap-3">
+      <div className="rounded-2xl bg-sky-100 p-2.5 text-sky-700">
+        <Smartphone size={18} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-sm font-black uppercase tracking-[0.12em] text-slate-900">Instalar no celular</h3>
+          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">
+            Sem loja
+          </span>
+        </div>
+        <p className={`mt-1 text-xs leading-relaxed ${TEXT_MUTED}`}>
+          O bolão funciona no navegador e pode virar atalho/app na tela inicial em poucos toques.
+        </p>
+      </div>
+    </div>
+
+    <div className="mt-4 grid gap-3 md:grid-cols-2">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">iPhone</div>
+        <div className="mt-2 space-y-1.5 text-[13px] leading-relaxed text-slate-700">
+          {INSTALLATION_TIPS.ios.map((step) => (
+            <div key={step}>{step}</div>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Android</div>
+        <div className="mt-2 space-y-1.5 text-[13px] leading-relaxed text-slate-700">
+          {INSTALLATION_TIPS.android.map((step) => (
+            <div key={step}>{step}</div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+      <button
+        type="button"
+        onClick={onInstall}
+        disabled={!installAvailable}
+        className={`${GLASS_BTN_PRIMARY} flex min-h-12 items-center justify-center gap-2 px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50`}
+      >
+        <Download size={16} />
+        {installAvailable ? installLabel : 'Use o menu do navegador para instalar'}
+      </button>
+      <button
+        type="button"
+        onClick={onShare}
+        className={`${GLASS_BTN_SECONDARY} flex min-h-12 items-center justify-center gap-2 px-4 py-3 text-sm font-semibold`}
+      >
+        {copied ? <CheckCheck size={16} /> : <Share2 size={16} />}
+        {copied ? 'Mensagem copiada' : 'Copiar mensagem do grupo'}
+      </button>
+    </div>
+  </div>
+);
+
+const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', syncError = '', isDemoMode = false, onInstallApp, installAvailable = false, onShareApp, copiedShare = false }) => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
@@ -1345,8 +1424,9 @@ const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', sy
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[linear-gradient(180deg,#f8fbff_0%,#eef5ff_100%)] text-slate-900 p-6 font-sans">
-      <div className={`${GLASS_CARD} w-full max-w-sm p-8 md:p-10 relative overflow-hidden`}>
+    <div className="app-shell min-h-screen flex flex-col items-center justify-center bg-[linear-gradient(180deg,#f8fbff_0%,#eef5ff_100%)] px-4 py-6 text-slate-900 font-sans sm:px-6">
+      <div className="w-full max-w-md space-y-4">
+      <div className={`${GLASS_CARD} w-full p-6 md:p-8 relative overflow-hidden`}>
         <div className="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.18),_transparent_70%)]"></div>
         <div className="flex justify-center mb-6">
           <div className="bg-sky-50 p-4 rounded-full shadow-inner border border-sky-100">
@@ -1386,11 +1466,11 @@ const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', sy
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className={`text-[10px] font-bold uppercase ml-1 mb-1.5 block ${TEXT_MUTED}`}>Nome de Usuário</label>
-            <div className="relative"><User size={18} className={`absolute left-3.5 top-3.5 ${TEXT_MUTED}`} /><input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Fera Braba" className={`${GLASS_INPUT} w-full pl-11 p-3.5 text-sm`}/></div>
+            <div className="relative"><User size={18} className={`absolute left-3.5 top-4 ${TEXT_MUTED}`} /><input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Fera Braba" className={`${GLASS_INPUT} min-h-13 w-full pl-11 p-3.5 text-base`}/></div>
           </div>
           <div>
             <label className={`text-[10px] font-bold uppercase ml-1 mb-1.5 block ${TEXT_MUTED}`}>Senha</label>
-            <div className="relative"><Lock size={18} className={`absolute left-3.5 top-3.5 ${TEXT_MUTED}`} /><input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="Sua senha secreta" className={`${GLASS_INPUT} w-full pl-11 pr-11 p-3.5 text-sm`}/><button type="button" onClick={() => setShowPassword(!showPassword)} className={`absolute right-3.5 top-3.5 hover:text-slate-800 transition-colors ${TEXT_MUTED}`}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>
+            <div className="relative"><Lock size={18} className={`absolute left-3.5 top-4 ${TEXT_MUTED}`} /><input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="Sua senha secreta" className={`${GLASS_INPUT} min-h-13 w-full pl-11 pr-12 p-3.5 text-base`}/><button type="button" onClick={() => setShowPassword(!showPassword)} className={`absolute right-3.5 top-3.5 rounded-full p-1 hover:text-slate-800 transition-colors ${TEXT_MUTED}`}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>
           </div>
           {isRegistering && (
             <div className="space-y-3">
@@ -1398,7 +1478,7 @@ const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', sy
               <div className="flex items-center gap-3">
                 <AvatarBadge user={{ nome: name || 'Novo usuário', avatar: avatarPreview }} size="lg" />
                 <div className="flex-1">
-                  <label className={`${GLASS_BTN_SECONDARY} flex cursor-pointer items-center justify-center px-4 py-3 text-xs font-bold uppercase tracking-widest`}>
+                  <label className={`${GLASS_BTN_SECONDARY} flex min-h-12 cursor-pointer items-center justify-center px-4 py-3 text-xs font-bold uppercase tracking-widest`}>
                     <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleAvatarChange} />
                     {avatarLoading ? 'Processando...' : avatarPreview ? 'Trocar imagem' : 'Escolher imagem'}
                   </label>
@@ -1411,6 +1491,13 @@ const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', sy
           <button type="submit" disabled={authLoading} className={`${GLASS_BTN_PRIMARY} w-full py-3.5 mt-2 flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60`}>{authLoading ? 'Verificando...' : isRegistering ? 'Criar Conta' : 'Entrar'} <ArrowRight size={18} /></button>
         </form>
         <div className="mt-8 text-center"><button onClick={() => { setIsRegistering(!isRegistering); setError(''); setAvatarPreview(''); }} className="text-xs text-slate-500 hover:text-slate-800 transition-colors underline decoration-slate-300 hover:decoration-slate-700">{isRegistering ? 'Já tenho conta. Fazer Login.' : 'Não tem conta? Criar nova.'}</button></div>
+      </div>
+      <InstallGuideCard
+        installAvailable={installAvailable}
+        onInstall={onInstallApp}
+        onShare={onShareApp}
+        copied={copiedShare}
+      />
       </div>
     </div>
   );
@@ -1428,6 +1515,8 @@ export default function App() {
   const [reviewSearch, setReviewSearch] = useState('');
   const [reviewGroupFilter, setReviewGroupFilter] = useState('todos');
   const [reviewPhaseFilter, setReviewPhaseFilter] = useState('todos');
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [shareCopied, setShareCopied] = useState(false);
   const [avatarError, setAvatarError] = useState('');
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState(isDemoMode ? 'demo' : 'connecting');
@@ -1439,6 +1528,34 @@ export default function App() {
   const remoteSnapshotRef = useRef('');
   const pendingSyncTimeoutRef = useRef(null);
   const syncInFlightRef = useRef(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (event) => {
+      event.preventDefault();
+      setInstallPrompt(event);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return undefined;
+
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, {
+      scope: import.meta.env.BASE_URL
+    }).catch((error) => {
+      console.error('Falha ao registrar service worker', error);
+    });
+
+    return undefined;
+  }, []);
+
+  useEffect(() => {
+    if (!shareCopied) return undefined;
+    const timeoutId = window.setTimeout(() => setShareCopied(false), 2200);
+    return () => window.clearTimeout(timeoutId);
+  }, [shareCopied]);
 
   const [bootstrapState] = useState(() => {
     const savedUsers = JSON.parse(localStorage.getItem('bolao26_users')) || [];
@@ -1770,6 +1887,46 @@ export default function App() {
   };
 
   const handleLogout = () => setCurrentUser(null);
+  const handleInstallApp = async () => {
+    if (!installPrompt) return;
+
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome !== 'accepted') {
+      setInstallPrompt(null);
+      return;
+    }
+
+    setInstallPrompt(null);
+  };
+
+  const handleShareApp = async () => {
+    const sharePayload = {
+      title: 'Bolão Copa 2026',
+      text: GROUP_SHARE_TEXT,
+      url: GROUP_SHARE_URL
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(sharePayload);
+        return;
+      }
+
+      await navigator.clipboard.writeText(GROUP_SHARE_TEXT);
+      setShareCopied(true);
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+
+      try {
+        await navigator.clipboard.writeText(GROUP_SHARE_TEXT);
+        setShareCopied(true);
+      } catch {
+        window.prompt('Copie a mensagem para o grupo:', GROUP_SHARE_TEXT);
+      }
+    }
+  };
+
   const handleAvatarSelected = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -1983,15 +2140,46 @@ export default function App() {
     return (
       <div className="space-y-4 animate-fade-in">
         <div className={`${GLASS_CARD} p-4 text-center`}>
-          <p className={`text-xs ${TEXT_MUTED}`}>A pontuação só aparece quando o <strong className="text-white">Admin</strong> preenche os resultados.</p>
+          <p className={`text-xs ${TEXT_MUTED}`}>A pontuação só aparece quando o <strong className="text-slate-900">Admin</strong> preenche os resultados.</p>
         </div>
-        <div className={`${GLASS_CARD} overflow-hidden`}>
+        <div className="space-y-3 lg:hidden">
+          {ranking.map((user, idx) => (
+            <div key={user.id} className={`${GLASS_CARD} p-4 ${user.id === currentUser.id ? 'ring-2 ring-sky-200' : ''}`}>
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-black text-slate-700">
+                  {idx + 1}
+                </div>
+                <AvatarBadge user={user} size="sm" className="h-10 w-10 text-sm" />
+                <div className="min-w-0 flex-1">
+                  <div className={`truncate text-sm font-bold ${user.id === currentUser.id ? 'text-sky-700' : 'text-slate-900'}`}>
+                    {user.nome} {user.id === currentUser.id && '(Você)'}
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-2xl bg-slate-50 px-2 py-2">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogos</div>
+                      <div className="mt-1 text-sm font-black text-slate-900">{user.ptsJogos}</div>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 px-2 py-2">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Mata</div>
+                      <div className="mt-1 text-sm font-black text-slate-900">{user.ptsMataMata}</div>
+                    </div>
+                    <div className="rounded-2xl bg-emerald-50 px-2 py-2">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">Total</div>
+                      <div className="mt-1 text-sm font-black text-emerald-700">{user.total}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className={`${GLASS_CARD} hidden overflow-hidden lg:block`}>
           <table className="w-full text-xs">
-            <thead className="bg-white/5 text-white/40 font-bold uppercase text-[9px] border-b border-white/5"><tr><th className="p-4 text-center">#</th><th className="p-4 text-left">Nome</th><th className="p-4 text-center">Jogos</th><th className="p-4 text-center">Mata</th><th className="p-4 text-center text-white">Total</th></tr></thead>
+            <thead className="border-b border-slate-200 bg-slate-50 text-[10px] font-bold uppercase text-slate-500"><tr><th className="p-4 text-center">#</th><th className="p-4 text-left">Nome</th><th className="p-4 text-center">Jogos</th><th className="p-4 text-center">Mata</th><th className="p-4 text-center text-slate-900">Total</th></tr></thead>
             <tbody>{ranking.map((user, idx) => (
-              <tr key={user.id} className={`border-b border-white/5 last:border-0 ${user.id === currentUser.id ? 'bg-blue-500/10' : ''}`}>
+              <tr key={user.id} className={`border-b border-slate-100 last:border-0 ${user.id === currentUser.id ? 'bg-sky-50' : ''}`}>
                 <td className={`p-4 text-center font-bold ${TEXT_MUTED}`}>{idx + 1}</td>
-                <td className={`p-4 ${user.id === currentUser.id ? 'text-blue-400' : TEXT_HIGHLIGHT}`}>
+                <td className={`p-4 ${user.id === currentUser.id ? 'text-sky-700' : TEXT_HIGHLIGHT}`}>
                   <div className="flex items-center gap-3">
                     <AvatarBadge user={user} size="sm" className="lg:w-12 lg:h-12 lg:text-base" />
                     <span className="font-bold">{user.nome} {user.id === currentUser.id && '(Você)'}</span>
@@ -1999,7 +2187,7 @@ export default function App() {
                 </td>
                 <td className={`p-4 text-center ${TEXT_MUTED}`}>{user.ptsJogos}</td>
                 <td className={`p-4 text-center ${TEXT_MUTED}`}>{user.ptsMataMata}</td>
-                <td className="p-4 text-center font-bold text-green-400 text-sm">{user.total}</td>
+                <td className="p-4 text-center text-sm font-bold text-emerald-700">{user.total}</td>
               </tr>
             ))}</tbody>
           </table>
@@ -2383,11 +2571,11 @@ export default function App() {
               </span>
             </div>
             <div className="grid gap-2 lg:min-w-[520px] lg:grid-cols-[minmax(0,1fr)_210px]">
-              <input value={reviewSearch} onChange={(e) => setReviewSearch(e.target.value)} placeholder="Filtrar participantes por nome" className={`${GLASS_INPUT} px-3 py-2.5 text-sm`} />
+              <input value={reviewSearch} onChange={(e) => setReviewSearch(e.target.value)} placeholder="Filtrar participantes por nome" className={`${GLASS_INPUT} min-h-12 px-3 py-2.5 text-base`} />
               <select
                 value={isGameMode ? reviewGroupFilter : reviewPhaseFilter}
                 onChange={(e) => isGameMode ? setReviewGroupFilter(e.target.value) : setReviewPhaseFilter(e.target.value)}
-                className={`${GLASS_INPUT} px-3 py-2.5 text-sm`}
+                className={`${GLASS_INPUT} min-h-12 px-3 py-2.5 text-base`}
               >
                 <option value="todos">{isGameMode ? 'Todos os grupos' : 'Todas as fases'}</option>
                 {(isGameMode
@@ -2567,7 +2755,8 @@ export default function App() {
           <span className="font-bold text-[12px] uppercase tracking-[0.16em] text-slate-700">Classificação - Grupo {grupo}</span>
           <span className="shrink-0 rounded-full bg-blue-400/10 px-2 py-0.5 text-[10px] font-semibold text-blue-500">{modoAdmin ? 'Oficial' : 'Simulada'}</span>
         </div>
-        <table className="w-full table-fixed text-[10px] text-slate-700 sm:text-[11px]">
+        <div className="overflow-x-auto overscroll-x-contain">
+        <table className="min-w-[420px] w-full table-fixed text-[10px] text-slate-700 sm:text-[11px]">
           <thead>
             <tr className="border-b border-white/5 text-slate-500">
               <th className="w-6 px-0.5 py-2 text-center">#</th>
@@ -2604,6 +2793,7 @@ export default function App() {
             })}
           </tbody>
         </table>
+        </div>
         {modoAdmin && (
           <div className="border-t border-slate-200 p-3 space-y-2 bg-slate-50/90">
             <div className="text-[11px] uppercase font-bold text-slate-700">Fair play / conduta FIFA</div>
@@ -2612,10 +2802,10 @@ export default function App() {
               return (
                 <div key={time} className="grid grid-cols-[minmax(0,1fr)_44px_44px_44px_44px] gap-2 items-center">
                   <span className="truncate text-[12px] font-medium text-slate-700">{time}</span>
-                  <input type="number" min="0" value={registro.amarelos ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'amarelos', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs text-slate-700`} placeholder="A" title="Amarelos" />
-                  <input type="number" min="0" value={registro.vermelhoIndireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'vermelhoIndireto', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs text-slate-700`} placeholder="2A" title="Vermelho indireto" />
-                  <input type="number" min="0" value={registro.vermelhoDireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'vermelhoDireto', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs text-slate-700`} placeholder="VD" title="Vermelho direto" />
-                  <input type="number" min="0" value={registro.amareloEVermelhoDireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'amareloEVermelhoDireto', e.target.value)} className={`${GLASS_INPUT} h-9 text-center text-xs text-slate-700`} placeholder="A+V" title="Amarelo + vermelho direto" />
+                  <input type="number" min="0" inputMode="numeric" value={registro.amarelos ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'amarelos', e.target.value)} className={`${GLASS_INPUT} h-11 text-center text-base text-slate-700`} placeholder="A" title="Amarelos" />
+                  <input type="number" min="0" inputMode="numeric" value={registro.vermelhoIndireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'vermelhoIndireto', e.target.value)} className={`${GLASS_INPUT} h-11 text-center text-base text-slate-700`} placeholder="2A" title="Vermelho indireto" />
+                  <input type="number" min="0" inputMode="numeric" value={registro.vermelhoDireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'vermelhoDireto', e.target.value)} className={`${GLASS_INPUT} h-11 text-center text-base text-slate-700`} placeholder="VD" title="Vermelho direto" />
+                  <input type="number" min="0" inputMode="numeric" value={registro.amareloEVermelhoDireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'amareloEVermelhoDireto', e.target.value)} className={`${GLASS_INPUT} h-11 text-center text-base text-slate-700`} placeholder="A+V" title="Amarelo + vermelho direto" />
                 </div>
               );
             })}
@@ -2669,11 +2859,11 @@ export default function App() {
         </div>
         {feedback}
         <div className="relative">
-          {(!isReady || isLocked) && <Lock size={12} className={`absolute left-3 top-3.5 ${TEXT_MUTED}`} />}
-          <select value={currentValue || ""} onChange={(e) => atualizarMataMata(phaseKey, e.target.value, idx)} disabled={!isReady || isLocked} className={`${GLASS_INPUT} w-full p-3 text-xs font-medium appearance-none ${(!isReady || isLocked) && 'pl-8 text-slate-400'}`}>
+          {(!isReady || isLocked) && <Lock size={12} className={`absolute left-3 top-4 ${TEXT_MUTED}`} />}
+          <select value={currentValue || ""} onChange={(e) => atualizarMataMata(phaseKey, e.target.value, idx)} disabled={!isReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base font-medium appearance-none ${(!isReady || isLocked) && 'pl-8 text-slate-400'}`}>
             <option value="">{isLocked ? "Palpite enviado" : isReady ? "Quem vence?" : "Defina os anteriores"}</option>{isReady && <><option value={timeA}>{timeA}</option><option value={timeB}>{timeB}</option></>}
           </select>
-          {!isLocked && isReady && <ChevronDown size={14} className={`absolute right-3 top-3.5 pointer-events-none ${TEXT_MUTED}`} />}
+          {!isLocked && isReady && <ChevronDown size={14} className={`absolute right-3 top-4 pointer-events-none ${TEXT_MUTED}`} />}
         </div>
       </div>
     );
@@ -2708,36 +2898,36 @@ export default function App() {
 
     return (
       <div className={`${GLASS_CARD} mb-3 transition-all ${secaoExpandida === 'podium' ? 'ring-1 ring-yellow-500/50' : ''}`}>
-        <button onClick={() => setSecaoExpandida(secaoExpandida === 'podium' ? null : 'podium')} className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-yellow-500/10 to-transparent"><div className="flex items-center gap-3"><Crown className="text-yellow-400" size={18} /><span className="font-bold text-sm text-white uppercase tracking-wide">Pódio Final</span></div>{secaoExpandida === 'podium' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
+        <button onClick={() => setSecaoExpandida(secaoExpandida === 'podium' ? null : 'podium')} className="flex min-h-13 w-full items-center justify-between bg-gradient-to-r from-yellow-500/10 to-transparent p-4"><div className="flex items-center gap-3"><Crown className="text-yellow-500" size={18} /><span className="font-bold text-sm text-slate-900 uppercase tracking-wide">Pódio Final</span></div>{secaoExpandida === 'podium' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
         {secaoExpandida === 'podium' && (
-          <div className="p-4 space-y-4 border-t border-white/5">
+          <div className="space-y-4 border-t border-slate-200 p-4">
             <div className="grid gap-3 md:grid-cols-2">
-              <div className={`${GLASS_CARD} p-3 bg-black/20`}>
-                <div className="text-[10px] font-bold uppercase text-yellow-400">Final oficial</div>
-                <div className="mt-2 text-xs font-semibold text-white">{finalSchedule.day}/{finalSchedule.month} • {finalSchedule.time} BR</div>
+              <div className={`${GLASS_CARD} bg-amber-50/70 p-3`}>
+                <div className="text-[10px] font-bold uppercase text-amber-700">Final oficial</div>
+                <div className="mt-2 text-xs font-semibold text-slate-900">{finalSchedule.day}/{finalSchedule.month} • {finalSchedule.time} BR</div>
                 <div className={`mt-1 text-[10px] ${TEXT_MUTED}`}>{finalInfo.local}</div>
                 {finalKickoffHint && <div className="mt-1 text-[10px] text-slate-400">{finalKickoffHint}</div>}
               </div>
-              <div className={`${GLASS_CARD} p-3 bg-black/20`}>
-                <div className="text-[10px] font-bold uppercase text-orange-400">3º lugar oficial</div>
-                <div className="mt-2 text-xs font-semibold text-white">{bronzeSchedule.day}/{bronzeSchedule.month} • {bronzeSchedule.time} BR</div>
+              <div className={`${GLASS_CARD} bg-orange-50/70 p-3`}>
+                <div className="text-[10px] font-bold uppercase text-orange-700">3º lugar oficial</div>
+                <div className="mt-2 text-xs font-semibold text-slate-900">{bronzeSchedule.day}/{bronzeSchedule.month} • {bronzeSchedule.time} BR</div>
                 <div className={`mt-1 text-[10px] ${TEXT_MUTED}`}>{bronzeInfo.local}</div>
                 {bronzeKickoffHint && <div className="mt-1 text-[10px] text-slate-400">{bronzeKickoffHint}</div>}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] text-yellow-400 font-bold uppercase block text-center mb-3">Grande Final {renderFeedback('campeao')}</label>
-              <div className={`${GLASS_CARD} p-4 bg-black/20`}>
-                <select value={dataSource.campeao || ""} onChange={e => { atualizarMataMata('campeao', e.target.value, null); const vice = finalistas.find(f => f !== e.target.value); if (vice) atualizarMataMata('vice', vice, null); }} disabled={!isFinalReady || isLocked} className={`${GLASS_INPUT} w-full p-3 text-xs border-yellow-500/30 focus:border-yellow-500 text-slate-800`}>
+              <label className="mb-3 block text-center text-[10px] font-bold uppercase text-amber-700">Grande Final {renderFeedback('campeao')}</label>
+              <div className={`${GLASS_CARD} bg-amber-50/60 p-4`}>
+                <select value={dataSource.campeao || ""} onChange={e => { atualizarMataMata('campeao', e.target.value, null); const vice = finalistas.find(f => f !== e.target.value); if (vice) atualizarMataMata('vice', vice, null); }} disabled={!isFinalReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base border-yellow-500/30 focus:border-yellow-500 text-slate-800`}>
                   <option value="">Quem será Campeão?</option>{isFinalReady && finalistas.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
                 {dataSource.vice && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>Vice: <span className="text-slate-800">{dataSource.vice}</span> {renderFeedback('vice')}</div>}
               </div>
             </div>
             <div className="space-y-2 pt-2">
-              <label className="text-[10px] text-orange-400 font-bold uppercase block text-center mb-3">3º Lugar {renderFeedback('terceiro')}</label>
-              <div className={`${GLASS_CARD} p-4 bg-black/20`}>
-                <select value={dataSource.terceiro || ""} onChange={e => { atualizarMataMata('terceiro', e.target.value, null); const quarto = disputantes3.find(t => t !== e.target.value); if (quarto) atualizarMataMata('quarto', quarto, null); }} disabled={!is3rdReady || isLocked} className={`${GLASS_INPUT} w-full p-3 text-xs border-orange-500/30 focus:border-orange-500 text-slate-800`}>
+              <label className="mb-3 block text-center text-[10px] font-bold uppercase text-orange-700">3º Lugar {renderFeedback('terceiro')}</label>
+              <div className={`${GLASS_CARD} bg-orange-50/60 p-4`}>
+                <select value={dataSource.terceiro || ""} onChange={e => { atualizarMataMata('terceiro', e.target.value, null); const quarto = disputantes3.find(t => t !== e.target.value); if (quarto) atualizarMataMata('quarto', quarto, null); }} disabled={!is3rdReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base border-orange-500/30 focus:border-orange-500 text-slate-800`}>
                   <option value="">Quem fica em 3º?</option>{is3rdReady && disputantes3.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
                 {dataSource.quarto && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>4º Lugar: <span className="text-slate-800">{dataSource.quarto}</span> {renderFeedback('quarto')}</div>}
@@ -2758,6 +2948,10 @@ export default function App() {
         syncStatus={syncStatus}
         syncError={syncError}
         isDemoMode={isDemoMode}
+        onInstallApp={handleInstallApp}
+        installAvailable={Boolean(installPrompt)}
+        onShareApp={handleShareApp}
+        copiedShare={shareCopied}
       />
     );
   }
@@ -2771,16 +2965,16 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#f4f7fb_100%)] text-slate-900 font-sans pb-28 lg:pb-10">
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-xl border-b border-slate-200 px-5 py-4 flex justify-between items-center shadow-sm lg:hidden">
+    <div className="app-shell min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#f4f7fb_100%)] text-slate-900 font-sans pb-28 lg:pb-10">
+      <header className="app-topbar sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-xl lg:hidden">
         <div className="flex items-center gap-3">
           <AvatarBadge user={currentUser} size="md" />
           <div><h1 className="text-sm font-bold text-slate-900 leading-tight">{currentUser.nome}</h1><p className={`text-[10px] font-medium tracking-wide ${TEXT_MUTED}`}>{modoAdmin ? 'ADMINISTRADOR' : 'Participante'}</p></div>
         </div>
-        <button onClick={handleLogout} className={`p-2.5 rounded-full hover:bg-slate-100 transition-colors ${TEXT_MUTED} hover:text-slate-800`}><LogOut size={18} /></button>
+        <button onClick={handleLogout} className={`min-h-11 min-w-11 rounded-full p-2.5 hover:bg-slate-100 transition-colors ${TEXT_MUTED} hover:text-slate-800`}><LogOut size={18} /></button>
       </header>
 
-      <main className="mx-auto max-w-[1720px] p-5 lg:grid lg:grid-cols-[244px_minmax(0,1fr)] lg:gap-6 lg:px-6 xl:px-8 lg:py-8">
+      <main className="mx-auto max-w-[1720px] px-4 py-4 lg:grid lg:grid-cols-[244px_minmax(0,1fr)] lg:gap-6 lg:px-6 xl:px-8 lg:py-8">
         <aside className="hidden lg:block">
           <div className="sticky top-8 space-y-5">
             <div className={`${GLASS_CARD} p-5`}>
@@ -2844,6 +3038,16 @@ export default function App() {
           </div>
         )}
         {!modoAdmin && (
+          <div className="mb-5">
+            <InstallGuideCard
+              installAvailable={Boolean(installPrompt)}
+              onInstall={handleInstallApp}
+              onShare={handleShareApp}
+              copied={shareCopied}
+            />
+          </div>
+        )}
+        {!modoAdmin && (
           <div className={`${GLASS_CARD} p-5 mb-5`}>
             <div className="flex items-center gap-4">
               <AvatarBadge user={currentUser} size="lg" />
@@ -2853,7 +3057,7 @@ export default function App() {
                 {avatarError && <div className="mt-2 text-xs text-rose-600">{avatarError}</div>}
               </div>
             </div>
-            <div className="mt-4 flex gap-3">
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <input
                 ref={avatarInputRef}
                 type="file"
@@ -2864,12 +3068,12 @@ export default function App() {
               <button
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={avatarLoading}
-                className={`${GLASS_BTN_PRIMARY} px-4 py-3 text-xs uppercase tracking-widest disabled:cursor-not-allowed disabled:opacity-50`}
+                className={`${GLASS_BTN_PRIMARY} min-h-12 px-4 py-3 text-xs uppercase tracking-widest disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 {avatarLoading ? 'Enviando...' : currentUser.avatar ? 'Trocar imagem' : 'Enviar imagem'}
               </button>
               {currentUser.avatar && (
-                <button onClick={handleRemoveAvatar} className={`${GLASS_BTN_SECONDARY} px-4 py-3 text-xs uppercase tracking-widest`}>
+                <button onClick={handleRemoveAvatar} className={`${GLASS_BTN_SECONDARY} min-h-12 px-4 py-3 text-xs uppercase tracking-widest`}>
                   Remover
                 </button>
               )}
@@ -2899,7 +3103,7 @@ export default function App() {
                     <button
                       onClick={() => handleSubmitSection(SUBMISSION_FIELDS.JOGOS)}
                       disabled={!usuarioPreencheuTodosOsJogos(jogosReais, palpitesUsuarioAtual)}
-                      className={`${GLASS_BTN_PRIMARY} px-4 py-3 text-xs uppercase tracking-widest disabled:cursor-not-allowed disabled:opacity-50`}
+                      className={`${GLASS_BTN_PRIMARY} min-h-12 px-4 py-3 text-xs uppercase tracking-widest disabled:cursor-not-allowed disabled:opacity-50`}
                     >
                       Enviar palpites
                     </button>
@@ -2921,21 +3125,21 @@ export default function App() {
                     const officialKickoffHint = formatOfficialKickoffHint(jogo);
                     return (
                       <div key={jogo.id} className={`${GLASS_CARD} p-4`}>
-                        <div className="flex justify-between items-start text-[11px] font-bold uppercase mb-4 text-slate-500 gap-3">
-                          <div className="flex flex-col gap-1">
+                        <div className="mb-4 flex flex-col gap-2 text-[11px] font-bold uppercase text-slate-500 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="flex flex-col gap-1 min-w-0">
                             <span className="flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
                             {officialKickoffHint && <span className="text-[10px] font-semibold normal-case text-slate-500">{officialKickoffHint}</span>}
                           </div>
-                          <span className="bg-slate-100 px-2 py-0.5 rounded-full text-[10px] text-slate-600 text-right">{jogo.local}</span>
+                          <span className="w-fit rounded-full bg-slate-100 px-2 py-1 text-[10px] text-slate-600">{jogo.local}</span>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="w-1/3 text-right text-[13px] font-bold truncate text-slate-800">{jogo.timeA}</span>
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
+                          <span className="text-right text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeA}</span>
                           <div className="flex items-center gap-2">
-                            <input type="number" min="0" disabled={palpitesTravadosJogos && !modoAdmin} value={valA} onChange={e => modoAdmin ? atualizarJogo(jogo.id, 'placarA', e.target.value) : atualizarPalpite(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} w-10 h-10 text-center text-sm font-bold`} />
+                            <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos && !modoAdmin} value={valA} onChange={e => modoAdmin ? atualizarJogo(jogo.id, 'placarA', e.target.value) : atualizarPalpite(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
                             <span className="text-sm text-slate-500 font-light">X</span>
-                            <input type="number" min="0" disabled={palpitesTravadosJogos && !modoAdmin} value={valB} onChange={e => modoAdmin ? atualizarJogo(jogo.id, 'placarB', e.target.value) : atualizarPalpite(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} w-10 h-10 text-center text-sm font-bold`} />
+                            <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos && !modoAdmin} value={valB} onChange={e => modoAdmin ? atualizarJogo(jogo.id, 'placarB', e.target.value) : atualizarPalpite(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
                           </div>
-                          <span className="w-1/3 text-left text-[13px] font-bold truncate text-slate-800">{jogo.timeB}</span>
+                          <span className="text-left text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeB}</span>
                         </div>
                       </div>
                     );
@@ -2963,7 +3167,7 @@ export default function App() {
                     <button
                       onClick={() => handleSubmitSection(SUBMISSION_FIELDS.MATA)}
                       disabled={!jogosEnviadosAt || !usuarioPreencheuMataCompleta(palpitesMataUsuarioAtual)}
-                      className={`${GLASS_BTN_PRIMARY} px-4 py-3 text-xs uppercase tracking-widest disabled:cursor-not-allowed disabled:opacity-50`}
+                      className={`${GLASS_BTN_PRIMARY} min-h-12 px-4 py-3 text-xs uppercase tracking-widest disabled:cursor-not-allowed disabled:opacity-50`}
                     >
                       Enviar mata-mata
                     </button>
@@ -2982,8 +3186,8 @@ export default function App() {
               { id: 'sf', title: 'Semifinais', list: MATA_MATA_CONFIG.sf, key: 'semis', pts: PONTOS.MATA.SF }
             ].map(section => (
               <div key={section.id}>
-                <button onClick={() => setSecaoExpandida(secaoExpandida === section.id ? null : section.id)} className={`${GLASS_CARD} w-full flex items-center justify-between p-4 mb-2 hover:bg-white/10 transition-colors`}>
-                  <span className="text-sm font-bold text-white tracking-wide">{section.title}</span>
+                <button onClick={() => setSecaoExpandida(secaoExpandida === section.id ? null : section.id)} className={`${GLASS_CARD} w-full flex min-h-13 items-center justify-between p-4 mb-2 hover:bg-white/10 transition-colors`}>
+                  <span className="text-sm font-bold text-slate-900 tracking-wide">{section.title}</span>
                   {secaoExpandida === section.id ? <ChevronUp size={16} className={TEXT_MUTED} /> : <ChevronDown size={16} className={TEXT_MUTED} />}
                 </button>
                 {secaoExpandida === section.id && (
@@ -3024,28 +3228,28 @@ export default function App() {
                     <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>4º Lugar</span><span className="font-bold text-slate-600">{PONTOS.MATA.TOP4} pts</span></div>
                  </div>
                </div>
-               <button onClick={handleReset} className={`w-full mt-6 py-4 rounded-xl border flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-widest transition-all ${resetConfirm ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-900/40' : 'border-red-500/30 text-red-400 bg-red-500/5 hover:bg-red-500/10'}`}><Trash2 size={14} /> {resetConfirm ? 'CLIQUE PARA CONFIRMAR' : 'RESETAR TUDO'}</button>
+               <button onClick={handleReset} className={`w-full mt-6 min-h-12 py-4 rounded-xl border flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-widest transition-all ${resetConfirm ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-900/40' : 'border-red-500/30 text-red-400 bg-red-500/5 hover:bg-red-500/10'}`}><Trash2 size={14} /> {resetConfirm ? 'CLIQUE PARA CONFIRMAR' : 'RESETAR TUDO'}</button>
              </div>
              {modoAdmin && (
                <div className={`${GLASS_CARD} p-6`}>
-                 <h3 className="font-bold text-sm mb-2 text-white flex items-center gap-2 uppercase tracking-wide"><User size={18} className="text-red-400" /> Gerenciar Usuários</h3>
+                 <h3 className="mb-2 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-900"><User size={18} className="text-red-500" /> Gerenciar Usuários</h3>
                  <p className={`text-xs mb-5 ${TEXT_MUTED}`}>Apague participantes e remova junto os palpites salvos deles. A conta Admin fica protegida.</p>
                  <div className="space-y-3">
                    {usuarios.map((user) => {
                      const adminUser = isAdminUser(user);
                      const isConfirming = userDeleteConfirmId === user.id;
                      return (
-                       <div key={user.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-black/20 p-3">
+                       <div key={user.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
                          <div className="min-w-0">
-                           <div className="truncate text-sm font-bold text-white">{user.nome}</div>
+                           <div className="truncate text-sm font-bold text-slate-900">{user.nome}</div>
                            <div className={`text-[10px] uppercase tracking-wide ${TEXT_MUTED}`}>{adminUser ? 'Administrador protegido' : 'Participante'}</div>
                          </div>
                          <button
                            onClick={() => handleDeleteUser(user.id)}
                            disabled={adminUser}
-                           className={`shrink-0 rounded-lg border px-3 py-2 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                           className={`shrink-0 rounded-lg border px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-all ${
                              adminUser
-                               ? 'cursor-not-allowed border-white/10 text-white/25'
+                               ? 'cursor-not-allowed border-slate-200 bg-white text-slate-300'
                                 : isConfirming
                                   ? 'border-red-500 bg-red-600 text-white shadow-lg shadow-red-900/40'
                                   : 'border-red-500/30 bg-red-500/5 text-red-400 hover:bg-red-500/10'
@@ -3064,13 +3268,14 @@ export default function App() {
         </section>
       </main>
 
-      <nav className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-xl border border-slate-200 px-5 py-3 rounded-full flex justify-between gap-6 shadow-[0_20px_45px_-25px_rgba(15,23,42,0.35)] z-50 max-w-[94%] w-auto lg:hidden">
+      <nav className="mobile-bottom-nav fixed left-1/2 z-50 flex w-[min(96vw,32rem)] -translate-x-1/2 justify-between gap-1 rounded-[28px] border border-slate-200 bg-white/95 px-2 py-2 shadow-[0_20px_45px_-25px_rgba(15,23,42,0.35)] backdrop-blur-xl lg:hidden">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = abaAtiva === item.id;
           return (
-            <button key={item.id} onClick={() => setAbaAtiva(item.id)} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-sky-600 scale-110' : 'text-slate-400 hover:text-slate-700'}`}>
+            <button key={item.id} onClick={() => setAbaAtiva(item.id)} className={`flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-bold uppercase tracking-[0.12em] transition-all ${active ? 'bg-sky-50 text-sky-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
               <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+              <span className="truncate">{item.label.split(' ')[0]}</span>
             </button>
           );
         })}
