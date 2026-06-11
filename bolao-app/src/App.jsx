@@ -1991,8 +1991,8 @@ export default function App() {
       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
     const participantColumnCount = Math.max(usersFiltrados.length, 1);
-    const reviewSummaryWidth = isGameMode ? 292 : 308;
-    const participantColumnMinWidth = isGameMode ? 158 : 164;
+    const reviewSummaryWidth = isGameMode ? 268 : 282;
+    const participantColumnMinWidth = isGameMode ? 142 : 148;
     const reviewGridTemplate = `${reviewSummaryWidth}px repeat(${participantColumnCount}, minmax(${participantColumnMinWidth}px, 1fr))`;
     const reviewDescription = isGameMode
       ? 'Cada confronto fica resumido na primeira coluna, deixando mais espaço para comparar os placares dos participantes.'
@@ -2010,14 +2010,14 @@ export default function App() {
     };
 
     const renderParticipantCard = (palpite) => (
-      <div className={`rounded-[22px] border px-2.5 py-3 text-center shadow-[0_18px_30px_-28px_rgba(15,23,42,0.95)] ${palpite.status.tone}`}>
-        <div className="text-lg font-black tracking-[-0.04em] text-slate-900 leading-none">{palpite.palpite}</div>
-        <div className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-full border border-black/5 bg-white/75 px-2 py-1">
+      <div className={`rounded-[18px] border px-2 py-2.5 text-center shadow-[0_14px_24px_-24px_rgba(15,23,42,0.95)] ${palpite.status.tone}`}>
+        <div className="text-base font-black tracking-[-0.04em] text-slate-900 leading-none">{palpite.palpite}</div>
+        <div className="mt-1.5 inline-flex items-center justify-center gap-1.5 rounded-full border border-black/5 bg-white/80 px-2 py-0.5">
           <span className={`h-2.5 w-2.5 rounded-full ${palpite.status.dot}`}></span>
           <span className="text-[9px] font-bold uppercase tracking-[0.16em]">{palpite.status.label}</span>
         </div>
-        <div className="mt-2 text-[11px] font-bold text-slate-700">{palpite.pontos} pts</div>
-        <div className="mt-1 text-[10px] leading-tight text-slate-400">{palpite.envio}</div>
+        <div className="mt-1.5 text-[10px] font-bold text-slate-700">{palpite.pontos} pts</div>
+        <div className="mt-1 text-[9px] leading-tight text-slate-400">{palpite.envio}</div>
       </div>
     );
 
@@ -2223,59 +2223,59 @@ export default function App() {
     const renderSummaryCell = (row) => {
       if (isGameMode) {
         return (
-          <div className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-4 py-4 shadow-[0_24px_45px_-38px_rgba(15,23,42,0.55)]">
-            <div className="flex items-start justify-between gap-3">
+          <div className="rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-3 py-3 shadow-[0_16px_30px_-30px_rgba(15,23,42,0.55)]">
+            <div className="flex items-start justify-between gap-2.5">
               <div className="min-w-0">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-700">Grupo {row.grupo}</div>
-                <div className="mt-1 text-[12px] font-semibold text-slate-700">{row.dataHora}</div>
+                <div className="mt-1 text-[11px] font-semibold text-slate-700">{row.dataHora}</div>
               </div>
-              <div className="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-center shadow-sm">
+              <div className="shrink-0 rounded-[16px] border border-slate-200 bg-white px-2.5 py-1.5 text-center shadow-sm">
                 <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Oficial</div>
-                <div className="mt-1 text-sm font-black tracking-[-0.03em] text-slate-900">{row.real}</div>
+                <div className="mt-0.5 text-[13px] font-black tracking-[-0.03em] text-slate-900">{row.real}</div>
               </div>
             </div>
 
-            <div className="mt-4 rounded-[20px] border border-slate-200 bg-white/90 px-3.5 py-3">
-              <div className="grid grid-cols-[minmax(0,1fr)_20px_minmax(0,1fr)] items-center gap-2">
-                <span className="truncate text-right text-[14px] font-bold text-slate-900">{row.timeA}</span>
+            <div className="mt-3 rounded-[16px] border border-slate-200 bg-white/90 px-3 py-2.5">
+              <div className="grid grid-cols-[minmax(0,1fr)_18px_minmax(0,1fr)] items-center gap-1.5">
+                <span className="truncate text-right text-[13px] font-bold text-slate-900">{row.timeA}</span>
                 <span className="text-center text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">x</span>
-                <span className="truncate text-[14px] font-bold text-slate-900">{row.timeB}</span>
+                <span className="truncate text-[13px] font-bold text-slate-900">{row.timeB}</span>
               </div>
             </div>
 
-            <div className="mt-3 text-[11px] text-slate-400">{row.local}</div>
+            <div className="mt-2.5 text-[10px] text-slate-400">{row.local}</div>
           </div>
         );
       }
 
       return (
-        <div className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfbff_100%)] px-4 py-4 shadow-[0_24px_45px_-38px_rgba(15,23,42,0.55)]">
-          <div className="flex items-start justify-between gap-3">
+        <div className="rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfbff_100%)] px-3 py-3 shadow-[0_16px_30px_-30px_rgba(15,23,42,0.55)]">
+          <div className="flex items-start justify-between gap-2.5">
             <div className="min-w-0">
               <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-700">{row.metaTop}</div>
-              <div className="mt-1 text-[12px] font-semibold text-slate-700">{row.metaBottom}</div>
+              <div className="mt-1 text-[11px] font-semibold text-slate-700">{row.metaBottom}</div>
             </div>
-            <div className="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-center shadow-sm">
+            <div className="shrink-0 rounded-[16px] border border-slate-200 bg-white px-2.5 py-1.5 text-center shadow-sm">
               <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Oficial</div>
-              <div className="mt-1 text-sm font-black tracking-[-0.03em] text-slate-900">{row.official}</div>
+              <div className="mt-0.5 text-[13px] font-black tracking-[-0.03em] text-slate-900">{row.official}</div>
             </div>
           </div>
 
-          <div className="mt-4 rounded-[20px] border border-slate-200 bg-white/90 px-3.5 py-3">
+          <div className="mt-3 rounded-[16px] border border-slate-200 bg-white/90 px-3 py-2.5">
             <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{row.matchupTitle}</div>
             {row.kind === 'match' ? (
-              <div className="mt-2 grid grid-cols-[minmax(0,1fr)_20px_minmax(0,1fr)] items-center gap-2">
-                <span className="truncate text-right text-[14px] font-bold text-slate-900">{row.sideA}</span>
+              <div className="mt-2 grid grid-cols-[minmax(0,1fr)_18px_minmax(0,1fr)] items-center gap-1.5">
+                <span className="truncate text-right text-[13px] font-bold text-slate-900">{row.sideA}</span>
                 <span className="text-center text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">x</span>
-                <span className="truncate text-[14px] font-bold text-slate-900">{row.sideB}</span>
+                <span className="truncate text-[13px] font-bold text-slate-900">{row.sideB}</span>
               </div>
             ) : (
-              <div className="mt-2 text-[14px] font-bold text-slate-900">{row.matchupSubtitle}</div>
+              <div className="mt-2 text-[13px] font-bold text-slate-900">{row.matchupSubtitle}</div>
             )}
-            <div className="mt-2 text-[10px] text-slate-400">{row.kind === 'match' ? row.matchupSubtitle : row.officialMeta}</div>
+            <div className="mt-1.5 text-[9px] text-slate-400">{row.kind === 'match' ? row.matchupSubtitle : row.officialMeta}</div>
           </div>
 
-          <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-slate-400">
+          <div className="mt-2.5 flex items-center justify-between gap-2 text-[10px] text-slate-400">
             <span className="truncate">{row.metaNote}</span>
             {row.kind === 'match' && <span className="shrink-0 font-semibold text-slate-500">{row.officialMeta}</span>}
           </div>
@@ -2343,20 +2343,20 @@ export default function App() {
         </div>
 
         <div className={`${GLASS_CARD} overflow-hidden`}>
-          <div className="overflow-x-auto overscroll-x-contain">
+          <div className="max-h-[calc(100vh-220px)] overflow-auto overscroll-contain">
             <div className="min-w-max text-xs bg-white">
               <div
-                className="sticky top-0 z-30 grid border-b border-slate-200 bg-slate-50/95 text-[10px] uppercase text-slate-500 backdrop-blur"
+                className="sticky top-0 z-40 grid border-b border-slate-200 bg-slate-50/95 text-[10px] uppercase text-slate-500 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.55)] backdrop-blur"
                 style={{ gridTemplateColumns: reviewGridTemplate }}
               >
-                <div className="sticky left-0 z-40 border-r border-slate-200 bg-slate-50/95 px-4 py-4 font-bold backdrop-blur">Resumo do confronto</div>
+                <div className="sticky left-0 z-50 border-r border-slate-200 bg-slate-50/95 px-4 py-3 font-bold backdrop-blur">Resumo do confronto</div>
                 {usersFiltrados.map((user) => (
-                  <div key={user.id} className="border-r border-slate-100 px-2.5 py-3 text-center last:border-r-0">
+                  <div key={user.id} className="border-r border-slate-100 px-2 py-2.5 text-center last:border-r-0">
                     <div className="flex items-center justify-center gap-2">
                       <AvatarBadge user={user} size="sm" />
-                      <div className="max-w-[102px] truncate font-bold normal-case text-[12px] text-slate-700">{user.nome}</div>
+                      <div className="max-w-[96px] truncate font-bold normal-case text-[11px] text-slate-700">{user.nome}</div>
                     </div>
-                    <div className="mt-1 text-[9px] font-semibold text-slate-400">
+                    <div className="mt-0.5 text-[9px] font-semibold text-slate-400">
                       {submissoes[user.id]?.[reviewSubmissionField] ? 'Enviado' : 'Rascunho'}
                     </div>
                   </div>
@@ -2383,12 +2383,12 @@ export default function App() {
                           className="grid border-b border-slate-100 bg-white last:border-0"
                           style={{ gridTemplateColumns: reviewGridTemplate }}
                         >
-                          <div className="sticky left-0 z-10 border-r border-slate-200 bg-white px-4 py-4">
+                          <div className="sticky left-0 z-20 border-r border-slate-200 bg-white px-3 py-3">
                             {renderSummaryCell(row)}
                           </div>
 
                           {row.palpites.map((palpite) => (
-                            <div key={`${row.id}-${palpite.userId}`} className="border-r border-slate-100 px-2.5 py-4 last:border-r-0">
+                            <div key={`${row.id}-${palpite.userId}`} className="border-r border-slate-100 px-2 py-3 last:border-r-0">
                               {renderParticipantCard(palpite)}
                             </div>
                           ))}
@@ -2413,12 +2413,12 @@ export default function App() {
                           className="grid border-b border-slate-100 bg-white last:border-0"
                           style={{ gridTemplateColumns: reviewGridTemplate }}
                         >
-                          <div className="sticky left-0 z-10 border-r border-slate-200 bg-white px-4 py-4">
+                          <div className="sticky left-0 z-20 border-r border-slate-200 bg-white px-3 py-3">
                             {renderSummaryCell(row)}
                           </div>
 
                           {row.palpites.map((palpite) => (
-                            <div key={`${row.id}-${palpite.userId}`} className="border-r border-slate-100 px-2.5 py-4 last:border-r-0">
+                            <div key={`${row.id}-${palpite.userId}`} className="border-r border-slate-100 px-2 py-3 last:border-r-0">
                               {renderParticipantCard(palpite)}
                             </div>
                           ))}
