@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle, Smartphone, Download, Share2, Copy, CheckCheck } from 'lucide-react';
+import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle, Smartphone, Download } from 'lucide-react';
 import { THIRD_PLACE_ASSIGNMENTS } from './thirdPlaceAssignments';
 import { TEAM_FIFA_RANKINGS } from './fifaTeamRankings';
 import RankingConsensusPanel from './RankingConsensusPanel';
@@ -152,13 +152,6 @@ const AVATAR_MAX_DIMENSION = 160;
 const AVATAR_UPLOAD_URL = import.meta.env.VITE_AVATAR_UPLOAD_URL || 'https://bolao2026-avatar-upload.linoscheduling.workers.dev';
 const AVATAR_PUBLIC_BASE_URL = import.meta.env.VITE_AVATAR_PUBLIC_BASE_URL || 'https://pub-56fbf4716fdc4ab69e70b4c56f28fccf.r2.dev';
 const DEMO_AVATAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAABv7bNHAAABpUlEQVR4nO3QwQ3CMBQFQYz//8u2g0QdW0dManIeZDV4SSQdlqzTeWYIAAAAAAAAAAB4m7vN3Wf9eR9n3rV7h9t7n5f4q2w8b0v2m2vV8f9bKf9t8m9bM4QGg9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rer8BX3kD6XhSx8AAAAASUVORK5CYII=';
-const GROUP_SHARE_URL = 'https://lhgcampos.github.io/bolao2026/';
-const GROUP_SHARE_TEXT = `Bolão da Copa 2026 no ar: ${GROUP_SHARE_URL}
-
-Abre no celular e, se quiser, instala na tela inicial como app.
-
-iPhone: Compartilhar > Adicionar à Tela de Início
-Android: menu do navegador > Instalar app / Adicionar à tela inicial`;
 const INSTALLATION_TIPS = {
   android: [
     'Abra o link no Chrome ou navegador compatível.',
@@ -1281,7 +1274,7 @@ const TEXT_MUTED = "text-slate-600";
 const TEXT_HIGHLIGHT = "text-slate-800";
 
 // --- SUB-COMPONENTES UI ---
-const InstallGuideCard = ({ installAvailable = false, onInstall, onShare, installLabel = 'Instalar app', copied = false }) => (
+const InstallGuideCard = ({ installAvailable = false, onInstall, installLabel = 'Instalar app' }) => (
   <div className={`${GLASS_CARD} p-4 sm:p-5`}>
     <div className="flex items-start gap-3">
       <div className="rounded-2xl bg-sky-100 p-2.5 text-sky-700">
@@ -1319,29 +1312,21 @@ const InstallGuideCard = ({ installAvailable = false, onInstall, onShare, instal
       </div>
     </div>
 
-    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+    <div className="mt-4">
       <button
         type="button"
         onClick={onInstall}
         disabled={!installAvailable}
-        className={`${GLASS_BTN_PRIMARY} flex min-h-12 items-center justify-center gap-2 px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50`}
+        className={`${GLASS_BTN_PRIMARY} flex min-h-12 w-full items-center justify-center gap-2 px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50`}
       >
         <Download size={16} />
         {installAvailable ? installLabel : 'Use o menu do navegador para instalar'}
-      </button>
-      <button
-        type="button"
-        onClick={onShare}
-        className={`${GLASS_BTN_SECONDARY} flex min-h-12 items-center justify-center gap-2 px-4 py-3 text-sm font-semibold`}
-      >
-        {copied ? <CheckCheck size={16} /> : <Share2 size={16} />}
-        {copied ? 'Mensagem copiada' : 'Copiar mensagem do grupo'}
       </button>
     </div>
   </div>
 );
 
-const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', syncError = '', isDemoMode = false, onInstallApp, installAvailable = false, onShareApp, copiedShare = false }) => {
+const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', syncError = '', isDemoMode = false, onInstallApp, installAvailable = false }) => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
@@ -1495,8 +1480,6 @@ const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', sy
       <InstallGuideCard
         installAvailable={installAvailable}
         onInstall={onInstallApp}
-        onShare={onShareApp}
-        copied={copiedShare}
       />
       </div>
     </div>
@@ -1516,7 +1499,6 @@ export default function App() {
   const [reviewGroupFilter, setReviewGroupFilter] = useState('todos');
   const [reviewPhaseFilter, setReviewPhaseFilter] = useState('todos');
   const [installPrompt, setInstallPrompt] = useState(null);
-  const [shareCopied, setShareCopied] = useState(false);
   const [avatarError, setAvatarError] = useState('');
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState(isDemoMode ? 'demo' : 'connecting');
@@ -1550,12 +1532,6 @@ export default function App() {
 
     return undefined;
   }, []);
-
-  useEffect(() => {
-    if (!shareCopied) return undefined;
-    const timeoutId = window.setTimeout(() => setShareCopied(false), 2200);
-    return () => window.clearTimeout(timeoutId);
-  }, [shareCopied]);
 
   const [bootstrapState] = useState(() => {
     const savedUsers = JSON.parse(localStorage.getItem('bolao26_users')) || [];
@@ -1898,33 +1874,6 @@ export default function App() {
     }
 
     setInstallPrompt(null);
-  };
-
-  const handleShareApp = async () => {
-    const sharePayload = {
-      title: 'Bolão Copa 2026',
-      text: GROUP_SHARE_TEXT,
-      url: GROUP_SHARE_URL
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(sharePayload);
-        return;
-      }
-
-      await navigator.clipboard.writeText(GROUP_SHARE_TEXT);
-      setShareCopied(true);
-    } catch (error) {
-      if (error?.name === 'AbortError') return;
-
-      try {
-        await navigator.clipboard.writeText(GROUP_SHARE_TEXT);
-        setShareCopied(true);
-      } catch {
-        window.prompt('Copie a mensagem para o grupo:', GROUP_SHARE_TEXT);
-      }
-    }
   };
 
   const handleAvatarSelected = async (event) => {
@@ -2950,8 +2899,6 @@ export default function App() {
         isDemoMode={isDemoMode}
         onInstallApp={handleInstallApp}
         installAvailable={Boolean(installPrompt)}
-        onShareApp={handleShareApp}
-        copiedShare={shareCopied}
       />
     );
   }
@@ -3042,8 +2989,6 @@ export default function App() {
             <InstallGuideCard
               installAvailable={Boolean(installPrompt)}
               onInstall={handleInstallApp}
-              onShare={handleShareApp}
-              copied={shareCopied}
             />
           </div>
         )}
