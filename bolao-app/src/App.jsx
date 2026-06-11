@@ -1985,26 +1985,19 @@ export default function App() {
 
   const ReviewSheet = () => {
     const searchTerm = reviewSearch.trim().toLowerCase();
+    const isGameMode = reviewMode === 'jogos';
     const usersFiltrados = [...participanteUsuarios]
       .filter((user) => !searchTerm || user.nome.toLowerCase().includes(searchTerm))
       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
-    const reviewLayout = {
-      meta: 190,
-      confronto: 320,
-      oficial: 132
-    };
-    const stickyOffsets = {
-      meta: 0,
-      confronto: reviewLayout.meta,
-      oficial: reviewLayout.meta + reviewLayout.confronto
-    };
     const participantColumnCount = Math.max(usersFiltrados.length, 1);
-    const reviewGridTemplate = `${reviewLayout.meta}px ${reviewLayout.confronto}px ${reviewLayout.oficial}px repeat(${participantColumnCount}, minmax(172px, 1fr))`;
-    const reviewDescription = reviewMode === 'jogos'
-      ? 'Cada linha mostra um confronto, o placar real e os palpites dos participantes lado a lado.'
-      : 'Cada linha mostra uma vaga da chave ou do pódio, com a escolha oficial e os palpites dos participantes.';
-    const reviewSubmissionField = reviewMode === 'jogos' ? SUBMISSION_FIELDS.JOGOS : SUBMISSION_FIELDS.MATA;
+    const reviewSummaryWidth = isGameMode ? 292 : 308;
+    const participantColumnMinWidth = isGameMode ? 158 : 164;
+    const reviewGridTemplate = `${reviewSummaryWidth}px repeat(${participantColumnCount}, minmax(${participantColumnMinWidth}px, 1fr))`;
+    const reviewDescription = isGameMode
+      ? 'Cada confronto fica resumido na primeira coluna, deixando mais espaço para comparar os placares dos participantes.'
+      : 'Cada vaga do mata-mata e do pódio fica condensada numa coluna-resumo, com foco total na leitura dos apostadores.';
+    const reviewSubmissionField = isGameMode ? SUBMISSION_FIELDS.JOGOS : SUBMISSION_FIELDS.MATA;
 
     const buildStatus = (variant) => {
       if (variant === 'cravou') return { label: 'Cravou', tone: 'border-emerald-200 bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' };
@@ -2017,14 +2010,14 @@ export default function App() {
     };
 
     const renderParticipantCard = (palpite) => (
-      <div className={`rounded-2xl border px-3 py-3 text-center shadow-sm ${palpite.status.tone}`}>
-        <div className="text-base font-bold text-slate-900">{palpite.palpite}</div>
-        <div className="mt-2 flex items-center justify-center gap-2">
+      <div className={`rounded-[22px] border px-2.5 py-3 text-center shadow-[0_18px_30px_-28px_rgba(15,23,42,0.95)] ${palpite.status.tone}`}>
+        <div className="text-lg font-black tracking-[-0.04em] text-slate-900 leading-none">{palpite.palpite}</div>
+        <div className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-full border border-black/5 bg-white/75 px-2 py-1">
           <span className={`h-2.5 w-2.5 rounded-full ${palpite.status.dot}`}></span>
-          <span className="text-[10px] font-bold uppercase tracking-wide">{palpite.status.label}</span>
+          <span className="text-[9px] font-bold uppercase tracking-[0.16em]">{palpite.status.label}</span>
         </div>
-        <div className="mt-2 text-[11px] font-bold text-sky-700">{palpite.pontos} pts</div>
-        <div className="mt-1 text-[10px] text-slate-400">{palpite.envio}</div>
+        <div className="mt-2 text-[11px] font-bold text-slate-700">{palpite.pontos} pts</div>
+        <div className="mt-1 text-[10px] leading-tight text-slate-400">{palpite.envio}</div>
       </div>
     );
 
@@ -2222,20 +2215,96 @@ export default function App() {
     const groupedKnockoutRows = [...knockoutSections, podiumSection]
       .filter((section) => reviewPhaseFilter === 'todos' || section.id === reviewPhaseFilter);
 
-    const linhas = reviewMode === 'jogos' ? gameRows : groupedKnockoutRows.flatMap((section) => section.rows);
+    const linhas = isGameMode ? gameRows : groupedKnockoutRows.flatMap((section) => section.rows);
+    const reviewCountLabel = isGameMode
+      ? `${linhas.length} jogo${linhas.length === 1 ? '' : 's'} visíveis`
+      : `${linhas.length} linha${linhas.length === 1 ? '' : 's'} da chave`;
+
+    const renderSummaryCell = (row) => {
+      if (isGameMode) {
+        return (
+          <div className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-4 py-4 shadow-[0_24px_45px_-38px_rgba(15,23,42,0.55)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-700">Grupo {row.grupo}</div>
+                <div className="mt-1 text-[12px] font-semibold text-slate-700">{row.dataHora}</div>
+              </div>
+              <div className="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-center shadow-sm">
+                <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Oficial</div>
+                <div className="mt-1 text-sm font-black tracking-[-0.03em] text-slate-900">{row.real}</div>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-[20px] border border-slate-200 bg-white/90 px-3.5 py-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_20px_minmax(0,1fr)] items-center gap-2">
+                <span className="truncate text-right text-[14px] font-bold text-slate-900">{row.timeA}</span>
+                <span className="text-center text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">x</span>
+                <span className="truncate text-[14px] font-bold text-slate-900">{row.timeB}</span>
+              </div>
+            </div>
+
+            <div className="mt-3 text-[11px] text-slate-400">{row.local}</div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfbff_100%)] px-4 py-4 shadow-[0_24px_45px_-38px_rgba(15,23,42,0.55)]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-700">{row.metaTop}</div>
+              <div className="mt-1 text-[12px] font-semibold text-slate-700">{row.metaBottom}</div>
+            </div>
+            <div className="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-center shadow-sm">
+              <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Oficial</div>
+              <div className="mt-1 text-sm font-black tracking-[-0.03em] text-slate-900">{row.official}</div>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-[20px] border border-slate-200 bg-white/90 px-3.5 py-3">
+            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{row.matchupTitle}</div>
+            {row.kind === 'match' ? (
+              <div className="mt-2 grid grid-cols-[minmax(0,1fr)_20px_minmax(0,1fr)] items-center gap-2">
+                <span className="truncate text-right text-[14px] font-bold text-slate-900">{row.sideA}</span>
+                <span className="text-center text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">x</span>
+                <span className="truncate text-[14px] font-bold text-slate-900">{row.sideB}</span>
+              </div>
+            ) : (
+              <div className="mt-2 text-[14px] font-bold text-slate-900">{row.matchupSubtitle}</div>
+            )}
+            <div className="mt-2 text-[10px] text-slate-400">{row.kind === 'match' ? row.matchupSubtitle : row.officialMeta}</div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-slate-400">
+            <span className="truncate">{row.metaNote}</span>
+            {row.kind === 'match' && <span className="shrink-0 font-semibold text-slate-500">{row.officialMeta}</span>}
+          </div>
+        </div>
+      );
+    };
 
     return (
       <div className="space-y-4 animate-fade-in">
-        <div className={`${GLASS_CARD} p-5 space-y-4`}>
-          <div className="flex items-center justify-between gap-3">
+        <div className={`${GLASS_CARD} p-5 space-y-4 lg:p-6`}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Planilha de Palpites</h3>
-              <p className={`text-xs mt-1 ${TEXT_MUTED}`}>{reviewDescription}</p>
+              <h3 className="text-base font-black uppercase tracking-[0.12em] text-slate-900">Planilha de Palpites</h3>
+              <p className={`mt-2 max-w-3xl text-sm leading-relaxed ${TEXT_MUTED}`}>{reviewDescription}</p>
             </div>
-            <div className="flex gap-2 rounded-full bg-slate-100 p-1">
-              <button onClick={() => setReviewMode('jogos')} className={`px-3 py-1.5 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'jogos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Jogos</button>
-              <button onClick={() => setReviewMode('mata')} className={`px-3 py-1.5 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'mata' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Mata-mata</button>
+            <div className="flex gap-2 rounded-full bg-slate-100 p-1 self-start">
+              <button onClick={() => setReviewMode('jogos')} className={`px-4 py-2 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'jogos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Jogos</button>
+              <button onClick={() => setReviewMode('mata')} className={`px-4 py-2 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'mata' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Mata-mata</button>
             </div>
+          </div>
+          <div className="flex flex-wrap gap-2.5 text-[10px] font-semibold text-slate-500">
+            <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-slate-700">
+              <span className="font-black text-slate-900">{usersFiltrados.length}</span>
+              {usersFiltrados.length === 1 ? 'apostador visível' : 'apostadores visíveis'}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-slate-700">
+              <span className="font-black text-slate-900">{linhas.length}</span>
+              {reviewCountLabel}
+            </span>
           </div>
           {reviewMode === 'jogos' && (
             <div className="flex flex-wrap gap-2 text-[10px] font-semibold text-slate-500">
@@ -2254,42 +2323,40 @@ export default function App() {
               <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-slate-400"></span> Sem palpite</span>
             </div>
           )}
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_150px]">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_210px]">
             <input value={reviewSearch} onChange={(e) => setReviewSearch(e.target.value)} placeholder="Filtrar participantes por nome" className={`${GLASS_INPUT} px-4 py-3 text-sm`} />
             <select
-              value={reviewMode === 'jogos' ? reviewGroupFilter : reviewPhaseFilter}
-              onChange={(e) => reviewMode === 'jogos' ? setReviewGroupFilter(e.target.value) : setReviewPhaseFilter(e.target.value)}
+              value={isGameMode ? reviewGroupFilter : reviewPhaseFilter}
+              onChange={(e) => isGameMode ? setReviewGroupFilter(e.target.value) : setReviewPhaseFilter(e.target.value)}
               className={`${GLASS_INPUT} px-4 py-3 text-sm`}
             >
-              <option value="todos">{reviewMode === 'jogos' ? 'Todos os grupos' : 'Todas as fases'}</option>
-              {(reviewMode === 'jogos'
+              <option value="todos">{isGameMode ? 'Todos os grupos' : 'Todas as fases'}</option>
+              {(isGameMode
                 ? Object.keys(GRUPOS_2026).map((grupo) => ({ id: grupo, label: `Grupo ${grupo}` }))
                 : knockoutPhaseOptions
               ).map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
             </select>
           </div>
           <div className={`text-[11px] ${TEXT_MUTED}`}>
-            {usersFiltrados.length === 1 ? '1 participante visível.' : `${usersFiltrados.length} participantes visíveis.`}
+            Arraste horizontalmente para comparar todos os apostadores sem perder o contexto do jogo.
           </div>
         </div>
 
         <div className={`${GLASS_CARD} overflow-hidden`}>
-          <div className="overflow-x-auto">
-            <div className="min-w-max text-xs">
+          <div className="overflow-x-auto overscroll-x-contain">
+            <div className="min-w-max text-xs bg-white">
               <div
-                className="sticky top-0 z-30 grid border-b border-slate-200 bg-slate-50 text-[10px] uppercase text-slate-500"
+                className="sticky top-0 z-30 grid border-b border-slate-200 bg-slate-50/95 text-[10px] uppercase text-slate-500 backdrop-blur"
                 style={{ gridTemplateColumns: reviewGridTemplate }}
               >
-                <div className="sticky z-40 border-r border-slate-200 bg-slate-50 px-4 py-4 font-bold" style={{ left: stickyOffsets.meta }}>Fase / Data</div>
-                <div className="sticky z-40 border-r border-slate-200 bg-slate-50 px-4 py-4 font-bold" style={{ left: stickyOffsets.confronto }}>Confronto</div>
-                <div className="sticky z-40 border-r border-slate-200 bg-slate-50 px-4 py-4 text-center font-bold" style={{ left: stickyOffsets.oficial }}>Oficial</div>
+                <div className="sticky left-0 z-40 border-r border-slate-200 bg-slate-50/95 px-4 py-4 font-bold backdrop-blur">Resumo do confronto</div>
                 {usersFiltrados.map((user) => (
-                  <div key={user.id} className="px-3 py-3 text-center">
+                  <div key={user.id} className="border-r border-slate-100 px-2.5 py-3 text-center last:border-r-0">
                     <div className="flex items-center justify-center gap-2">
                       <AvatarBadge user={user} size="sm" />
-                      <div className="max-w-[110px] truncate font-bold normal-case text-[11px] text-slate-700">{user.nome}</div>
+                      <div className="max-w-[102px] truncate font-bold normal-case text-[12px] text-slate-700">{user.nome}</div>
                     </div>
-                    <div className="mt-1 text-[9px] font-medium text-slate-400">
+                    <div className="mt-1 text-[9px] font-semibold text-slate-400">
                       {submissoes[user.id]?.[reviewSubmissionField] ? 'Enviado' : 'Rascunho'}
                     </div>
                   </div>
@@ -2316,31 +2383,12 @@ export default function App() {
                           className="grid border-b border-slate-100 bg-white last:border-0"
                           style={{ gridTemplateColumns: reviewGridTemplate }}
                         >
-                          <div className="sticky z-10 border-r border-slate-200 bg-white px-4 py-4 text-slate-500" style={{ left: stickyOffsets.meta }}>
-                            <div className="text-[11px] font-bold uppercase tracking-wide text-slate-700">Grupo {row.grupo}</div>
-                            <div className="mt-1 text-[11px]">{row.dataHora}</div>
-                            <div className="mt-1 text-[10px] text-slate-400">{row.local}</div>
-                          </div>
-
-                          <div className="sticky z-10 border-r border-slate-200 bg-white px-4 py-4" style={{ left: stickyOffsets.confronto }}>
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                              <div className="flex items-center justify-between gap-3 text-[13px] font-bold text-slate-800">
-                                <span className="min-w-0 flex-1 truncate text-right">{row.timeA}</span>
-                                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">x</span>
-                                <span className="min-w-0 flex-1 truncate">{row.timeB}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="sticky z-10 flex items-center justify-center border-r border-slate-200 bg-white px-4 py-4" style={{ left: stickyOffsets.oficial }}>
-                            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center shadow-sm">
-                              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Placar</div>
-                              <div className="mt-1 text-base font-bold text-slate-900">{row.real}</div>
-                            </div>
+                          <div className="sticky left-0 z-10 border-r border-slate-200 bg-white px-4 py-4">
+                            {renderSummaryCell(row)}
                           </div>
 
                           {row.palpites.map((palpite) => (
-                            <div key={`${row.id}-${palpite.userId}`} className="px-3 py-4">
+                            <div key={`${row.id}-${palpite.userId}`} className="border-r border-slate-100 px-2.5 py-4 last:border-r-0">
                               {renderParticipantCard(palpite)}
                             </div>
                           ))}
@@ -2365,38 +2413,12 @@ export default function App() {
                           className="grid border-b border-slate-100 bg-white last:border-0"
                           style={{ gridTemplateColumns: reviewGridTemplate }}
                         >
-                          <div className="sticky z-10 border-r border-slate-200 bg-white px-4 py-4 text-slate-500" style={{ left: stickyOffsets.meta }}>
-                            <div className="text-[11px] font-bold uppercase tracking-wide text-slate-700">{row.metaTop}</div>
-                            <div className="mt-1 text-[11px]">{row.metaBottom}</div>
-                            <div className="mt-1 text-[10px] text-slate-400">{row.metaNote}</div>
-                          </div>
-
-                          <div className="sticky z-10 border-r border-slate-200 bg-white px-4 py-4" style={{ left: stickyOffsets.confronto }}>
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{row.matchupTitle}</div>
-                              {row.kind === 'match' ? (
-                                <div className="mt-2 flex items-center justify-between gap-3 text-[13px] font-bold text-slate-800">
-                                  <span className="min-w-0 flex-1 truncate text-right">{row.sideA}</span>
-                                  <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">x</span>
-                                  <span className="min-w-0 flex-1 truncate">{row.sideB}</span>
-                                </div>
-                              ) : (
-                                <div className="mt-2 text-sm font-bold text-slate-800">{row.matchupSubtitle}</div>
-                              )}
-                              {row.kind === 'match' && <div className="mt-2 text-[10px] text-slate-400">{row.matchupSubtitle}</div>}
-                            </div>
-                          </div>
-
-                          <div className="sticky z-10 flex items-center justify-center border-r border-slate-200 bg-white px-4 py-4" style={{ left: stickyOffsets.oficial }}>
-                            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center shadow-sm">
-                              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Oficial</div>
-                              <div className="mt-1 text-sm font-bold text-slate-900">{row.official}</div>
-                              <div className="mt-1 text-[10px] text-slate-400">{row.officialMeta}</div>
-                            </div>
+                          <div className="sticky left-0 z-10 border-r border-slate-200 bg-white px-4 py-4">
+                            {renderSummaryCell(row)}
                           </div>
 
                           {row.palpites.map((palpite) => (
-                            <div key={`${row.id}-${palpite.userId}`} className="px-3 py-4">
+                            <div key={`${row.id}-${palpite.userId}`} className="border-r border-slate-100 px-2.5 py-4 last:border-r-0">
                               {renderParticipantCard(palpite)}
                             </div>
                           ))}
@@ -2645,7 +2667,7 @@ export default function App() {
         <button onClick={handleLogout} className={`p-2.5 rounded-full hover:bg-slate-100 transition-colors ${TEXT_MUTED} hover:text-slate-800`}><LogOut size={18} /></button>
       </header>
 
-      <main className="mx-auto max-w-7xl p-5 lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8 lg:px-8 lg:py-8">
+      <main className="mx-auto max-w-[1720px] p-5 lg:grid lg:grid-cols-[244px_minmax(0,1fr)] lg:gap-6 lg:px-6 xl:px-8 lg:py-8">
         <aside className="hidden lg:block">
           <div className="sticky top-8 space-y-5">
             <div className={`${GLASS_CARD} p-5`}>
@@ -2687,7 +2709,7 @@ export default function App() {
           </div>
         </aside>
 
-        <section className="min-w-0 max-w-lg mx-auto w-full lg:max-w-none">
+        <section className="min-w-0 max-w-xl mx-auto w-full lg:max-w-none">
         {!isDemoMode && (
           <div className={`${GLASS_CARD} mb-5 px-4 py-3`}>
             <div className="flex items-center justify-between gap-3">
