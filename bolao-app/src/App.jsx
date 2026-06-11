@@ -2223,59 +2223,59 @@ export default function App() {
     const renderSummaryCell = (row) => {
       if (isGameMode) {
         return (
-          <div className="rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-3 py-3 shadow-[0_16px_30px_-30px_rgba(15,23,42,0.55)]">
-            <div className="flex items-start justify-between gap-2.5">
+          <div className="rounded-[16px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-2.5 py-2.5 shadow-[0_12px_24px_-24px_rgba(15,23,42,0.45)]">
+            <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-700">Grupo {row.grupo}</div>
                 <div className="mt-1 text-[11px] font-semibold text-slate-700">{row.dataHora}</div>
               </div>
-              <div className="shrink-0 rounded-[16px] border border-slate-200 bg-white px-2.5 py-1.5 text-center shadow-sm">
+              <div className="shrink-0 rounded-[14px] border border-slate-200 bg-white px-2 py-1 text-center shadow-sm">
                 <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Oficial</div>
                 <div className="mt-0.5 text-[13px] font-black tracking-[-0.03em] text-slate-900">{row.real}</div>
               </div>
             </div>
 
-            <div className="mt-3 rounded-[16px] border border-slate-200 bg-white/90 px-3 py-2.5">
-              <div className="grid grid-cols-[minmax(0,1fr)_18px_minmax(0,1fr)] items-center gap-1.5">
+            <div className="mt-2.5 rounded-[14px] border border-slate-200 bg-white/90 px-2.5 py-2">
+              <div className="grid grid-cols-[minmax(0,1fr)_16px_minmax(0,1fr)] items-center gap-1">
                 <span className="truncate text-right text-[13px] font-bold text-slate-900">{row.timeA}</span>
                 <span className="text-center text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">x</span>
                 <span className="truncate text-[13px] font-bold text-slate-900">{row.timeB}</span>
               </div>
             </div>
 
-            <div className="mt-2.5 text-[10px] text-slate-400">{row.local}</div>
+            <div className="mt-2 text-[10px] text-slate-400">{row.local}</div>
           </div>
         );
       }
 
       return (
-        <div className="rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfbff_100%)] px-3 py-3 shadow-[0_16px_30px_-30px_rgba(15,23,42,0.55)]">
-          <div className="flex items-start justify-between gap-2.5">
+        <div className="rounded-[16px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfbff_100%)] px-2.5 py-2.5 shadow-[0_12px_24px_-24px_rgba(15,23,42,0.45)]">
+          <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-700">{row.metaTop}</div>
               <div className="mt-1 text-[11px] font-semibold text-slate-700">{row.metaBottom}</div>
             </div>
-            <div className="shrink-0 rounded-[16px] border border-slate-200 bg-white px-2.5 py-1.5 text-center shadow-sm">
+            <div className="shrink-0 rounded-[14px] border border-slate-200 bg-white px-2 py-1 text-center shadow-sm">
               <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Oficial</div>
               <div className="mt-0.5 text-[13px] font-black tracking-[-0.03em] text-slate-900">{row.official}</div>
             </div>
           </div>
 
-          <div className="mt-3 rounded-[16px] border border-slate-200 bg-white/90 px-3 py-2.5">
+          <div className="mt-2.5 rounded-[14px] border border-slate-200 bg-white/90 px-2.5 py-2">
             <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{row.matchupTitle}</div>
             {row.kind === 'match' ? (
-              <div className="mt-2 grid grid-cols-[minmax(0,1fr)_18px_minmax(0,1fr)] items-center gap-1.5">
+              <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_16px_minmax(0,1fr)] items-center gap-1">
                 <span className="truncate text-right text-[13px] font-bold text-slate-900">{row.sideA}</span>
                 <span className="text-center text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">x</span>
                 <span className="truncate text-[13px] font-bold text-slate-900">{row.sideB}</span>
               </div>
             ) : (
-              <div className="mt-2 text-[13px] font-bold text-slate-900">{row.matchupSubtitle}</div>
+              <div className="mt-1.5 text-[13px] font-bold text-slate-900">{row.matchupSubtitle}</div>
             )}
             <div className="mt-1.5 text-[9px] text-slate-400">{row.kind === 'match' ? row.matchupSubtitle : row.officialMeta}</div>
           </div>
 
-          <div className="mt-2.5 flex items-center justify-between gap-2 text-[10px] text-slate-400">
+          <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-slate-400">
             <span className="truncate">{row.metaNote}</span>
             {row.kind === 'match' && <span className="shrink-0 font-semibold text-slate-500">{row.officialMeta}</span>}
           </div>
@@ -2383,7 +2383,7 @@ export default function App() {
                           className="grid border-b border-slate-100 bg-white last:border-0"
                           style={{ gridTemplateColumns: reviewGridTemplate }}
                         >
-                          <div className="sticky left-0 z-20 border-r border-slate-200 bg-white px-3 py-3">
+                          <div className="sticky left-0 z-20 border-r border-slate-200 bg-white px-2.5 py-2.5">
                             {renderSummaryCell(row)}
                           </div>
 
@@ -2413,7 +2413,7 @@ export default function App() {
                           className="grid border-b border-slate-100 bg-white last:border-0"
                           style={{ gridTemplateColumns: reviewGridTemplate }}
                         >
-                          <div className="sticky left-0 z-20 border-r border-slate-200 bg-white px-3 py-3">
+                          <div className="sticky left-0 z-20 border-r border-slate-200 bg-white px-2.5 py-2.5">
                             {renderSummaryCell(row)}
                           </div>
 
