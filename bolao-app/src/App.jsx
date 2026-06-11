@@ -781,8 +781,6 @@ const buildStateDocument = ({
 
 const buildStateSnapshot = (state) => JSON.stringify(buildStateDocument(state, { includeUpdatedAt: false }));
 
-const buildRemotePayload = (state) => buildStateDocument(state);
-
 const buildRemoteUserIndexRecord = (user) => {
   const normalized = normalizeUser(user);
   return {
@@ -1226,14 +1224,6 @@ const parseMatchDateTime = (match) => {
   return new Date(2026, (month || 1) - 1, day || 1, hour || 0, minute || 0).getTime();
 };
 
-const formatMatchMeta = (match) => {
-  const schedule = formatBrazilMatchSchedule(match);
-  return {
-    top: `Grupo ${match.grupo}`,
-    bottom: schedule.label
-  };
-};
-
 const AvatarBadge = ({ user, size = 'md', className = '' }) => {
   const sizes = {
     sm: 'w-7 h-7 text-[11px]',
@@ -1435,6 +1425,7 @@ export default function App() {
   const [reviewMode, setReviewMode] = useState('jogos');
   const [reviewSearch, setReviewSearch] = useState('');
   const [reviewGroupFilter, setReviewGroupFilter] = useState('todos');
+  const [reviewPhaseFilter, setReviewPhaseFilter] = useState('todos');
   const [avatarError, setAvatarError] = useState('');
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState(isDemoMode ? 'demo' : 'connecting');
@@ -1519,6 +1510,7 @@ export default function App() {
     setReviewMode('jogos');
     setReviewSearch('');
     setReviewGroupFilter('todos');
+    setReviewPhaseFilter('todos');
     setSyncStatus('demo');
   }, [isDemoMode]);
 
@@ -1632,6 +1624,8 @@ export default function App() {
     };
   }, [isDemoMode]);
 
+  const modoAdmin = isAdminUser(currentUser); 
+
   useEffect(() => {
     if (isDemoMode || !remoteReadyRef.current) return;
     if (skipNextRemoteSyncRef.current) {
@@ -1683,7 +1677,6 @@ export default function App() {
     };
   }, [isDemoMode, usuarios, jogosReais, palpitesJogos, palpitesMataMata, gabaritoMataMata, condutaGrupos, submissoes]);
 
-  const modoAdmin = isAdminUser(currentUser); 
   const palpitesUsuarioAtual = currentUser ? palpitesJogos[currentUser.id] : undefined;
   const palpitesMataUsuarioAtual = currentUser ? (palpitesMataMata[currentUser.id] || {}) : {};
   const gruposCompletos = currentUser ? faseDeGruposCompleta(jogosReais, modoAdmin ? undefined : palpitesUsuarioAtual) : false;
@@ -1996,6 +1989,45 @@ export default function App() {
       .filter((user) => !searchTerm || user.nome.toLowerCase().includes(searchTerm))
       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
+    const reviewLayout = {
+      meta: 190,
+      confronto: 320,
+      oficial: 132
+    };
+    const stickyOffsets = {
+      meta: 0,
+      confronto: reviewLayout.meta,
+      oficial: reviewLayout.meta + reviewLayout.confronto
+    };
+    const participantColumnCount = Math.max(usersFiltrados.length, 1);
+    const reviewGridTemplate = `${reviewLayout.meta}px ${reviewLayout.confronto}px ${reviewLayout.oficial}px repeat(${participantColumnCount}, minmax(172px, 1fr))`;
+    const reviewDescription = reviewMode === 'jogos'
+      ? 'Cada linha mostra um confronto, o placar real e os palpites dos participantes lado a lado.'
+      : 'Cada linha mostra uma vaga da chave ou do pódio, com a escolha oficial e os palpites dos participantes.';
+    const reviewSubmissionField = reviewMode === 'jogos' ? SUBMISSION_FIELDS.JOGOS : SUBMISSION_FIELDS.MATA;
+
+    const buildStatus = (variant) => {
+      if (variant === 'cravou') return { label: 'Cravou', tone: 'border-emerald-200 bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' };
+      if (variant === 'winner') return { label: 'Acertou vencedor', tone: 'border-sky-200 bg-sky-50 text-sky-700', dot: 'bg-sky-500' };
+      if (variant === 'correct') return { label: 'Acertou', tone: 'border-emerald-200 bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' };
+      if (variant === 'error') return { label: 'Errou', tone: 'border-rose-200 bg-rose-50 text-rose-700', dot: 'bg-rose-500' };
+      if (variant === 'waiting-real') return { label: 'Aguardando real', tone: 'border-amber-200 bg-amber-50 text-amber-700', dot: 'bg-amber-500' };
+      if (variant === 'waiting-official') return { label: 'Aguardando oficial', tone: 'border-amber-200 bg-amber-50 text-amber-700', dot: 'bg-amber-500' };
+      return { label: 'Sem palpite', tone: 'border-slate-200 bg-slate-50 text-slate-500', dot: 'bg-slate-400' };
+    };
+
+    const renderParticipantCard = (palpite) => (
+      <div className={`rounded-2xl border px-3 py-3 text-center shadow-sm ${palpite.status.tone}`}>
+        <div className="text-base font-bold text-slate-900">{palpite.palpite}</div>
+        <div className="mt-2 flex items-center justify-center gap-2">
+          <span className={`h-2.5 w-2.5 rounded-full ${palpite.status.dot}`}></span>
+          <span className="text-[10px] font-bold uppercase tracking-wide">{palpite.status.label}</span>
+        </div>
+        <div className="mt-2 text-[11px] font-bold text-sky-700">{palpite.pontos} pts</div>
+        <div className="mt-1 text-[10px] text-slate-400">{palpite.envio}</div>
+      </div>
+    );
+
     const jogosFiltrados = jogosReais
       .filter((jogo) => reviewGroupFilter === 'todos' || jogo.grupo === reviewGroupFilter)
       .sort((a, b) => (
@@ -2006,11 +2038,15 @@ export default function App() {
 
     const gameRows = jogosFiltrados.map((jogo) => {
       const realPreenchido = placarPreenchido(jogo.placarA, jogo.placarB);
+      const schedule = formatBrazilMatchSchedule(jogo);
 
       return {
         id: jogo.id,
-        grupoMeta: formatMatchMeta(jogo),
-        confronto: `${jogo.timeA} x ${jogo.timeB}`,
+        grupo: jogo.grupo,
+        dataHora: `${schedule.day}/${schedule.month} • ${schedule.time} BR`,
+        local: jogo.local,
+        timeA: jogo.timeA,
+        timeB: jogo.timeB,
         real: realPreenchido ? `${jogo.placarA} x ${jogo.placarB}` : '—',
         palpites: usersFiltrados.map((user) => {
           const palpite = palpitesJogos[user.id]?.[jogo.id];
@@ -2019,116 +2055,174 @@ export default function App() {
             ? calcularPontosJogo(palpite.placarA, palpite.placarB, jogo.placarA, jogo.placarB)
             : null;
 
-          let status = { label: 'Sem palpite', tone: 'bg-slate-100 text-slate-500' };
-          if (palpitePreenchido && !realPreenchido) status = { label: 'Aguardando real', tone: 'bg-amber-100 text-amber-700' };
-          if (resultado?.pts === PONTOS.JOGO.CHEIO) status = { label: 'Cravou', tone: 'bg-emerald-100 text-emerald-700' };
-          if (resultado?.pts === PONTOS.JOGO.VITORIA) status = { label: 'Vencedor', tone: 'bg-sky-100 text-sky-700' };
-          if (resultado && resultado.pts === 0) status = { label: 'Errou', tone: 'bg-rose-100 text-rose-700' };
+          let status = buildStatus();
+          if (palpitePreenchido && !realPreenchido) status = buildStatus('waiting-real');
+          if (resultado?.pts === PONTOS.JOGO.CHEIO) status = buildStatus('cravou');
+          if (resultado?.pts === PONTOS.JOGO.VITORIA) status = buildStatus('winner');
+          if (resultado && resultado.pts === 0) status = buildStatus('error');
 
           return {
             userId: user.id,
-            usuario: user.nome,
             palpite: palpitePreenchido ? `${palpite.placarA} x ${palpite.placarB}` : '—',
             status,
             pontos: resultado?.pts ?? 0,
-            envio: formatSubmissionDate(submissoes[user.id]?.[SUBMISSION_FIELDS.JOGOS]),
-            enviado: Boolean(submissoes[user.id]?.[SUBMISSION_FIELDS.JOGOS])
+            envio: formatSubmissionDate(submissoes[user.id]?.[SUBMISSION_FIELDS.JOGOS])
           };
         })
       };
     });
 
-    const knockoutRows = usersFiltrados.flatMap((user) => {
-      const userMata = palpitesMataMata[user.id] || {};
-      const phaseRows = [
-        ...MATA_MATA_CONFIG.r32.map((match, idx) => ({
-          id: `${user.id}-r32-${match.id}`,
-          usuario: user.nome,
-          etapa: '32-avos',
-          disputa: `Jogo ${match.id}`,
-          palpite: userMata.dezeszeseisavos?.[idx] || '—',
-          oficial: gabaritoMataMata.dezeszeseisavos?.[idx] || '—',
-          pontos: userMata.dezeszeseisavos?.[idx] && userMata.dezeszeseisavos?.[idx] === gabaritoMataMata.dezeszeseisavos?.[idx] ? PONTOS.MATA.R32 : 0
-        })),
-        ...MATA_MATA_CONFIG.r16.map((match, idx) => ({
-          id: `${user.id}-r16-${match.id}`,
-          usuario: user.nome,
-          etapa: 'Oitavas',
-          disputa: `Jogo ${match.id}`,
-          palpite: userMata.oitavas?.[idx] || '—',
-          oficial: gabaritoMataMata.oitavas?.[idx] || '—',
-          pontos: userMata.oitavas?.[idx] && userMata.oitavas?.[idx] === gabaritoMataMata.oitavas?.[idx] ? PONTOS.MATA.R16 : 0
-        })),
-        ...MATA_MATA_CONFIG.qf.map((match, idx) => ({
-          id: `${user.id}-qf-${match.id}`,
-          usuario: user.nome,
-          etapa: 'Quartas',
-          disputa: `Jogo ${match.id}`,
-          palpite: userMata.quartas?.[idx] || '—',
-          oficial: gabaritoMataMata.quartas?.[idx] || '—',
-          pontos: userMata.quartas?.[idx] && userMata.quartas?.[idx] === gabaritoMataMata.quartas?.[idx] ? PONTOS.MATA.QF : 0
-        })),
-        ...MATA_MATA_CONFIG.sf.map((match, idx) => ({
-          id: `${user.id}-sf-${match.id}`,
-          usuario: user.nome,
-          etapa: 'Semis',
-          disputa: `Jogo ${match.id}`,
-          palpite: userMata.semis?.[idx] || '—',
-          oficial: gabaritoMataMata.semis?.[idx] || '—',
-          pontos: userMata.semis?.[idx] && userMata.semis?.[idx] === gabaritoMataMata.semis?.[idx] ? PONTOS.MATA.SF : 0
-        })),
-        {
-          id: `${user.id}-campeao`,
-          usuario: user.nome,
-          etapa: 'Pódio',
-          disputa: 'Campeão',
-          palpite: userMata.campeao || '—',
-          oficial: gabaritoMataMata.campeao || '—',
-          pontos: userMata.campeao && userMata.campeao === gabaritoMataMata.campeao ? PONTOS.MATA.CAMPEAO : 0
-        },
-        {
-          id: `${user.id}-vice`,
-          usuario: user.nome,
-          etapa: 'Pódio',
-          disputa: 'Vice',
-          palpite: userMata.vice || '—',
-          oficial: gabaritoMataMata.vice || '—',
-          pontos: userMata.vice && userMata.vice === gabaritoMataMata.vice ? PONTOS.MATA.VICE : 0
-        },
-        {
-          id: `${user.id}-terceiro`,
-          usuario: user.nome,
-          etapa: 'Pódio',
-          disputa: '3º lugar',
-          palpite: userMata.terceiro || '—',
-          oficial: gabaritoMataMata.terceiro || '—',
-          pontos: userMata.terceiro && userMata.terceiro === gabaritoMataMata.terceiro ? PONTOS.MATA.TOP3 : 0
-        },
-        {
-          id: `${user.id}-quarto`,
-          usuario: user.nome,
-          etapa: 'Pódio',
-          disputa: '4º lugar',
-          palpite: userMata.quarto || '—',
-          oficial: gabaritoMataMata.quarto || '—',
-          pontos: userMata.quarto && userMata.quarto === gabaritoMataMata.quarto ? PONTOS.MATA.TOP4 : 0
-        }
-      ];
+    const groupedGameRows = Object.entries(
+      gameRows.reduce((acc, row) => {
+        if (!acc[row.grupo]) acc[row.grupo] = [];
+        acc[row.grupo].push(row);
+        return acc;
+      }, {})
+    ).sort(([grupoA], [grupoB]) => grupoA.localeCompare(grupoB, 'pt-BR'));
 
-      return phaseRows.map((row) => {
-        let status = { label: 'Sem palpite', tone: 'bg-slate-100 text-slate-500' };
-        if (row.palpite !== '—' && row.oficial === '—') status = { label: 'Aguardando oficial', tone: 'bg-amber-100 text-amber-700' };
-        if (row.pontos > 0) status = { label: 'Acertou', tone: 'bg-emerald-100 text-emerald-700' };
-        if (row.palpite !== '—' && row.oficial !== '—' && row.pontos === 0) status = { label: 'Errou', tone: 'bg-rose-100 text-rose-700' };
-        return {
-          ...row,
-          status,
-          envio: formatSubmissionDate(submissoes[user.id]?.[SUBMISSION_FIELDS.MATA])
-        };
-      });
+    const knockoutPhaseOptions = [
+      { id: 'r32', label: '32-avos' },
+      { id: 'r16', label: 'Oitavas' },
+      { id: 'qf', label: 'Quartas' },
+      { id: 'sf', label: 'Semifinais' },
+      { id: 'podio', label: 'Pódio final' }
+    ];
+
+    const resolveKnockoutSides = (phaseKey, match) => {
+      if (phaseKey === 'dezeszeseisavos' && match?.label?.includes(' x ')) {
+        const [sideA, sideB] = match.label.split(' x ');
+        return { sideA, sideB };
+      }
+
+      return {
+        sideA: getWinnerOfMatch(match.feedA, gabaritoMataMata) || `Venc. ${match.feedA}`,
+        sideB: getWinnerOfMatch(match.feedB, gabaritoMataMata) || `Venc. ${match.feedB}`
+      };
+    };
+
+    const buildKnockoutPalpites = ({ official, points, getter }) => usersFiltrados.map((user) => {
+      const palpite = getter(palpitesMataMata[user.id] || {});
+      const preenchido = Boolean(palpite);
+      const pontos = preenchido && official !== '—' && palpite === official ? points : 0;
+      let status = buildStatus();
+      if (preenchido && official === '—') status = buildStatus('waiting-official');
+      if (pontos > 0) status = buildStatus('correct');
+      if (preenchido && official !== '—' && pontos === 0) status = buildStatus('error');
+
+      return {
+        userId: user.id,
+        palpite: palpite || '—',
+        status,
+        pontos,
+        envio: formatSubmissionDate(submissoes[user.id]?.[SUBMISSION_FIELDS.MATA])
+      };
     });
 
-    const linhas = reviewMode === 'jogos' ? gameRows : knockoutRows;
+    const knockoutSections = [
+      { id: 'r32', title: '32-avos de final', phaseKey: 'dezeszeseisavos', points: PONTOS.MATA.R32, list: MATA_MATA_CONFIG.r32 },
+      { id: 'r16', title: 'Oitavas de final', phaseKey: 'oitavas', points: PONTOS.MATA.R16, list: MATA_MATA_CONFIG.r16 },
+      { id: 'qf', title: 'Quartas de final', phaseKey: 'quartas', points: PONTOS.MATA.QF, list: MATA_MATA_CONFIG.qf },
+      { id: 'sf', title: 'Semifinais', phaseKey: 'semis', points: PONTOS.MATA.SF, list: MATA_MATA_CONFIG.sf }
+    ].map((section) => ({
+      ...section,
+      rows: section.list.map((match, idx) => {
+        const schedule = formatBrazilMatchSchedule(match);
+        const { sideA, sideB } = resolveKnockoutSides(section.phaseKey, match);
+        const official = gabaritoMataMata[section.phaseKey]?.[idx] || '—';
+
+        return {
+          id: `${section.id}-${match.id}`,
+          kind: 'match',
+          metaTop: section.title,
+          metaBottom: `${schedule.day}/${schedule.month} • ${schedule.time} BR`,
+          metaNote: match.local,
+          matchupTitle: `Jogo ${match.id}`,
+          matchupSubtitle: `${section.points} pts em jogo`,
+          sideA,
+          sideB,
+          official,
+          officialMeta: official === '—' ? 'Aguardando definição' : `${section.points} pts`,
+          palpites: buildKnockoutPalpites({
+            official,
+            points: section.points,
+            getter: (userMata) => userMata[section.phaseKey]?.[idx]
+          })
+        };
+      })
+    }));
+
+    const finalInfo = MATA_MATA_CONFIG.final[0];
+    const bronzeInfo = MATA_MATA_CONFIG.bronzeFinal[0];
+    const finalSchedule = formatBrazilMatchSchedule(finalInfo);
+    const bronzeSchedule = formatBrazilMatchSchedule(bronzeInfo);
+
+    const podiumSection = {
+      id: 'podio',
+      title: 'Pódio final',
+      rows: [
+        {
+          id: 'campeao',
+          metaTop: 'Pódio final',
+          metaBottom: `${finalSchedule.day}/${finalSchedule.month} • ${finalSchedule.time} BR`,
+          metaNote: finalInfo.local,
+          matchupTitle: 'Campeão',
+          matchupSubtitle: 'Escolha o vencedor da final',
+          official: gabaritoMataMata.campeao || '—',
+          officialMeta: `${PONTOS.MATA.CAMPEAO} pts`,
+          points: PONTOS.MATA.CAMPEAO,
+          field: 'campeao'
+        },
+        {
+          id: 'vice',
+          metaTop: 'Pódio final',
+          metaBottom: `${finalSchedule.day}/${finalSchedule.month} • ${finalSchedule.time} BR`,
+          metaNote: finalInfo.local,
+          matchupTitle: 'Vice',
+          matchupSubtitle: 'Derrotado da final',
+          official: gabaritoMataMata.vice || '—',
+          officialMeta: `${PONTOS.MATA.VICE} pts`,
+          points: PONTOS.MATA.VICE,
+          field: 'vice'
+        },
+        {
+          id: 'terceiro',
+          metaTop: 'Pódio final',
+          metaBottom: `${bronzeSchedule.day}/${bronzeSchedule.month} • ${bronzeSchedule.time} BR`,
+          metaNote: bronzeInfo.local,
+          matchupTitle: '3º lugar',
+          matchupSubtitle: 'Vencedor da disputa do bronze',
+          official: gabaritoMataMata.terceiro || '—',
+          officialMeta: `${PONTOS.MATA.TOP3} pts`,
+          points: PONTOS.MATA.TOP3,
+          field: 'terceiro'
+        },
+        {
+          id: 'quarto',
+          metaTop: 'Pódio final',
+          metaBottom: `${bronzeSchedule.day}/${bronzeSchedule.month} • ${bronzeSchedule.time} BR`,
+          metaNote: bronzeInfo.local,
+          matchupTitle: '4º lugar',
+          matchupSubtitle: 'Derrotado da disputa do bronze',
+          official: gabaritoMataMata.quarto || '—',
+          officialMeta: `${PONTOS.MATA.TOP4} pts`,
+          points: PONTOS.MATA.TOP4,
+          field: 'quarto'
+        }
+      ].map((row) => ({
+        ...row,
+        kind: 'podium',
+        palpites: buildKnockoutPalpites({
+          official: row.official,
+          points: row.points,
+          getter: (userMata) => userMata[row.field]
+        })
+      }))
+    };
+
+    const groupedKnockoutRows = [...knockoutSections, podiumSection]
+      .filter((section) => reviewPhaseFilter === 'todos' || section.id === reviewPhaseFilter);
+
+    const linhas = reviewMode === 'jogos' ? gameRows : groupedKnockoutRows.flatMap((section) => section.rows);
 
     return (
       <div className="space-y-4 animate-fade-in">
@@ -2136,7 +2230,7 @@ export default function App() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Planilha de Palpites</h3>
-              <p className={`text-xs mt-1 ${TEXT_MUTED}`}>Cada linha mostra um confronto, o placar real e os palpites dos participantes lado a lado.</p>
+              <p className={`text-xs mt-1 ${TEXT_MUTED}`}>{reviewDescription}</p>
             </div>
             <div className="flex gap-2 rounded-full bg-slate-100 p-1">
               <button onClick={() => setReviewMode('jogos')} className={`px-3 py-1.5 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'jogos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Jogos</button>
@@ -2152,118 +2246,167 @@ export default function App() {
               <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-slate-400"></span> Sem palpite</span>
             </div>
           )}
+          {reviewMode === 'mata' && (
+            <div className="flex flex-wrap gap-2 text-[10px] font-semibold text-slate-500">
+              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span> Acertou</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 text-rose-700"><span className="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Errou</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-amber-700"><span className="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Aguardando oficial</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-slate-400"></span> Sem palpite</span>
+            </div>
+          )}
           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_150px]">
-            <input value={reviewSearch} onChange={(e) => setReviewSearch(e.target.value)} placeholder="Filtrar colunas por usuário" className={`${GLASS_INPUT} px-4 py-3 text-sm`} />
-            <select value={reviewGroupFilter} onChange={(e) => setReviewGroupFilter(e.target.value)} disabled={reviewMode !== 'jogos'} className={`${GLASS_INPUT} px-4 py-3 text-sm`}>
-              <option value="todos">Todos os grupos</option>
-              {Object.keys(GRUPOS_2026).map((grupo) => <option key={grupo} value={grupo}>Grupo {grupo}</option>)}
+            <input value={reviewSearch} onChange={(e) => setReviewSearch(e.target.value)} placeholder="Filtrar participantes por nome" className={`${GLASS_INPUT} px-4 py-3 text-sm`} />
+            <select
+              value={reviewMode === 'jogos' ? reviewGroupFilter : reviewPhaseFilter}
+              onChange={(e) => reviewMode === 'jogos' ? setReviewGroupFilter(e.target.value) : setReviewPhaseFilter(e.target.value)}
+              className={`${GLASS_INPUT} px-4 py-3 text-sm`}
+            >
+              <option value="todos">{reviewMode === 'jogos' ? 'Todos os grupos' : 'Todas as fases'}</option>
+              {(reviewMode === 'jogos'
+                ? Object.keys(GRUPOS_2026).map((grupo) => ({ id: grupo, label: `Grupo ${grupo}` }))
+                : knockoutPhaseOptions
+              ).map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
             </select>
+          </div>
+          <div className={`text-[11px] ${TEXT_MUTED}`}>
+            {usersFiltrados.length === 1 ? '1 participante visível.' : `${usersFiltrados.length} participantes visíveis.`}
           </div>
         </div>
 
         <div className={`${GLASS_CARD} overflow-hidden`}>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px]">
-                {reviewMode === 'jogos' ? (
-                  <tr>
-                    <th className="px-4 py-3 text-left min-w-[140px]">Grupo / Data</th>
-                    <th className="px-4 py-3 text-left min-w-[220px]">Confronto</th>
-                    <th className="px-4 py-3 text-center min-w-[96px]">Real</th>
-                    {usersFiltrados.map((user) => (
-                      <th key={user.id} className="px-4 py-3 text-center min-w-[180px]">
-                        <div className="flex items-center justify-center gap-2">
-                          <AvatarBadge user={user} size="sm" />
-                          <div className="font-bold text-slate-700 normal-case text-[11px]">{user.nome}</div>
+            <div className="min-w-max text-xs">
+              <div
+                className="sticky top-0 z-30 grid border-b border-slate-200 bg-slate-50 text-[10px] uppercase text-slate-500"
+                style={{ gridTemplateColumns: reviewGridTemplate }}
+              >
+                <div className="sticky z-40 border-r border-slate-200 bg-slate-50 px-4 py-4 font-bold" style={{ left: stickyOffsets.meta }}>Fase / Data</div>
+                <div className="sticky z-40 border-r border-slate-200 bg-slate-50 px-4 py-4 font-bold" style={{ left: stickyOffsets.confronto }}>Confronto</div>
+                <div className="sticky z-40 border-r border-slate-200 bg-slate-50 px-4 py-4 text-center font-bold" style={{ left: stickyOffsets.oficial }}>Oficial</div>
+                {usersFiltrados.map((user) => (
+                  <div key={user.id} className="px-3 py-3 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <AvatarBadge user={user} size="sm" />
+                      <div className="max-w-[110px] truncate font-bold normal-case text-[11px] text-slate-700">{user.nome}</div>
+                    </div>
+                    <div className="mt-1 text-[9px] font-medium text-slate-400">
+                      {submissoes[user.id]?.[reviewSubmissionField] ? 'Enviado' : 'Rascunho'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {linhas.length === 0 && (
+                <div className="px-4 py-10 text-center text-slate-400">Nenhum registro encontrado com os filtros atuais.</div>
+              )}
+
+              {reviewMode === 'jogos' ? (
+                <>
+                  {groupedGameRows.map(([grupo, rows]) => (
+                    <div key={grupo} className="border-b border-slate-100 last:border-0">
+                      <div className="border-b border-slate-200 bg-white px-4 py-3">
+                        <div className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-sky-700">
+                          Grupo {grupo}
                         </div>
-                        <div className="mt-1 text-[9px] font-medium text-slate-400">
-                          {submissoes[user.id]?.[SUBMISSION_FIELDS.JOGOS] ? 'Enviado' : 'Rascunho'}
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                ) : (
-                  <tr>
-                    <th className="px-4 py-3 text-left">Usuário</th>
-                    <th className="px-4 py-3 text-left">Etapa</th>
-                    <th className="px-4 py-3 text-left">Disputa</th>
-                    <th className="px-4 py-3 text-left">Palpite</th>
-                    <th className="px-4 py-3 text-left">Oficial</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                    <th className="px-4 py-3 text-center">Pts</th>
-                    <th className="px-4 py-3 text-center">Envio</th>
-                  </tr>
-                )}
-              </thead>
-              <tbody>
-                {linhas.length === 0 && (
-                  <tr>
-                    <td colSpan={reviewMode === 'jogos' ? 3 + Math.max(usersFiltrados.length, 1) : 8} className="px-4 py-10 text-center text-slate-400">Nenhum registro encontrado com os filtros atuais.</td>
-                  </tr>
-                )}
-                {reviewMode === 'jogos' && gameRows.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-100 last:border-0">
-                    <td className="px-4 py-3 text-slate-500">
-                      <div className="leading-tight">
-                        <div>{row.grupoMeta.top}</div>
-                        <div>{row.grupoMeta.bottom}</div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-700 font-semibold">{row.confronto}</td>
-                    <td className="px-4 py-3 text-center font-bold text-slate-900">{row.real}</td>
-                    {row.palpites.map((palpite) => (
-                      <td key={`${row.id}-${palpite.userId}`} className="px-4 py-3 align-top">
-                        <div className={`rounded-2xl border px-3 py-3 text-center ${
-                          palpite.status.label === 'Cravou'
-                            ? 'border-emerald-200 bg-emerald-50'
-                            : palpite.status.label === 'Vencedor'
-                              ? 'border-sky-200 bg-sky-50'
-                              : palpite.status.label === 'Errou'
-                                ? 'border-rose-200 bg-rose-50'
-                                : palpite.status.label === 'Aguardando real'
-                                  ? 'border-amber-200 bg-amber-50'
-                                  : 'border-slate-200 bg-slate-50'
-                        }`}>
-                          <div className="text-sm font-bold text-slate-900">{palpite.palpite}</div>
-                          <div className="mt-2 flex justify-center">
-                            <span className={`h-3 w-3 rounded-full ${
-                              palpite.status.label === 'Cravou'
-                                ? 'bg-emerald-500'
-                                : palpite.status.label === 'Vencedor'
-                                  ? 'bg-sky-500'
-                                  : palpite.status.label === 'Errou'
-                                    ? 'bg-rose-500'
-                                    : palpite.status.label === 'Aguardando real'
-                                      ? 'bg-amber-500'
-                                      : 'bg-slate-400'
-                            }`}></span>
+
+                      {rows.map((row) => (
+                        <div
+                          key={row.id}
+                          className="grid border-b border-slate-100 bg-white last:border-0"
+                          style={{ gridTemplateColumns: reviewGridTemplate }}
+                        >
+                          <div className="sticky z-10 border-r border-slate-200 bg-white px-4 py-4 text-slate-500" style={{ left: stickyOffsets.meta }}>
+                            <div className="text-[11px] font-bold uppercase tracking-wide text-slate-700">Grupo {row.grupo}</div>
+                            <div className="mt-1 text-[11px]">{row.dataHora}</div>
+                            <div className="mt-1 text-[10px] text-slate-400">{row.local}</div>
                           </div>
-                          <div className="mt-2 text-[10px] font-semibold text-sky-700">{palpite.pontos} pts</div>
-                          <div className="mt-1 text-[10px] text-slate-400">{palpite.envio}</div>
+
+                          <div className="sticky z-10 border-r border-slate-200 bg-white px-4 py-4" style={{ left: stickyOffsets.confronto }}>
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                              <div className="flex items-center justify-between gap-3 text-[13px] font-bold text-slate-800">
+                                <span className="min-w-0 flex-1 truncate text-right">{row.timeA}</span>
+                                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">x</span>
+                                <span className="min-w-0 flex-1 truncate">{row.timeB}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="sticky z-10 flex items-center justify-center border-r border-slate-200 bg-white px-4 py-4" style={{ left: stickyOffsets.oficial }}>
+                            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center shadow-sm">
+                              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Placar</div>
+                              <div className="mt-1 text-base font-bold text-slate-900">{row.real}</div>
+                            </div>
+                          </div>
+
+                          {row.palpites.map((palpite) => (
+                            <div key={`${row.id}-${palpite.userId}`} className="px-3 py-4">
+                              {renderParticipantCard(palpite)}
+                            </div>
+                          ))}
                         </div>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-                {reviewMode === 'mata' && knockoutRows.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-100 last:border-0">
-                    <td className="px-4 py-3 font-semibold text-slate-800">
-                      <div className="flex items-center gap-2">
-                        <AvatarBadge user={usuarios.find((user) => user.nome === row.usuario)} size="sm" />
-                        <span>{row.usuario}</span>
+                      ))}
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {groupedKnockoutRows.map((section) => (
+                    <div key={section.id} className="border-b border-slate-100 last:border-0">
+                      <div className="border-b border-slate-200 bg-white px-4 py-3">
+                        <div className="inline-flex items-center rounded-full bg-violet-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-violet-700">
+                          {section.title}
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-500">{row.etapa}</td>
-                    <td className="px-4 py-3 text-slate-700">{row.disputa}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-800">{row.palpite}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-800">{row.oficial}</td>
-                    <td className="px-4 py-3 text-center"><span className={`inline-flex rounded-full px-2.5 py-1 font-bold ${row.status.tone}`}>{row.status.label}</span></td>
-                    <td className="px-4 py-3 text-center font-bold text-sky-700">{row.pontos}</td>
-                    <td className="px-4 py-3 text-center text-slate-500">{row.envio}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+                      {section.rows.map((row) => (
+                        <div
+                          key={row.id}
+                          className="grid border-b border-slate-100 bg-white last:border-0"
+                          style={{ gridTemplateColumns: reviewGridTemplate }}
+                        >
+                          <div className="sticky z-10 border-r border-slate-200 bg-white px-4 py-4 text-slate-500" style={{ left: stickyOffsets.meta }}>
+                            <div className="text-[11px] font-bold uppercase tracking-wide text-slate-700">{row.metaTop}</div>
+                            <div className="mt-1 text-[11px]">{row.metaBottom}</div>
+                            <div className="mt-1 text-[10px] text-slate-400">{row.metaNote}</div>
+                          </div>
+
+                          <div className="sticky z-10 border-r border-slate-200 bg-white px-4 py-4" style={{ left: stickyOffsets.confronto }}>
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{row.matchupTitle}</div>
+                              {row.kind === 'match' ? (
+                                <div className="mt-2 flex items-center justify-between gap-3 text-[13px] font-bold text-slate-800">
+                                  <span className="min-w-0 flex-1 truncate text-right">{row.sideA}</span>
+                                  <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">x</span>
+                                  <span className="min-w-0 flex-1 truncate">{row.sideB}</span>
+                                </div>
+                              ) : (
+                                <div className="mt-2 text-sm font-bold text-slate-800">{row.matchupSubtitle}</div>
+                              )}
+                              {row.kind === 'match' && <div className="mt-2 text-[10px] text-slate-400">{row.matchupSubtitle}</div>}
+                            </div>
+                          </div>
+
+                          <div className="sticky z-10 flex items-center justify-center border-r border-slate-200 bg-white px-4 py-4" style={{ left: stickyOffsets.oficial }}>
+                            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center shadow-sm">
+                              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Oficial</div>
+                              <div className="mt-1 text-sm font-bold text-slate-900">{row.official}</div>
+                              <div className="mt-1 text-[10px] text-slate-400">{row.officialMeta}</div>
+                            </div>
+                          </div>
+
+                          {row.palpites.map((palpite) => (
+                            <div key={`${row.id}-${palpite.userId}`} className="px-3 py-4">
+                              {renderParticipantCard(palpite)}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
