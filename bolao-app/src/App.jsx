@@ -2367,7 +2367,7 @@ export default function App() {
               <p className={`mt-1 max-w-4xl text-[12px] leading-snug ${TEXT_MUTED}`}>{reviewDescription}</p>
             </div>
             <div className="flex gap-2 rounded-full bg-slate-100 p-1 self-start">
-              <button onClick={() => setReviewMode('jogos')} className={`px-3 py-1.5 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'jogos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Jogos</button>
+              <button onClick={() => setReviewMode('jogos')} className={`px-3 py-1.5 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'jogos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Fase de Grupos</button>
               <button onClick={() => setReviewMode('mata')} className={`px-3 py-1.5 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'mata' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Mata-mata</button>
             </div>
           </div>
@@ -2763,7 +2763,7 @@ export default function App() {
   }
 
   const navItems = [
-    { id: 'jogos', icon: Calendar, label: 'Jogos' },
+    { id: 'jogos', icon: Calendar, label: 'Fase de Grupos' },
     { id: 'matamata', icon: Crown, label: 'Mata-mata' },
     { id: 'ranking', icon: Trophy, label: 'Ranking' },
     { id: 'painel', icon: Medal, label: 'Painel' },
