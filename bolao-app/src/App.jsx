@@ -989,6 +989,26 @@ const mergeRemoteState = (baseState, localState, { currentUserId = null, isAdmin
   };
 };
 
+const parseRemoteWriteError = async (response) => {
+  let payload = null;
+
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (payload?.error === 'Entry limit reached') {
+    return 'A base online atingiu o limite do plano atual. Contas novas ou incompletas não conseguem sincronizar até liberar mais espaço.';
+  }
+
+  if (typeof payload?.message === 'string' && payload.message.trim()) {
+    return `Falha ao gravar base online (${response.status}): ${payload.message}`;
+  }
+
+  return `Falha ao gravar base online (${response.status})`;
+};
+
 const writeRemoteEntry = async (path, payload) => {
   const response = await fetch(getRemotePathUrl(path), {
     method: 'POST',
@@ -997,7 +1017,7 @@ const writeRemoteEntry = async (path, payload) => {
   });
 
   if (!response.ok) {
-    throw new Error(`Falha ao gravar base online (${response.status})`);
+    throw new Error(await parseRemoteWriteError(response));
   }
 };
 
