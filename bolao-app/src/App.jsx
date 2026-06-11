@@ -1900,27 +1900,27 @@ export default function App() {
   }, [jogosReais, palpitesUsuarioAtual, condutaGrupos, currentUser, gruposCompletos]);
 
   useEffect(() => {
+    if (!currentUser || modoAdmin) return;
+
     setPalpitesMataMata((current) => {
-      let changed = false;
-      const next = { ...current };
-
-      participanteUsuarios.forEach((user) => {
-        const sanitized = sanitizeKnockoutBracket({
-          bracket: current[user.id] || {},
-          jogos: jogosReais,
-          palpitesUsuario: palpitesJogos[user.id],
-          condutaGrupos
-        });
-
-        if (JSON.stringify(current[user.id] || createEmptyKnockoutBracket()) !== JSON.stringify(sanitized)) {
-          next[user.id] = sanitized;
-          changed = true;
-        }
+      const currentBracket = current[currentUser.id] || {};
+      const sanitized = sanitizeKnockoutBracket({
+        bracket: currentBracket,
+        jogos: jogosReais,
+        palpitesUsuario: palpitesJogos[currentUser.id],
+        condutaGrupos
       });
 
-      return changed ? next : current;
+      if (JSON.stringify(currentBracket || createEmptyKnockoutBracket()) === JSON.stringify(sanitized)) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [currentUser.id]: sanitized
+      };
     });
-  }, [participanteUsuarios, jogosReais, palpitesJogos, condutaGrupos]);
+  }, [currentUser, modoAdmin, jogosReais, palpitesJogos, condutaGrupos]);
 
   useEffect(() => {
     setGabaritoMataMata((current) => {
