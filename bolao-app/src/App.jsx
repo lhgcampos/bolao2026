@@ -2292,60 +2292,64 @@ export default function App() {
 
     return (
       <div className="space-y-4 animate-fade-in">
-        <div className={`${GLASS_CARD} p-5 space-y-4 lg:p-6`}>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className={`${GLASS_CARD} p-4 space-y-3 lg:p-4`}>
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h3 className="text-base font-black uppercase tracking-[0.12em] text-slate-900">Planilha de Palpites</h3>
-              <p className={`mt-2 max-w-3xl text-sm leading-relaxed ${TEXT_MUTED}`}>{reviewDescription}</p>
+              <h3 className="text-[15px] font-black uppercase tracking-[0.12em] text-slate-900">Planilha de Palpites</h3>
+              <p className={`mt-1 max-w-4xl text-[12px] leading-snug ${TEXT_MUTED}`}>{reviewDescription}</p>
             </div>
             <div className="flex gap-2 rounded-full bg-slate-100 p-1 self-start">
-              <button onClick={() => setReviewMode('jogos')} className={`px-4 py-2 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'jogos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Jogos</button>
-              <button onClick={() => setReviewMode('mata')} className={`px-4 py-2 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'mata' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Mata-mata</button>
+              <button onClick={() => setReviewMode('jogos')} className={`px-3 py-1.5 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'jogos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Jogos</button>
+              <button onClick={() => setReviewMode('mata')} className={`px-3 py-1.5 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'mata' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Mata-mata</button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2.5 text-[10px] font-semibold text-slate-500">
-            <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-slate-700">
-              <span className="font-black text-slate-900">{usersFiltrados.length}</span>
-              {usersFiltrados.length === 1 ? 'apostador visível' : 'apostadores visíveis'}
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-slate-700">
-              <span className="font-black text-slate-900">{linhas.length}</span>
-              {reviewCountLabel}
-            </span>
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap gap-2 text-[10px] font-semibold text-slate-500">
+              <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
+                <span className="font-black text-slate-900">{usersFiltrados.length}</span>
+                {usersFiltrados.length === 1 ? 'apostador' : 'apostadores'}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
+                <span className="font-black text-slate-900">{linhas.length}</span>
+                {reviewCountLabel}
+              </span>
+            </div>
+            <div className="grid gap-2 lg:min-w-[520px] lg:grid-cols-[minmax(0,1fr)_210px]">
+              <input value={reviewSearch} onChange={(e) => setReviewSearch(e.target.value)} placeholder="Filtrar participantes por nome" className={`${GLASS_INPUT} px-3 py-2.5 text-sm`} />
+              <select
+                value={isGameMode ? reviewGroupFilter : reviewPhaseFilter}
+                onChange={(e) => isGameMode ? setReviewGroupFilter(e.target.value) : setReviewPhaseFilter(e.target.value)}
+                className={`${GLASS_INPUT} px-3 py-2.5 text-sm`}
+              >
+                <option value="todos">{isGameMode ? 'Todos os grupos' : 'Todas as fases'}</option>
+                {(isGameMode
+                  ? Object.keys(GRUPOS_2026).map((grupo) => ({ id: grupo, label: `Grupo ${grupo}` }))
+                  : knockoutPhaseOptions
+                ).map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+              </select>
+            </div>
           </div>
-          {reviewMode === 'jogos' && (
-            <div className="flex flex-wrap gap-2 text-[10px] font-semibold text-slate-500">
-              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span> Cravou</span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1.5 text-sky-700"><span className="h-2.5 w-2.5 rounded-full bg-sky-500"></span> Acertou vencedor</span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 text-rose-700"><span className="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Errou</span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-amber-700"><span className="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Aguardando real</span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-slate-400"></span> Sem palpite</span>
-            </div>
-          )}
-          {reviewMode === 'mata' && (
-            <div className="flex flex-wrap gap-2 text-[10px] font-semibold text-slate-500">
-              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span> Acertou</span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 text-rose-700"><span className="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Errou</span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-amber-700"><span className="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Aguardando oficial</span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-slate-400"></span> Sem palpite</span>
-            </div>
-          )}
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_210px]">
-            <input value={reviewSearch} onChange={(e) => setReviewSearch(e.target.value)} placeholder="Filtrar participantes por nome" className={`${GLASS_INPUT} px-4 py-3 text-sm`} />
-            <select
-              value={isGameMode ? reviewGroupFilter : reviewPhaseFilter}
-              onChange={(e) => isGameMode ? setReviewGroupFilter(e.target.value) : setReviewPhaseFilter(e.target.value)}
-              className={`${GLASS_INPUT} px-4 py-3 text-sm`}
-            >
-              <option value="todos">{isGameMode ? 'Todos os grupos' : 'Todas as fases'}</option>
-              {(isGameMode
-                ? Object.keys(GRUPOS_2026).map((grupo) => ({ id: grupo, label: `Grupo ${grupo}` }))
-                : knockoutPhaseOptions
-              ).map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-            </select>
+          <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold text-slate-500">
+            <span className="text-[11px] text-slate-500">Legenda:</span>
+            {reviewMode === 'jogos' && (
+              <>
+                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span> Cravou</span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-2.5 py-1 text-sky-700"><span className="h-2.5 w-2.5 rounded-full bg-sky-500"></span> Acertou vencedor</span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-2.5 py-1 text-rose-700"><span className="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Errou</span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-2.5 py-1 text-amber-700"><span className="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Aguardando real</span>
+              </>
+            )}
+            {reviewMode === 'mata' && (
+              <>
+                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span> Acertou</span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-2.5 py-1 text-rose-700"><span className="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Errou</span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-2.5 py-1 text-amber-700"><span className="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Aguardando oficial</span>
+              </>
+            )}
+            <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-slate-400"></span> Sem palpite</span>
           </div>
           <div className={`text-[11px] ${TEXT_MUTED}`}>
-            Arraste horizontalmente para comparar todos os apostadores sem perder o contexto do jogo.
+            Arraste na horizontal para comparar os apostadores.
           </div>
         </div>
 
