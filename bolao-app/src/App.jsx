@@ -1024,15 +1024,15 @@ const writeRemoteEntry = async (path, payload) => {
 const writeRemoteState = async (state, { currentUserId = null, isAdmin = false } = {}) => {
   const normalizedUsers = (state.users || []).map(normalizeUser);
   const updatedAt = Date.now();
+  const metaEntry = [
+    REMOTE_PATHS.meta,
+    {
+      schemaVersion: REMOTE_SCHEMA_VERSION,
+      updatedAt,
+      userIds: normalizedUsers.map((user) => user.id)
+    }
+  ];
   const entries = [
-    [
-      REMOTE_PATHS.meta,
-      {
-        schemaVersion: REMOTE_SCHEMA_VERSION,
-        updatedAt,
-        userIds: normalizedUsers.map((user) => user.id)
-      }
-    ],
     [REMOTE_PATHS.usersIndex, buildRemoteUsersIndex(normalizedUsers)]
   ];
 
@@ -1061,6 +1061,9 @@ const writeRemoteState = async (state, { currentUserId = null, isAdmin = false }
   }
 
   await Promise.all(entries.map(([path, payload]) => writeRemoteEntry(path, payload)));
+  // `meta.updatedAt` funciona como marcador de commit: grava por ultimo para nao anunciar
+  // um estado novo antes de os documentos de jogos/gabarito ficarem visiveis.
+  await writeRemoteEntry(metaEntry[0], metaEntry[1]);
   return updatedAt;
 };
 
@@ -1615,8 +1618,7 @@ export default function App() {
       setSyncStatus('syncing');
       setSyncError('');
       const syncResult = await syncRemoteStateWithPatch(pending.state, pending.options || {});
-      remoteUpdatedAtRef.current = syncResult.updatedAt || Date.now();
-      remoteSnapshotRef.current = pending.snapshot || buildStateSnapshot(syncResult.mergedState || pending.state);
+      applyAppState(syncResult.mergedState || pending.state, syncResult.updatedAt || Date.now());
       clearPendingSync();
       setSyncStatus('online');
     } catch (error) {
@@ -1658,10 +1660,15 @@ export default function App() {
           return;
         }
 
-        applyAppState(parseRemotePayload(remotePayload), remotePayload.updatedAt || Date.now());
         remoteReadyRef.current = true;
+        if (readPendingSync()) {
+          setSyncStatus('syncing');
+          flushPendingSync();
+          return;
+        }
+
+        applyAppState(parseRemotePayload(remotePayload), remotePayload.updatedAt || Date.now());
         setSyncStatus('online');
-        if (readPendingSync()) flushPendingSync();
       } catch (error) {
         if (cancelled) return;
         setSyncStatus('offline');
