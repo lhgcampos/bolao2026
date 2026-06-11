@@ -1226,9 +1226,9 @@ const parseMatchDateTime = (match) => {
 
 const AvatarBadge = ({ user, size = 'md', className = '' }) => {
   const sizes = {
-    sm: 'w-7 h-7 text-[11px]',
-    md: 'w-9 h-9 text-sm',
-    lg: 'w-14 h-14 text-lg'
+    sm: 'w-7 h-7 text-[11px] lg:w-8 lg:h-8 lg:text-xs',
+    md: 'w-9 h-9 text-sm lg:w-11 lg:h-11 lg:text-base',
+    lg: 'w-14 h-14 text-lg lg:w-[68px] lg:h-[68px] lg:text-[22px]'
   };
 
   const sizeClass = sizes[size] || sizes.md;
