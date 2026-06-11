@@ -2219,6 +2219,7 @@ export default function App() {
     const reviewCountLabel = isGameMode
       ? `${linhas.length} jogo${linhas.length === 1 ? '' : 's'} visíveis`
       : `${linhas.length} linha${linhas.length === 1 ? '' : 's'} da chave`;
+    const usersFiltradosById = Object.fromEntries(usersFiltrados.map((user) => [user.id, user]));
 
     const renderSummaryCell = (row) => {
       if (isGameMode) {
@@ -2290,6 +2291,42 @@ export default function App() {
       );
     };
 
+    const renderMobileParticipantRow = (palpite) => {
+      const user = usersFiltradosById[palpite.userId];
+      return (
+        <div key={palpite.userId} className="flex items-center gap-3 px-3 py-2.5">
+          <AvatarBadge user={user} size="sm" className="shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[12px] font-bold text-slate-800">{user?.nome || 'Participante'}</div>
+            <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">
+              <span className={`h-2 w-2 rounded-full ${palpite.status.dot}`}></span>
+              <span className="truncate">{palpite.status.label}</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-[15px] font-black tracking-[-0.03em] text-slate-900">{palpite.palpite}</div>
+            <div className="mt-0.5 text-[10px] font-semibold text-slate-600">{palpite.pontos} pts</div>
+            <div className="mt-0.5 text-[9px] text-slate-400">{palpite.envio}</div>
+          </div>
+        </div>
+      );
+    };
+
+    const renderMobileRowCard = (row) => (
+      <div key={row.id} className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_16px_32px_-28px_rgba(15,23,42,0.38)]">
+        <div className="p-3">
+          {renderSummaryCell(row)}
+        </div>
+        <div className="border-t border-slate-100 bg-slate-50/55">
+          {row.palpites.map((palpite, index) => (
+            <div key={`${row.id}-${palpite.userId}`} className={index > 0 ? 'border-t border-slate-100' : ''}>
+              {renderMobileParticipantRow(palpite)}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+
     return (
       <div className="space-y-4 animate-fade-in">
         <div className={`${GLASS_CARD} p-4 space-y-3 lg:p-4`}>
@@ -2353,7 +2390,41 @@ export default function App() {
           </div>
         </div>
 
-        <div className={`${GLASS_CARD} overflow-hidden`}>
+        <div className="space-y-4 lg:hidden">
+          {linhas.length === 0 && (
+            <div className={`${GLASS_CARD} px-4 py-10 text-center text-slate-400`}>Nenhum registro encontrado com os filtros atuais.</div>
+          )}
+
+          {reviewMode === 'jogos' ? (
+            <>
+              {groupedGameRows.map(([grupo, rows]) => (
+                <div key={grupo} className="space-y-3">
+                  <div className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-sky-700">
+                    Grupo {grupo}
+                  </div>
+                  <div className="space-y-3">
+                    {rows.map((row) => renderMobileRowCard(row))}
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              {groupedKnockoutRows.map((section) => (
+                <div key={section.id} className="space-y-3">
+                  <div className="inline-flex items-center rounded-full bg-violet-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-violet-700">
+                    {section.title}
+                  </div>
+                  <div className="space-y-3">
+                    {section.rows.map((row) => renderMobileRowCard(row))}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        <div className={`${GLASS_CARD} hidden overflow-hidden lg:block`}>
           <div className="max-h-[calc(100vh-220px)] overflow-auto overscroll-contain">
             <div className="min-w-max text-xs bg-white">
               <div
