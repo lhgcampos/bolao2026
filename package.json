@@ -7,9 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "seed:roqueia": "node scripts/seed-roqueia-picks.mjs",
     "test:ranking-positions": "node scripts/test-ranking-positions.mjs",
     "test:ranking-consensus": "node scripts/test-ranking-consensus.mjs",
     "test:user-home-insights": "node scripts/test-user-home-insights.mjs",
+    "validate:roqueia": "node scripts/seed-roqueia-picks.mjs --validate-only",
     "preview": "vite preview"
   },
   "dependencies": {
