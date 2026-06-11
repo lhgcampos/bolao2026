@@ -1078,9 +1078,17 @@ const syncRemoteStateWithPatch = async (localState, options = {}) => {
   return { mergedState, updatedAt };
 };
 
+const normalizePendingSync = (pending) => {
+  if (!pending || typeof pending !== 'object' || !pending.state || typeof pending.state !== 'object') {
+    return null;
+  }
+
+  return pending;
+};
+
 const readPendingSync = () => {
   try {
-    return JSON.parse(localStorage.getItem(PENDING_SYNC_KEY) || 'null');
+    return normalizePendingSync(JSON.parse(localStorage.getItem(PENDING_SYNC_KEY) || 'null'));
   } catch {
     return null;
   }
@@ -1660,14 +1668,24 @@ export default function App() {
           return;
         }
 
+        const nextRemoteState = parseRemotePayload(remotePayload);
+        const pendingSync = readPendingSync();
         remoteReadyRef.current = true;
-        if (readPendingSync()) {
-          setSyncStatus('syncing');
-          flushPendingSync();
+
+        if (pendingSync) {
+          const remoteSnapshot = buildStateSnapshot(nextRemoteState);
+          if (pendingSync.snapshot && pendingSync.snapshot === remoteSnapshot) {
+            clearPendingSync();
+            applyAppState(nextRemoteState, remotePayload.updatedAt || Date.now());
+            setSyncStatus('online');
+            return;
+          }
+
+          await flushPendingSync();
           return;
         }
 
-        applyAppState(parseRemotePayload(remotePayload), remotePayload.updatedAt || Date.now());
+        applyAppState(nextRemoteState, remotePayload.updatedAt || Date.now());
         setSyncStatus('online');
       } catch (error) {
         if (cancelled) return;
