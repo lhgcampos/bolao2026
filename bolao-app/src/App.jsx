@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle, Smartphone, Download } from 'lucide-react';
+import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle } from 'lucide-react';
 import { THIRD_PLACE_ASSIGNMENTS } from './thirdPlaceAssignments';
 import { TEAM_FIFA_RANKINGS } from './fifaTeamRankings';
 import RankingConsensusPanel from './RankingConsensusPanel';
@@ -152,19 +152,6 @@ const AVATAR_MAX_DIMENSION = 160;
 const AVATAR_UPLOAD_URL = import.meta.env.VITE_AVATAR_UPLOAD_URL || 'https://bolao2026-avatar-upload.linoscheduling.workers.dev';
 const AVATAR_PUBLIC_BASE_URL = import.meta.env.VITE_AVATAR_PUBLIC_BASE_URL || 'https://pub-56fbf4716fdc4ab69e70b4c56f28fccf.r2.dev';
 const DEMO_AVATAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAABv7bNHAAABpUlEQVR4nO3QwQ3CMBQFQYz//8u2g0QdW0dManIeZDV4SSQdlqzTeWYIAAAAAAAAAAB4m7vN3Wf9eR9n3rV7h9t7n5f4q2w8b0v2m2vV8f9bKf9t8m9bM4QGg9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rer8BX3kD6XhSx8AAAAASUVORK5CYII=';
-const INSTALLATION_TIPS = {
-  android: [
-    'Abra o link no Chrome ou navegador compatível.',
-    'Toque em "Instalar app" ou no menu do navegador.',
-    'Se não aparecer, use "Adicionar à tela inicial".'
-  ],
-  ios: [
-    'Abra o link no Safari.',
-    'Toque em Compartilhar.',
-    'Escolha "Adicionar à Tela de Início".'
-  ]
-};
-
 // --- CONFIGURAÇÃO INICIAL ---
 const buildPairKey = (timeA, timeB) => [timeA, timeB].sort().join('||');
 
@@ -1274,59 +1261,7 @@ const TEXT_MUTED = "text-slate-600";
 const TEXT_HIGHLIGHT = "text-slate-800";
 
 // --- SUB-COMPONENTES UI ---
-const InstallGuideCard = ({ installAvailable = false, onInstall, installLabel = 'Instalar app' }) => (
-  <div className={`${GLASS_CARD} p-4 sm:p-5`}>
-    <div className="flex items-start gap-3">
-      <div className="rounded-2xl bg-sky-100 p-2.5 text-sky-700">
-        <Smartphone size={18} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-black uppercase tracking-[0.12em] text-slate-900">Instalar no celular</h3>
-          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">
-            Sem loja
-          </span>
-        </div>
-        <p className={`mt-1 text-xs leading-relaxed ${TEXT_MUTED}`}>
-          O bolão funciona no navegador e pode virar atalho/app na tela inicial em poucos toques.
-        </p>
-      </div>
-    </div>
-
-    <div className="mt-4 grid gap-3 md:grid-cols-2">
-      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
-        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">iPhone</div>
-        <div className="mt-2 space-y-1.5 text-[13px] leading-relaxed text-slate-700">
-          {INSTALLATION_TIPS.ios.map((step) => (
-            <div key={step}>{step}</div>
-          ))}
-        </div>
-      </div>
-      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
-        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Android</div>
-        <div className="mt-2 space-y-1.5 text-[13px] leading-relaxed text-slate-700">
-          {INSTALLATION_TIPS.android.map((step) => (
-            <div key={step}>{step}</div>
-          ))}
-        </div>
-      </div>
-    </div>
-
-    <div className="mt-4">
-      <button
-        type="button"
-        onClick={onInstall}
-        disabled={!installAvailable}
-        className={`${GLASS_BTN_PRIMARY} flex min-h-12 w-full items-center justify-center gap-2 px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50`}
-      >
-        <Download size={16} />
-        {installAvailable ? installLabel : 'Use o menu do navegador para instalar'}
-      </button>
-    </div>
-  </div>
-);
-
-const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', syncError = '', isDemoMode = false, onInstallApp, installAvailable = false }) => {
+const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', syncError = '', isDemoMode = false }) => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
@@ -1477,10 +1412,6 @@ const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', sy
         </form>
         <div className="mt-8 text-center"><button onClick={() => { setIsRegistering(!isRegistering); setError(''); setAvatarPreview(''); }} className="text-xs text-slate-500 hover:text-slate-800 transition-colors underline decoration-slate-300 hover:decoration-slate-700">{isRegistering ? 'Já tenho conta. Fazer Login.' : 'Não tem conta? Criar nova.'}</button></div>
       </div>
-      <InstallGuideCard
-        installAvailable={installAvailable}
-        onInstall={onInstallApp}
-      />
       </div>
     </div>
   );
@@ -1498,7 +1429,6 @@ export default function App() {
   const [reviewSearch, setReviewSearch] = useState('');
   const [reviewGroupFilter, setReviewGroupFilter] = useState('todos');
   const [reviewPhaseFilter, setReviewPhaseFilter] = useState('todos');
-  const [installPrompt, setInstallPrompt] = useState(null);
   const [avatarError, setAvatarError] = useState('');
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState(isDemoMode ? 'demo' : 'connecting');
@@ -1510,16 +1440,6 @@ export default function App() {
   const remoteSnapshotRef = useRef('');
   const pendingSyncTimeoutRef = useRef(null);
   const syncInFlightRef = useRef(false);
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (event) => {
-      event.preventDefault();
-      setInstallPrompt(event);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-  }, []);
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return undefined;
@@ -1863,19 +1783,6 @@ export default function App() {
   };
 
   const handleLogout = () => setCurrentUser(null);
-  const handleInstallApp = async () => {
-    if (!installPrompt) return;
-
-    installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    if (outcome !== 'accepted') {
-      setInstallPrompt(null);
-      return;
-    }
-
-    setInstallPrompt(null);
-  };
-
   const handleAvatarSelected = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -2897,8 +2804,6 @@ export default function App() {
         syncStatus={syncStatus}
         syncError={syncError}
         isDemoMode={isDemoMode}
-        onInstallApp={handleInstallApp}
-        installAvailable={Boolean(installPrompt)}
       />
     );
   }
@@ -2982,14 +2887,6 @@ export default function App() {
               </div>
             </div>
             {syncError && <div className="mt-2 text-[11px] text-rose-600">{syncError}</div>}
-          </div>
-        )}
-        {!modoAdmin && (
-          <div className="mb-5">
-            <InstallGuideCard
-              installAvailable={Boolean(installPrompt)}
-              onInstall={handleInstallApp}
-            />
           </div>
         )}
         {!modoAdmin && (
