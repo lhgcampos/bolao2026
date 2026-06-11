@@ -6,6 +6,7 @@ import {
   calculateDivergenceScore,
   getConsensusEligibleUsers
 } from '../bolao-app/src/rankingConsensus.js';
+import { buildCompetitionRanking } from '../bolao-app/src/ranking.js';
 
 const submissionFields = {
   JOGOS: 'jogosAt',
@@ -117,10 +118,10 @@ const betsKnockout = {
   99: structuredClone(completeBracket)
 };
 
-const ranking = [
+const ranking = buildCompetitionRanking([
   { id: 1, nome: 'Ana', ptsJogos: 40, ptsMataMata: 120, total: 160, exatos: 2 },
   { id: 2, nome: 'Beto', ptsJogos: 20, ptsMataMata: 90, total: 110, exatos: 1 }
-];
+], (user) => user.total, (user) => user.nome);
 
 const eligibleUsers = getConsensusEligibleUsers({
   users,
@@ -198,12 +199,25 @@ assert.ok(narrativeA.some((line) => line.includes('Ana')), 'linhas narrativas de
 
 const zeroRankingNarrative = buildNarrativeLines({
   dashboard,
-  ranking: [
+  ranking: buildCompetitionRanking([
     { id: 1, nome: 'Ana', ptsJogos: 0, ptsMataMata: 0, total: 0, exatos: 0 },
     { id: 2, nome: 'Beto', ptsJogos: 0, ptsMataMata: 0, total: 0, exatos: 0 }
-  ]
+  ], (user) => user.total, (user) => user.nome)
 });
 assert.ok(!zeroRankingNarrative.some((line) => line.includes('lidera o ranking geral com 0 pts.')), 'nao deve falar de lider geral zerado');
 assert.ok(!zeroRankingNarrative.some((line) => line.includes('lidera o mata-mata com 0 pts.')), 'nao deve falar de lider de mata zerado');
+
+const tiedTopNarrative = buildNarrativeLines({
+  dashboard,
+  ranking: buildCompetitionRanking([
+    { id: 1, nome: 'Ana', ptsJogos: 20, ptsMataMata: 10, total: 30, exatos: 1 },
+    { id: 2, nome: 'Beto', ptsJogos: 18, ptsMataMata: 12, total: 30, exatos: 3 },
+    { id: 3, nome: 'Caio', ptsJogos: 10, ptsMataMata: 5, total: 15, exatos: 0 }
+  ], (user) => user.total, (user) => user.nome)
+});
+assert.ok(
+  tiedTopNarrative.some((line) => line.includes('Ana e Beto lideram o ranking geral com 30 pts.')),
+  'empate no topo nao pode virar lider unico por ordem alfabetica'
+);
 
 console.log('ranking consensus tests: ok');

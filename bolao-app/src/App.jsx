@@ -4,6 +4,7 @@ import { THIRD_PLACE_ASSIGNMENTS } from './thirdPlaceAssignments';
 import { TEAM_FIFA_RANKINGS } from './fifaTeamRankings';
 import RankingConsensusPanel from './RankingConsensusPanel';
 import { buildConsensusDashboard } from './rankingConsensus';
+import { buildCompetitionRanking } from './ranking';
 
 // --- DADOS ESTRUTURAIS ---
 const GRUPOS_2026 = {
@@ -1950,7 +1951,7 @@ export default function App() {
 
   const RankingTable = () => {
     const ranking = useMemo(() => {
-      return usuarios.filter((user) => !isAdminUser(user)).map(user => {
+      const rankingEntries = usuarios.filter((user) => !isAdminUser(user)).map(user => {
         let ptsJogos = 0, ptsMataMata = 0, exatos = 0;
         jogosReais.forEach(jogo => {
           if (jogo.placarA !== '' && jogo.placarB !== '') {
@@ -1973,7 +1974,9 @@ export default function App() {
         };
         checkPhase('semis', PONTOS.MATA.SF); checkPhase('quartas', PONTOS.MATA.QF); checkPhase('oitavas', PONTOS.MATA.R16); checkPhase('dezeszeseisavos', PONTOS.MATA.R32);
         return { ...user, ptsJogos, ptsMataMata, total: ptsJogos + ptsMataMata, exatos };
-      }).sort((a, b) => b.total - a.total || b.exatos - a.exatos || a.nome.localeCompare(b.nome, 'pt-BR'));
+      });
+
+      return buildCompetitionRanking(rankingEntries, (user) => user.total, (user) => user.nome);
     }, [usuarios, jogosReais, palpitesJogos, palpitesMataMata, gabaritoMataMata]);
 
     const consensusDashboard = useMemo(() => {
@@ -1999,11 +2002,11 @@ export default function App() {
           <p className={`text-xs ${TEXT_MUTED}`}>A pontuação só aparece quando o <strong className="text-slate-900">Admin</strong> preenche os resultados.</p>
         </div>
         <div className="space-y-3 lg:hidden">
-          {ranking.map((user, idx) => (
+          {ranking.map((user) => (
             <div key={user.id} className={`${GLASS_CARD} p-4 ${user.id === currentUser.id ? 'ring-2 ring-sky-200' : ''}`}>
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-black text-slate-700">
-                  {idx + 1}
+                  {user.rank}
                 </div>
                 <AvatarBadge user={user} size="sm" className="h-10 w-10 text-sm" />
                 <div className="min-w-0 flex-1">
@@ -2032,9 +2035,9 @@ export default function App() {
         <div className={`${GLASS_CARD} hidden overflow-hidden lg:block`}>
           <table className="w-full text-xs">
             <thead className="border-b border-slate-200 bg-slate-50 text-[10px] font-bold uppercase text-slate-500"><tr><th className="p-4 text-center">#</th><th className="p-4 text-left">Nome</th><th className="p-4 text-center">Jogos</th><th className="p-4 text-center">Mata</th><th className="p-4 text-center text-slate-900">Total</th></tr></thead>
-            <tbody>{ranking.map((user, idx) => (
+            <tbody>{ranking.map((user) => (
               <tr key={user.id} className={`border-b border-slate-100 last:border-0 ${user.id === currentUser.id ? 'bg-sky-50' : ''}`}>
-                <td className={`p-4 text-center font-bold ${TEXT_MUTED}`}>{idx + 1}</td>
+                <td className={`p-4 text-center font-bold ${TEXT_MUTED}`}>{user.rank}</td>
                 <td className={`p-4 ${user.id === currentUser.id ? 'text-sky-700' : TEXT_HIGHLIGHT}`}>
                   <div className="flex items-center gap-3">
                     <AvatarBadge user={user} size="sm" className="lg:w-12 lg:h-12 lg:text-base" />

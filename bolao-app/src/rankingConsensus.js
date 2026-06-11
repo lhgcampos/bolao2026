@@ -371,8 +371,15 @@ export function buildNarrativeLines({ dashboard, ranking = [] }) {
   }
 
   const overallLeader = ranking[0];
+  const overallLeaders = overallLeader
+    ? ranking.filter((entry) => entry.total === overallLeader.total)
+    : [];
   if (overallLeader && overallLeader.total > 0) {
-    pushLine(`${overallLeader.nome} lidera o ranking geral com ${overallLeader.total} pts.`);
+    pushLine(
+      overallLeaders.length === 1
+        ? `${overallLeader.nome} lidera o ranking geral com ${overallLeader.total} pts.`
+        : `${formatNamesList(overallLeaders.map((entry) => entry.nome))} lideram o ranking geral com ${overallLeader.total} pts.`
+    );
   }
 
   const knockoutLeader = [...ranking].sort((a, b) => (
