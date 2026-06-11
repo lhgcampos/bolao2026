@@ -1968,7 +1968,7 @@ export default function App() {
                 <td className={`p-4 text-center font-bold ${TEXT_MUTED}`}>{idx + 1}</td>
                 <td className={`p-4 ${user.id === currentUser.id ? 'text-blue-400' : TEXT_HIGHLIGHT}`}>
                   <div className="flex items-center gap-3">
-                    <AvatarBadge user={user} size="sm" />
+                    <AvatarBadge user={user} size="sm" className="lg:w-12 lg:h-12 lg:text-base" />
                     <span className="font-bold">{user.nome} {user.id === currentUser.id && '(Você)'}</span>
                   </div>
                 </td>
@@ -2364,7 +2364,7 @@ export default function App() {
                 {usersFiltrados.map((user) => (
                   <div key={user.id} className="border-r border-slate-100 px-2 py-2.5 text-center last:border-r-0">
                     <div className="flex items-center justify-center gap-2">
-                      <AvatarBadge user={user} size="sm" />
+                      <AvatarBadge user={user} size="sm" className="lg:w-12 lg:h-12 lg:text-base" />
                       <div className="max-w-[96px] truncate font-bold normal-case text-[11px] text-slate-700">{user.nome}</div>
                     </div>
                     <div className="mt-0.5 text-[9px] font-semibold text-slate-400">
