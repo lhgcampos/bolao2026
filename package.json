@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "test:ranking-positions": "node scripts/test-ranking-positions.mjs",
     "test:ranking-consensus": "node scripts/test-ranking-consensus.mjs",
+    "test:user-home-insights": "node scripts/test-user-home-insights.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -5,6 +5,8 @@ import { TEAM_FIFA_RANKINGS } from './fifaTeamRankings';
 import RankingConsensusPanel from './RankingConsensusPanel';
 import { buildConsensusDashboard } from './rankingConsensus';
 import { buildCompetitionRanking } from './ranking';
+import { buildUserHomeInsights } from './userHomeInsights';
+import MyBolaoCard from './MyBolaoCard';
 
 // --- DADOS ESTRUTURAIS ---
 const GRUPOS_2026 = {
@@ -1711,6 +1713,77 @@ export default function App() {
     () => usuarios.filter((user) => !isAdminUser(user)),
     [usuarios]
   );
+  const ranking = useMemo(() => {
+    const rankingEntries = usuarios.filter((user) => !isAdminUser(user)).map((user) => {
+      let ptsJogos = 0;
+      let ptsMataMata = 0;
+      let exatos = 0;
+
+      jogosReais.forEach((jogo) => {
+        if (jogo.placarA !== '' && jogo.placarB !== '') {
+          const aposta = palpitesJogos[user.id]?.[jogo.id];
+          if (aposta && aposta.placarA !== '' && aposta.placarB !== '') {
+            const res = calcularPontosJogo(aposta.placarA, aposta.placarB, jogo.placarA, jogo.placarB);
+            if (res) {
+              ptsJogos += res.pts;
+              if (res.pts === PONTOS.JOGO.CHEIO) exatos++;
+            }
+          }
+        }
+      });
+
+      const userMM = palpitesMataMata[user.id] || {};
+      if (gabaritoMataMata.campeao && userMM.campeao === gabaritoMataMata.campeao) ptsMataMata += PONTOS.MATA.CAMPEAO;
+      if (gabaritoMataMata.vice && userMM.vice === gabaritoMataMata.vice) ptsMataMata += PONTOS.MATA.VICE;
+      if (gabaritoMataMata.terceiro && userMM.terceiro === gabaritoMataMata.terceiro) ptsMataMata += PONTOS.MATA.TOP3;
+      if (gabaritoMataMata.quarto && userMM.quarto === gabaritoMataMata.quarto) ptsMataMata += PONTOS.MATA.TOP4;
+
+      const checkPhase = (field, points) => {
+        const official = gabaritoMataMata[field] || [];
+        const userBet = userMM[field] || [];
+        userBet.forEach((betTeam) => {
+          if (betTeam && official.includes(betTeam)) ptsMataMata += points;
+        });
+      };
+
+      checkPhase('semis', PONTOS.MATA.SF);
+      checkPhase('quartas', PONTOS.MATA.QF);
+      checkPhase('oitavas', PONTOS.MATA.R16);
+      checkPhase('dezeszeseisavos', PONTOS.MATA.R32);
+
+      return { ...user, ptsJogos, ptsMataMata, total: ptsJogos + ptsMataMata, exatos };
+    });
+
+    return buildCompetitionRanking(rankingEntries, (user) => user.total, (user) => user.nome);
+  }, [usuarios, jogosReais, palpitesJogos, palpitesMataMata, gabaritoMataMata]);
+  const homeInsightCard = useMemo(() => {
+    if (!currentUser || modoAdmin) return null;
+
+    return buildUserHomeInsights({
+      currentUserId: currentUser.id,
+      users: participanteUsuarios,
+      matches: jogosReais,
+      predictions: palpitesJogos,
+      ranking,
+      scoringRules: PONTOS,
+      unlocked: currentUserCanSeeConsensusPanel,
+      pendingGroupPicksCount: jogosPendentesUsuario,
+      knockoutComplete: usuarioPreencheuMataCompleta(palpitesMataUsuarioAtual),
+      officialKnockout: gabaritoMataMata,
+      knockoutPredictions: palpitesMataUsuarioAtual
+    });
+  }, [
+    currentUser,
+    modoAdmin,
+    participanteUsuarios,
+    jogosReais,
+    palpitesJogos,
+    ranking,
+    currentUserCanSeeConsensusPanel,
+    jogosPendentesUsuario,
+    palpitesMataUsuarioAtual,
+    gabaritoMataMata
+  ]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -1950,35 +2023,6 @@ export default function App() {
   };
 
   const RankingTable = () => {
-    const ranking = useMemo(() => {
-      const rankingEntries = usuarios.filter((user) => !isAdminUser(user)).map(user => {
-        let ptsJogos = 0, ptsMataMata = 0, exatos = 0;
-        jogosReais.forEach(jogo => {
-          if (jogo.placarA !== '' && jogo.placarB !== '') {
-            const aposta = palpitesJogos[user.id]?.[jogo.id];
-            if (aposta && aposta.placarA !== '' && aposta.placarB !== '') {
-              const res = calcularPontosJogo(aposta.placarA, aposta.placarB, jogo.placarA, jogo.placarB);
-              if (res) { ptsJogos += res.pts; if (res.pts === PONTOS.JOGO.CHEIO) exatos++; }
-            }
-          }
-        });
-        const userMM = palpitesMataMata[user.id] || {};
-        if (gabaritoMataMata.campeao && userMM.campeao === gabaritoMataMata.campeao) ptsMataMata += PONTOS.MATA.CAMPEAO;
-        if (gabaritoMataMata.vice && userMM.vice === gabaritoMataMata.vice) ptsMataMata += PONTOS.MATA.VICE;
-        if (gabaritoMataMata.terceiro && userMM.terceiro === gabaritoMataMata.terceiro) ptsMataMata += PONTOS.MATA.TOP3;
-        if (gabaritoMataMata.quarto && userMM.quarto === gabaritoMataMata.quarto) ptsMataMata += PONTOS.MATA.TOP4;
-        const checkPhase = (field, points) => {
-           const official = gabaritoMataMata[field] || [];
-           const userBet = userMM[field] || [];
-           userBet.forEach((betTeam) => { if (betTeam && official.includes(betTeam)) { ptsMataMata += points; } });
-        };
-        checkPhase('semis', PONTOS.MATA.SF); checkPhase('quartas', PONTOS.MATA.QF); checkPhase('oitavas', PONTOS.MATA.R16); checkPhase('dezeszeseisavos', PONTOS.MATA.R32);
-        return { ...user, ptsJogos, ptsMataMata, total: ptsJogos + ptsMataMata, exatos };
-      });
-
-      return buildCompetitionRanking(rankingEntries, (user) => user.total, (user) => user.nome);
-    }, [usuarios, jogosReais, palpitesJogos, palpitesMataMata, gabaritoMataMata]);
-
     const consensusDashboard = useMemo(() => {
       if (!currentUserCanSeeConsensusPanel) return null;
       return buildConsensusDashboard({
@@ -2927,6 +2971,7 @@ export default function App() {
         )}
         {abaAtiva === 'jogos' && (
           <div className="space-y-8 animate-fade-in">
+            {!modoAdmin && homeInsightCard && <MyBolaoCard insight={homeInsightCard} />}
             {!modoAdmin && (
               <div className={`${GLASS_CARD} p-5 flex flex-col gap-4`}>
                 <div className="flex items-start justify-between gap-4">
