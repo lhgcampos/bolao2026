@@ -3,4 +3,5 @@ dist/
 bolao-app/dist/
 reports/
 backups/
+quarentena/
 .DS_Store

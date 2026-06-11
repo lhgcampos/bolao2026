@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle } from 'lucide-react';
 import { THIRD_PLACE_ASSIGNMENTS } from './thirdPlaceAssignments';
 import { TEAM_FIFA_RANKINGS } from './fifaTeamRankings';
+import RankingConsensusPanel from './RankingConsensusPanel';
+import { buildConsensusDashboard } from './rankingConsensus';
 
 // --- DADOS ESTRUTURAIS ---
 const GRUPOS_2026 = {
@@ -1685,6 +1687,12 @@ export default function App() {
   const palpitesTravadosJogos = !modoAdmin && Boolean(jogosEnviadosAt);
   const palpitesTravadosMata = !modoAdmin && Boolean(mataEnviadosAt);
   const jogosPendentesUsuario = currentUser ? contarJogosPendentes(jogosReais, palpitesUsuarioAtual) : 0;
+  const currentUserCanSeeConsensusPanel = modoAdmin || (
+    Boolean(jogosEnviadosAt) &&
+    Boolean(mataEnviadosAt) &&
+    usuarioPreencheuTodosOsJogos(jogosReais, palpitesUsuarioAtual) &&
+    usuarioPreencheuMataCompleta(palpitesMataUsuarioAtual)
+  );
   const participanteUsuarios = useMemo(
     () => usuarios.filter((user) => !isAdminUser(user)),
     [usuarios]
@@ -1952,8 +1960,25 @@ export default function App() {
         };
         checkPhase('semis', PONTOS.MATA.SF); checkPhase('quartas', PONTOS.MATA.QF); checkPhase('oitavas', PONTOS.MATA.R16); checkPhase('dezeszeseisavos', PONTOS.MATA.R32);
         return { ...user, ptsJogos, ptsMataMata, total: ptsJogos + ptsMataMata, exatos };
-      }).sort((a, b) => b.total - a.total || b.exatos - a.exatos);
+      }).sort((a, b) => b.total - a.total || b.exatos - a.exatos || a.nome.localeCompare(b.nome, 'pt-BR'));
     }, [usuarios, jogosReais, palpitesJogos, palpitesMataMata, gabaritoMataMata]);
+
+    const consensusDashboard = useMemo(() => {
+      if (!currentUserCanSeeConsensusPanel) return null;
+      return buildConsensusDashboard({
+        users: usuarios,
+        submissions: submissoes,
+        betsGames: palpitesJogos,
+        betsKnockout: palpitesMataMata,
+        games: jogosReais,
+        ranking,
+        teamRankings: TEAM_FIFA_RANKINGS,
+        submissionFields: SUBMISSION_FIELDS,
+        isAdminUser,
+        usuarioPreencheuTodosOsJogos,
+        usuarioPreencheuMataCompleta
+      });
+    }, [currentUserCanSeeConsensusPanel, usuarios, submissoes, palpitesJogos, palpitesMataMata, jogosReais, ranking]);
 
     return (
       <div className="space-y-4 animate-fade-in">
@@ -1979,6 +2004,12 @@ export default function App() {
             ))}</tbody>
           </table>
         </div>
+        <RankingConsensusPanel
+          canSee={currentUserCanSeeConsensusPanel}
+          dashboard={consensusDashboard}
+          jogosSubmitted={Boolean(jogosEnviadosAt)}
+          mataSubmitted={Boolean(mataEnviadosAt)}
+        />
       </div>
     );
   };

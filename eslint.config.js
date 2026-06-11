@@ -9,7 +9,6 @@ export default defineConfig([
     'node_modules',
     'bolao-app/dist',
     'dist',
-    'app.jsx',
   ]),
   {
     files: ['bolao-app/src/**/*.{js,jsx}'],
