@@ -396,7 +396,7 @@ const ordenarTabelaGrupoFifa = (linhas, jogosProcessados) => {
   ));
 };
 
-const calcularTabelaGrupo = (grupo, jogos, palpitesUsuario, condutaGrupos = {}) => {
+const calcularTabelaGrupo = (grupo, jogos, palpitesUsuario, condutaGrupos = {}, { preferPredictions = false } = {}) => {
   const times = GRUPOS_2026[grupo];
   const tabela = {};
   const jogosProcessados = [];
@@ -417,10 +417,12 @@ const calcularTabelaGrupo = (grupo, jogos, palpitesUsuario, condutaGrupos = {}) 
   });
   const jogosDoGrupo = jogos.filter(j => j.grupo === grupo);
   jogosDoGrupo.forEach(jogo => {
-    let gA = jogo.placarA, gB = jogo.placarB;
+    const p = palpitesUsuario?.[jogo.id];
+    const predictionFilled = p && p.placarA !== '' && p.placarB !== '';
+    let gA = preferPredictions && predictionFilled ? p.placarA : jogo.placarA;
+    let gB = preferPredictions && predictionFilled ? p.placarB : jogo.placarB;
     if (gA === '' || gB === '') {
-      const p = palpitesUsuario?.[jogo.id];
-      if (p && p.placarA !== '' && p.placarB !== '') { gA = p.placarA; gB = p.placarB; }
+      if (predictionFilled) { gA = p.placarA; gB = p.placarB; }
     }
     if (gA !== '' && gB !== '') {
       const pA = parseInt(gA), pB = parseInt(gB);
@@ -526,7 +528,7 @@ const getR32Team = (ref, jogos, palpitesUsuario, condutaGrupos, gruposCompletos)
   if (ref.length === 2) {
     const pos = parseInt(ref[0]);
     const grp = ref[1];
-    const tabela = calcularTabelaGrupo(grp, jogos, palpitesUsuario, condutaGrupos);
+    const tabela = calcularTabelaGrupo(grp, jogos, palpitesUsuario, condutaGrupos, { preferPredictions: Boolean(palpitesUsuario) });
     return tabela[pos-1]?.time || "A definir";
   }
   return null;
@@ -562,7 +564,7 @@ const buildThirdPlaceAllocation = (jogos, palpitesUsuario, condutaGrupos, grupos
   if (!gruposCompletos) return {};
   const tabelaGeral = {};
   Object.keys(GRUPOS_2026).forEach((grupo) => {
-    tabelaGeral[grupo] = calcularTabelaGrupo(grupo, jogos, palpitesUsuario, condutaGrupos);
+    tabelaGeral[grupo] = calcularTabelaGrupo(grupo, jogos, palpitesUsuario, condutaGrupos, { preferPredictions: Boolean(palpitesUsuario) });
   });
   const terceiros = [];
   Object.values(tabelaGeral).forEach((tabela) => {
@@ -1898,42 +1900,6 @@ export default function App() {
       )
     );
   }, [jogosReais, palpitesUsuarioAtual, condutaGrupos, currentUser, gruposCompletos]);
-
-  useEffect(() => {
-    if (!currentUser || modoAdmin) return;
-
-    setPalpitesMataMata((current) => {
-      const currentBracket = current[currentUser.id] || {};
-      const sanitized = sanitizeKnockoutBracket({
-        bracket: currentBracket,
-        jogos: jogosReais,
-        palpitesUsuario: palpitesJogos[currentUser.id],
-        condutaGrupos
-      });
-
-      if (JSON.stringify(currentBracket || createEmptyKnockoutBracket()) === JSON.stringify(sanitized)) {
-        return current;
-      }
-
-      return {
-        ...current,
-        [currentUser.id]: sanitized
-      };
-    });
-  }, [currentUser, modoAdmin, jogosReais, palpitesJogos, condutaGrupos]);
-
-  useEffect(() => {
-    setGabaritoMataMata((current) => {
-      const sanitized = sanitizeKnockoutBracket({
-        bracket: current,
-        jogos: jogosReais,
-        palpitesUsuario: undefined,
-        condutaGrupos
-      });
-
-      return JSON.stringify(current) === JSON.stringify(sanitized) ? current : sanitized;
-    });
-  }, [jogosReais, condutaGrupos]);
 
   const handleLogin = (id, nome, senha, extraUser = {}) => {
     const normalizedUser = normalizeUser({ id, nome, senha, ...extraUser });
