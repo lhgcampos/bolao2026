@@ -1,4 +1,4 @@
-import { buildCompetitionRanking } from './ranking.js';
+import { buildDenseRanking } from './ranking.js';
 
 const PHASE_LENGTHS = {
   dezeszeseisavos: 32,
@@ -183,7 +183,7 @@ const buildNextMatchOvertakeInsight = ({ currentEntry, ranking, predictionsByUse
     };
   });
 
-  const hypotheticalRanking = buildCompetitionRanking(
+  const hypotheticalRanking = buildDenseRanking(
     hypotheticalEntries,
     (entry) => entry.hypotheticalTotal,
     (entry) => entry.nome

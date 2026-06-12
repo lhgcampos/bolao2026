@@ -13,16 +13,15 @@ export function sortRankingEntries(entries = [], getPoints = getDefaultPoints, g
   ));
 }
 
-export function assignCompetitionRanks(sortedPlayers = [], getPoints = getDefaultPoints) {
+export function assignDenseRanks(sortedPlayers = [], getPoints = getDefaultPoints) {
   let previousPoints = null;
   let previousRank = 0;
 
   return sortedPlayers.map((player, index) => {
     const currentPoints = getPoints(player);
-    const currentPosition = index + 1;
 
     if (previousPoints === null || currentPoints !== previousPoints) {
-      previousRank = currentPosition;
+      previousRank += 1;
       previousPoints = currentPoints;
     }
 
@@ -33,6 +32,6 @@ export function assignCompetitionRanks(sortedPlayers = [], getPoints = getDefaul
   });
 }
 
-export function buildCompetitionRanking(entries = [], getPoints = getDefaultPoints, getName = getDefaultName) {
-  return assignCompetitionRanks(sortRankingEntries(entries, getPoints, getName), getPoints);
+export function buildDenseRanking(entries = [], getPoints = getDefaultPoints, getName = getDefaultName) {
+  return assignDenseRanks(sortRankingEntries(entries, getPoints, getName), getPoints);
 }

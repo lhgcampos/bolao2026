@@ -4,7 +4,7 @@ import { THIRD_PLACE_ASSIGNMENTS } from './thirdPlaceAssignments';
 import { TEAM_FIFA_RANKINGS } from './fifaTeamRankings';
 import RankingConsensusPanel from './RankingConsensusPanel';
 import { buildConsensusDashboard } from './rankingConsensus';
-import { buildCompetitionRanking } from './ranking';
+import { buildDenseRanking } from './ranking';
 import { buildUserHomeInsights } from './userHomeInsights';
 import MyBolaoCard from './MyBolaoCard';
 
@@ -1852,7 +1852,7 @@ export default function App() {
       return { ...user, ptsJogos, ptsMataMata, total: ptsJogos + ptsMataMata, exatos };
     });
 
-    return buildCompetitionRanking(rankingEntries, (user) => user.total, (user) => user.nome);
+    return buildDenseRanking(rankingEntries, (user) => user.total, (user) => user.nome);
   }, [usuarios, jogosReais, palpitesJogos, palpitesMataMata, gabaritoMataMata]);
   const homeInsightCard = useMemo(() => {
     if (!currentUser || modoAdmin) return null;
