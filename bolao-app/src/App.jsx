@@ -522,6 +522,16 @@ const usuarioPreencheuMataCompleta = (palpitesUsuario = {}) => (
   [palpitesUsuario.campeao, palpitesUsuario.vice, palpitesUsuario.terceiro, palpitesUsuario.quarto].every(Boolean)
 );
 
+const sanitizeSubmissionMap = (submissions = {}, betsKnockout = {}) => Object.fromEntries(
+  Object.entries(submissions || {}).map(([userId, entry]) => {
+    const normalizedEntry = entry && typeof entry === 'object' ? { ...entry } : {};
+    if (normalizedEntry.mataAt && !usuarioPreencheuMataCompleta(betsKnockout?.[userId])) {
+      delete normalizedEntry.mataAt;
+    }
+    return [userId, normalizedEntry];
+  })
+);
+
 const getR32Team = (ref, jogos, palpitesUsuario, condutaGrupos, gruposCompletos) => {
   if (!gruposCompletos) return "A definir";
   if (!ref) return "???";
@@ -794,7 +804,7 @@ const buildStateDocument = ({
   betsKnockout,
   officialKnockout,
   conduct,
-  submissions
+  submissions: sanitizeSubmissionMap(submissions, betsKnockout)
 });
 
 const buildStateSnapshot = (state) => JSON.stringify(buildStateDocument(state, { includeUpdatedAt: false }));
@@ -827,15 +837,16 @@ const parseRemotePayload = (payload) => {
 
   const users = Object.values(payload.usersById || {}).map(normalizeUser);
   const normalizedGameData = normalizePersistedGameData(payload.matches, payload.betsGames);
+  const betsKnockout = payload.betsKnockout || {};
 
   return {
     users,
     matches: Array.isArray(payload.matches) && payload.matches.length ? normalizedGameData.matches : fallback.matches,
     betsGames: normalizedGameData.betsGames,
-    betsKnockout: payload.betsKnockout || {},
+    betsKnockout,
     officialKnockout: payload.officialKnockout || {},
     conduct: payload.conduct || {},
-    submissions: payload.submissions || {}
+    submissions: sanitizeSubmissionMap(payload.submissions || {}, betsKnockout)
   };
 };
 
@@ -987,7 +998,10 @@ const mergeRemoteState = (baseState, localState, { currentUserId = null, isAdmin
     betsKnockout: mergeOwnedRecordMap(baseState.betsKnockout, localState.betsKnockout),
     officialKnockout: isAdmin ? (localState.officialKnockout || baseState.officialKnockout || {}) : (baseState.officialKnockout || {}),
     conduct: isAdmin ? (localState.conduct || baseState.conduct || {}) : (baseState.conduct || {}),
-    submissions: mergeOwnedRecordMap(baseState.submissions, localState.submissions)
+    submissions: sanitizeSubmissionMap(
+      mergeOwnedRecordMap(baseState.submissions, localState.submissions),
+      mergeOwnedRecordMap(baseState.betsKnockout, localState.betsKnockout)
+    )
   };
 };
 
@@ -1800,8 +1814,9 @@ export default function App() {
   const gruposCompletos = currentUser ? faseDeGruposCompleta(jogosReais, modoAdmin ? undefined : palpitesUsuarioAtual) : false;
   const jogosEnviadosAt = currentUser ? submissoes[currentUser.id]?.[SUBMISSION_FIELDS.JOGOS] : null;
   const mataEnviadosAt = currentUser ? submissoes[currentUser.id]?.[SUBMISSION_FIELDS.MATA] : null;
+  const mataCompletaUsuarioAtual = usuarioPreencheuMataCompleta(palpitesMataUsuarioAtual);
   const palpitesTravadosJogos = !modoAdmin && Boolean(jogosEnviadosAt);
-  const palpitesTravadosMata = !modoAdmin && Boolean(mataEnviadosAt);
+  const palpitesTravadosMata = !modoAdmin && Boolean(mataEnviadosAt) && mataCompletaUsuarioAtual;
   const jogosPendentesUsuario = currentUser ? contarJogosPendentes(jogosReais, palpitesUsuarioAtual) : 0;
   const currentUserCanSeeConsensusPanel = modoAdmin || (
     Boolean(jogosEnviadosAt) &&
@@ -1868,7 +1883,7 @@ export default function App() {
       scoringRules: PONTOS,
       unlocked: currentUserCanSeeConsensusPanel,
       pendingGroupPicksCount: jogosPendentesUsuario,
-      knockoutComplete: usuarioPreencheuMataCompleta(palpitesMataUsuarioAtual),
+      knockoutComplete: mataCompletaUsuarioAtual,
       officialKnockout: gabaritoMataMata,
       knockoutPredictions: palpitesMataUsuarioAtual
     });
@@ -1882,6 +1897,7 @@ export default function App() {
     currentUserCanSeeConsensusPanel,
     jogosPendentesUsuario,
     palpitesMataUsuarioAtual,
+    mataCompletaUsuarioAtual,
     gabaritoMataMata
   ]);
 
