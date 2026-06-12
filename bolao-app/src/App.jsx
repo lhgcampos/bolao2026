@@ -137,6 +137,7 @@ const REMOTE_PATHS = {
 };
 const PENDING_SYNC_KEY = 'bolao26_pending_sync_v1';
 const SYNC_DEBOUNCE_MS = 900;
+const SYNC_IMMEDIATE_RETRY_MS = 80;
 const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/K3WYefFWkzY09iK1csJtZA?mode=gi_t';
 const REMOTE_POLL_MS = 5000;
 const COUNTRY_SHORT_NAMES = {
@@ -971,6 +972,26 @@ const fetchRemoteState = async () => {
   return mergeRemotePayloads(legacyPayload, shardedPayload);
 };
 
+const fetchRemoteUpdatedAtMarker = async () => {
+  const metaDoc = await fetchRemoteEntry(REMOTE_PATHS.meta);
+  if (metaDoc?.updatedAt) {
+    return {
+      updatedAt: metaDoc.updatedAt,
+      userIds: Array.isArray(metaDoc.userIds) ? metaDoc.userIds : []
+    };
+  }
+
+  const legacyPayload = await fetchLegacyRemoteState();
+  if (legacyPayload?.updatedAt) {
+    return {
+      updatedAt: legacyPayload.updatedAt,
+      userIds: []
+    };
+  }
+
+  return null;
+};
+
 const mergeRemoteState = (baseState, localState, { currentUserId = null, isAdmin = false } = {}) => {
   const baseUsers = Object.fromEntries((baseState.users || []).map((user) => [user.id, normalizeUser(user)]));
   const localUsers = Object.fromEntries((localState.users || []).map((user) => [user.id, normalizeUser(user)]));
@@ -1037,6 +1058,28 @@ const writeRemoteEntry = async (path, payload) => {
   }
 };
 
+const writeRemoteAdminSharedState = async (state) => {
+  const updatedAt = Date.now();
+  const currentMeta = await fetchRemoteEntry(REMOTE_PATHS.meta);
+  const currentUserIds = Array.isArray(currentMeta?.userIds)
+    ? currentMeta.userIds
+    : (state.users || []).map((user) => normalizeUser(user).id);
+
+  await Promise.all([
+    writeRemoteEntry(REMOTE_PATHS.matches, state.matches || []),
+    writeRemoteEntry(REMOTE_PATHS.officialKnockout, state.officialKnockout || {}),
+    writeRemoteEntry(REMOTE_PATHS.conduct, state.conduct || {})
+  ]);
+
+  await writeRemoteEntry(REMOTE_PATHS.meta, {
+    schemaVersion: REMOTE_SCHEMA_VERSION,
+    updatedAt,
+    userIds: currentUserIds
+  });
+
+  return updatedAt;
+};
+
 const writeRemoteState = async (state, { currentUserId = null, isAdmin = false } = {}) => {
   const normalizedUsers = (state.users || []).map(normalizeUser);
   const updatedAt = Date.now();
@@ -1084,6 +1127,11 @@ const writeRemoteState = async (state, { currentUserId = null, isAdmin = false }
 };
 
 const syncRemoteStateWithPatch = async (localState, options = {}) => {
+  if (options.scope === 'admin-shared' && options.isAdmin) {
+    const updatedAt = await writeRemoteAdminSharedState(localState);
+    return { mergedState: localState, updatedAt };
+  }
+
   const remotePayload = await fetchRemoteState();
   const mergedState = mergeRemoteState(
     remotePayload ? parseRemotePayload(remotePayload) : createInitialAppState(),
@@ -1119,6 +1167,18 @@ const savePendingSync = (pending) => {
 
 const clearPendingSync = () => {
   localStorage.removeItem(PENDING_SYNC_KEY);
+};
+
+const clearPendingSyncIfSnapshot = (snapshot) => {
+  if (!snapshot) {
+    clearPendingSync();
+    return;
+  }
+
+  const currentPending = readPendingSync();
+  if (currentPending?.snapshot === snapshot) {
+    clearPendingSync();
+  }
 };
 
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
@@ -1543,6 +1603,8 @@ export default function App() {
   const remoteSnapshotRef = useRef('');
   const pendingSyncTimeoutRef = useRef(null);
   const syncInFlightRef = useRef(false);
+  const latestLocalSnapshotRef = useRef('');
+  const nextSyncScopeRef = useRef(null);
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return undefined;
@@ -1611,6 +1673,27 @@ export default function App() {
     });
   };
 
+  const getCurrentLocalState = () => ({
+    users: usuarios,
+    matches: jogosReais,
+    betsGames: palpitesJogos,
+    betsKnockout: palpitesMataMata,
+    officialKnockout: gabaritoMataMata,
+    conduct: condutaGrupos,
+    submissions: submissoes
+  });
+
+  const schedulePendingSyncFlush = (delay = SYNC_DEBOUNCE_MS) => {
+    if (pendingSyncTimeoutRef.current) {
+      window.clearTimeout(pendingSyncTimeoutRef.current);
+    }
+
+    pendingSyncTimeoutRef.current = window.setTimeout(() => {
+      pendingSyncTimeoutRef.current = null;
+      flushPendingSync();
+    }, delay);
+  };
+
   useEffect(() => {
     if (!isDemoMode) return;
     const demo = buildPlanilhaDemoData();
@@ -1632,24 +1715,46 @@ export default function App() {
     setSyncStatus('demo');
   }, [isDemoMode]);
 
+  useEffect(() => {
+    const nextState = getCurrentLocalState();
+    latestLocalSnapshotRef.current = buildStateSnapshot(nextState);
+  }, [usuarios, jogosReais, palpitesJogos, palpitesMataMata, gabaritoMataMata, condutaGrupos, submissoes]);
+
   const flushPendingSync = async () => {
     if (isDemoMode || syncInFlightRef.current) return;
     const pending = readPendingSync();
     if (!pending?.state) return;
 
+    const flushedSnapshot = pending.snapshot || buildStateSnapshot(pending.state);
     syncInFlightRef.current = true;
+    let shouldRetryImmediately = false;
+
     try {
       setSyncStatus('syncing');
       setSyncError('');
       const syncResult = await syncRemoteStateWithPatch(pending.state, pending.options || {});
-      applyAppState(syncResult.mergedState || pending.state, syncResult.updatedAt || Date.now());
-      clearPendingSync();
-      setSyncStatus('online');
+      const latestPending = readPendingSync();
+      const hasNewerPending = Boolean(latestPending?.snapshot && latestPending.snapshot !== flushedSnapshot);
+      const localChangedSinceFlush = Boolean(
+        latestLocalSnapshotRef.current &&
+        latestLocalSnapshotRef.current !== flushedSnapshot
+      );
+
+      if (!hasNewerPending && !localChangedSinceFlush) {
+        clearPendingSyncIfSnapshot(flushedSnapshot);
+        applyAppState(syncResult.mergedState || pending.state, syncResult.updatedAt || Date.now());
+        setSyncStatus('online');
+      } else {
+        shouldRetryImmediately = true;
+      }
     } catch (error) {
       setSyncStatus('offline');
       setSyncError(error.message || 'Falha ao salvar dados online.');
     } finally {
       syncInFlightRef.current = false;
+      if (shouldRetryImmediately) {
+        schedulePendingSyncFlush(SYNC_IMMEDIATE_RETRY_MS);
+      }
     }
   };
 
@@ -1723,10 +1828,12 @@ export default function App() {
     const intervalId = window.setInterval(async () => {
       try {
         if (readPendingSync()) return;
+        const remoteMarker = await fetchRemoteUpdatedAtMarker();
+        if (!remoteMarker) return;
+        const remoteUpdatedAt = remoteMarker.updatedAt || 0;
+        if (remoteUpdatedAt <= remoteUpdatedAtRef.current) return;
         const remotePayload = await fetchRemoteState();
         if (!remotePayload) return;
-        const remoteUpdatedAt = remotePayload.updatedAt || 0;
-        if (remoteUpdatedAt <= remoteUpdatedAtRef.current) return;
         applyAppState(parseRemotePayload(remotePayload), remoteUpdatedAt);
         setSyncStatus('online');
         setSyncError('');
@@ -1765,41 +1872,24 @@ export default function App() {
       return;
     }
 
-    const snapshot = buildStateSnapshot({
-      users: usuarios,
-      matches: jogosReais,
-      betsGames: palpitesJogos,
-      betsKnockout: palpitesMataMata,
-      officialKnockout: gabaritoMataMata,
-      conduct: condutaGrupos,
-      submissions: submissoes
-    });
+    const nextState = getCurrentLocalState();
+    const snapshot = buildStateSnapshot(nextState);
 
     if (snapshot === remoteSnapshotRef.current) return;
 
     const pending = {
-      state: {
-        users: usuarios,
-        matches: jogosReais,
-        betsGames: palpitesJogos,
-        betsKnockout: palpitesMataMata,
-        officialKnockout: gabaritoMataMata,
-        conduct: condutaGrupos,
-        submissions: submissoes
+      state: nextState,
+      options: {
+        currentUserId: currentUser?.id || null,
+        isAdmin: modoAdmin,
+        scope: nextSyncScopeRef.current || null
       },
-      options: { currentUserId: currentUser?.id || null, isAdmin: modoAdmin },
       snapshot
     };
 
+    nextSyncScopeRef.current = null;
     savePendingSync(pending);
-
-    if (pendingSyncTimeoutRef.current) {
-      window.clearTimeout(pendingSyncTimeoutRef.current);
-    }
-
-    pendingSyncTimeoutRef.current = window.setTimeout(() => {
-      flushPendingSync();
-    }, SYNC_DEBOUNCE_MS);
+    schedulePendingSyncFlush(pending.options.scope === 'admin-shared' ? 220 : SYNC_DEBOUNCE_MS);
 
     return () => {
       if (pendingSyncTimeoutRef.current) {
@@ -1978,12 +2068,20 @@ export default function App() {
     )));
     setCurrentUser((current) => ({ ...current, avatar: '', avatarKey: '' }));
   };
-  const atualizarJogo = (id, c, v) => setJogosReais(p => p.map(j => j.id === id ? { ...j, [c]: v } : j));
+  const atualizarJogo = (id, c, v) => {
+    if (modoAdmin) {
+      nextSyncScopeRef.current = 'admin-shared';
+    }
+    setJogosReais(p => p.map(j => j.id === id ? { ...j, [c]: v } : j));
+  };
   const atualizarPalpite = (id, c, v) => {
     if (palpitesTravadosJogos) return;
     setPalpitesJogos(p => ({ ...p, [currentUser.id]: { ...(p[currentUser.id] || {}), [id]: { ...(p[currentUser.id]?.[id] || { placarA: '', placarB: '' }), [c]: v } } }));
   };
   const atualizarCondutaGrupo = (grupo, time, campo, valor) => {
+    if (modoAdmin) {
+      nextSyncScopeRef.current = 'admin-shared';
+    }
     setCondutaGrupos((anterior) => ({
       ...anterior,
       [grupo]: {
@@ -1997,6 +2095,9 @@ export default function App() {
   };
   const atualizarMataMata = (c, v, i) => {
     if (palpitesTravadosMata && !modoAdmin) return;
+    if (modoAdmin) {
+      nextSyncScopeRef.current = 'admin-shared';
+    }
     const setter = modoAdmin ? setGabaritoMataMata : setPalpitesMataMata;
     setter(p => {
       const root = modoAdmin ? p : (p[currentUser.id] || {});
