@@ -9,6 +9,7 @@ export default defineConfig([
     'node_modules',
     'bolao-app/dist',
     'dist',
+    'incident-backups',
   ]),
   {
     files: ['bolao-app/src/**/*.{js,jsx}'],
@@ -31,6 +32,18 @@ export default defineConfig([
       'react-hooks/exhaustive-deps': 'off',
       'react-hooks/set-state-in-effect': 'off',
       'react-hooks/static-components': 'off',
+    },
+  },
+  {
+    files: ['scripts/**/*.mjs', 'eslint.config.js'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      globals: globals.node,
+      sourceType: 'module',
+    },
+    rules: {
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },
 ])

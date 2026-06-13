@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "../index.html";
+@source "./**/*.{js,jsx}";
 
 :root {
   font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
