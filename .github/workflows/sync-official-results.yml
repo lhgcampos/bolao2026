@@ -2,7 +2,8 @@ name: Sync Official Results
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/5 * * * *'
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -15,6 +16,7 @@ jobs:
       OFFICIAL_RESULTS_PROVIDER: espn
       OFFICIAL_RESULTS_AUTO_APPLY: "true"
       OFFICIAL_RESULTS_DRY_RUN: "false"
+      OFFICIAL_RESULTS_SYNC_CRON: ${{ github.event.schedule || 'manual' }}
       OFFICIAL_RESULTS_REMOTE_BASE: https://mantledb.sh/v2
       OFFICIAL_RESULTS_REMOTE_NAMESPACE: lhgcampos-bolao2026-live-20260609
     steps:

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { applyManualResultCorrection } from '../bolao-app/src/officialResults/applyOfficialResult.js';
 import { syncOfficialResults } from '../bolao-app/src/officialResults/officialResultSync.js';
 import { buildChronologicalMatchGroups, gerarJogosIniciais, sortMatchesChronologically } from '../bolao-app/src/matchData.js';
+import { deriveOfficialKnockout, getTournamentSyncWindowState, mergeOfficialKnockout } from '../bolao-app/src/officialResults/tournamentSync.js';
 
 const baseMatches = gerarJogosIniciais();
 const baseMatch = baseMatches.find((match) => match.id === 1);
@@ -123,6 +124,33 @@ const buildExternalMatch = (override = {}) => ({
     baseMatches.find((match) => match.id === 2)
   ]);
   assert.equal(groups.length, 1, 'nao quebra quando jogo nao tem estadio ou cidade');
+}
+
+{
+  const activeWindow = getTournamentSyncWindowState(new Date('2026-06-12T19:10:00Z').getTime());
+  const inactiveWindow = getTournamentSyncWindowState(new Date('2026-06-12T23:59:00Z').getTime());
+  assert.equal(activeWindow.active, true, 'janela ativa precisa ser detectada');
+  assert.equal(inactiveWindow.active, false, 'janela inativa precisa ser detectada');
+}
+
+{
+  const derived = deriveOfficialKnockout([
+    { roundKey: 'r32', startedAt: '2026-06-28T19:00:00Z', status: 'FT', homeTeam: { name: 'México' }, awayTeam: { name: 'Catar' }, scoreHome: 2, scoreAway: 1 },
+    { roundKey: 'r16', startedAt: '2026-07-04T19:00:00Z', status: 'FT', homeTeam: { name: 'Brasil' }, awayTeam: { name: 'Argentina' }, scoreHome: 3, scoreAway: 2 },
+    { roundKey: 'qf', startedAt: '2026-07-09T19:00:00Z', status: 'FT', homeTeam: { name: 'França' }, awayTeam: { name: 'Espanha' }, scoreHome: 1, scoreAway: 0 },
+    { roundKey: 'sf', startedAt: '2026-07-14T19:00:00Z', status: 'FT', homeTeam: { name: 'Brasil' }, awayTeam: { name: 'França' }, scoreHome: 2, scoreAway: 0 },
+    { roundKey: 'bronze', startedAt: '2026-07-18T21:00:00Z', status: 'FT', homeTeam: { name: 'Croácia' }, awayTeam: { name: 'Uruguai' }, scoreHome: 2, scoreAway: 1 },
+    { roundKey: 'final', startedAt: '2026-07-19T19:00:00Z', status: 'FT', homeTeam: { name: 'Brasil' }, awayTeam: { name: 'França' }, scoreHome: 1, scoreAway: 0 }
+  ]);
+  assert.equal(derived.dezeszeseisavos[0], 'México', 'mata-mata deve preencher vencedores por rodada');
+  assert.equal(derived.campeao, 'Brasil', 'mata-mata deve preencher campeao');
+  assert.equal(derived.terceiro, 'Croácia', 'mata-mata deve preencher terceiro');
+
+  const merged = mergeOfficialKnockout(
+    { dezeszeseisavos: [''], oitavas: [''], quartas: [''], semis: [''], campeao: '', vice: '', terceiro: '', quarto: '' },
+    derived
+  );
+  assert.equal(merged.campeao, 'Brasil', 'merge do mata-mata deve preservar campeao derivado');
 }
 
 console.log('official results sync tests: ok');

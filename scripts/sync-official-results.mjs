@@ -2,6 +2,7 @@ import { fetchFootballDataMatches } from '../bolao-app/src/officialResults/provi
 import { fetchEspnWorldCupMatches } from '../bolao-app/src/officialResults/providers/espnWorldCupProvider.js';
 import { fetchOpenFootballMatches } from '../bolao-app/src/officialResults/providers/openFootballProvider.js';
 import { syncOfficialResults } from '../bolao-app/src/officialResults/officialResultSync.js';
+import { deriveOfficialKnockout, getTournamentSyncWindowState, mergeOfficialKnockout } from '../bolao-app/src/officialResults/tournamentSync.js';
 import { gerarJogosIniciais, normalizePersistedGameData } from '../bolao-app/src/matchData.js';
 
 const REMOTE_STORE_BASE = process.env.OFFICIAL_RESULTS_REMOTE_BASE || 'https://mantledb.sh/v2';
@@ -9,7 +10,8 @@ const REMOTE_NAMESPACE = process.env.OFFICIAL_RESULTS_REMOTE_NAMESPACE || 'lhgca
 const REMOTE_LEGACY_STATE_PATH = 'state';
 const REMOTE_PATHS = {
   meta: 'meta',
-  matches: 'matches'
+  matches: 'matches',
+  officialKnockout: 'official-knockout'
 };
 
 const AUTO_APPLY = process.env.OFFICIAL_RESULTS_AUTO_APPLY !== 'false';
@@ -91,12 +93,24 @@ const fetchProviderMatches = async (providerName) => {
 };
 
 const run = async () => {
+  const syncMode = String(process.env.OFFICIAL_RESULTS_SYNC_CRON || 'manual');
+  const windowState = getTournamentSyncWindowState();
+  if (syncMode === '*/5 * * * *' && !windowState.active) {
+    console.log(JSON.stringify({ providerPolicy: { configuredProviders: PROVIDERS, syncMode, windowState }, report: { skipped: 'outside-active-window' } }, null, 2));
+    return;
+  }
+  if (syncMode === '*/30 * * * *' && windowState.active) {
+    console.log(JSON.stringify({ providerPolicy: { configuredProviders: PROVIDERS, syncMode, windowState }, report: { skipped: 'inside-active-window' } }, null, 2));
+    return;
+  }
+
   const providerResults = await Promise.all(PROVIDERS.map(async (provider) => ({
     provider,
     matches: await fetchProviderMatches(provider)
   })));
 
   const { meta, matches } = await loadRemoteMatches();
+  const officialKnockoutDoc = await fetchRemoteEntry(REMOTE_PATHS.officialKnockout) || {};
   const externalMatches = providerResults.flatMap((entry) => entry.matches);
   const appliedAt = Date.now();
   const syncResult = syncOfficialResults({
@@ -105,10 +119,17 @@ const run = async () => {
     autoApply: AUTO_APPLY && !DRY_RUN,
     appliedAt
   });
+  const derivedOfficialKnockout = mergeOfficialKnockout(officialKnockoutDoc, deriveOfficialKnockout(externalMatches));
+  const officialKnockoutChanged = JSON.stringify(derivedOfficialKnockout) !== JSON.stringify(officialKnockoutDoc || {});
 
-  if (AUTO_APPLY && !DRY_RUN && syncResult.changed) {
+  if (AUTO_APPLY && !DRY_RUN && (syncResult.changed || officialKnockoutChanged)) {
     const userIds = Array.isArray(meta?.userIds) ? meta.userIds : [];
-    await writeRemoteEntry(REMOTE_PATHS.matches, syncResult.matches);
+    if (syncResult.changed) {
+      await writeRemoteEntry(REMOTE_PATHS.matches, syncResult.matches);
+    }
+    if (officialKnockoutChanged) {
+      await writeRemoteEntry(REMOTE_PATHS.officialKnockout, derivedOfficialKnockout);
+    }
     await writeRemoteEntry(REMOTE_PATHS.meta, {
       schemaVersion: meta?.schemaVersion || 3,
       updatedAt: appliedAt,
@@ -120,9 +141,14 @@ const run = async () => {
     providerPolicy: {
       configuredProviders: PROVIDERS,
       autoApply: AUTO_APPLY,
-      dryRun: DRY_RUN
+      dryRun: DRY_RUN,
+      syncMode,
+      windowState
     },
-    report: syncResult.report
+    report: {
+      ...syncResult.report,
+      officialKnockoutChanged
+    }
   };
 
   console.log(JSON.stringify(output, null, 2));

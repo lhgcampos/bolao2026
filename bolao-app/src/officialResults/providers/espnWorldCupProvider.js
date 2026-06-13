@@ -21,6 +21,18 @@ const normalizeTeam = (competitor = {}) => ({
   tla: competitor?.team?.abbreviation || ''
 });
 
+const normalizeRoundKey = (event = {}, competition = {}) => {
+  const text = `${event?.name || ''} ${event?.shortName || ''} ${competition?.altGameNote || ''}`.toLowerCase();
+  if (text.includes('third place')) return 'bronze';
+  if (text.includes('semifinal')) return 'sf';
+  if (text.includes('quarterfinal')) return 'qf';
+  if (text.includes('round of 16')) return 'r16';
+  if (text.includes('round of 32')) return 'r32';
+  if (text.includes('final')) return 'final';
+  if (text.includes('group')) return 'group';
+  return 'unknown';
+};
+
 const buildDatesRange = ({
   startDate = '20260611',
   endDate = '20260719'
@@ -55,6 +67,7 @@ export const fetchEspnWorldCupMatches = async ({
       sourceLabel: 'ESPN scoreboard',
       authoritative: true,
       externalMatchId: String(event?.id || competition?.id || ''),
+      roundKey: normalizeRoundKey(event, competition),
       status: normalizeStatus(competition, event),
       startedAt: competition?.date || event?.date || '',
       lastUpdated: '',
@@ -64,6 +77,8 @@ export const fetchEspnWorldCupMatches = async ({
         .trim(),
       homeTeam: normalizeTeam(home),
       awayTeam: normalizeTeam(away),
+      homeWinner: Boolean(home?.winner),
+      awayWinner: Boolean(away?.winner),
       scoreHome: normalizeScore(home),
       scoreAway: normalizeScore(away)
     };
