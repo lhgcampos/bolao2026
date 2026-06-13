@@ -1,0 +1,34 @@
+name: Sync Official Results
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      OFFICIAL_RESULTS_PROVIDER: espn
+      OFFICIAL_RESULTS_AUTO_APPLY: "true"
+      OFFICIAL_RESULTS_DRY_RUN: "false"
+      OFFICIAL_RESULTS_REMOTE_BASE: https://mantledb.sh/v2
+      OFFICIAL_RESULTS_REMOTE_NAMESPACE: lhgcampos-bolao2026-live-20260609
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync official results
+        run: npm run sync:official-results

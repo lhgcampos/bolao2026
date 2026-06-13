@@ -1,4 +1,5 @@
 import { fetchFootballDataMatches } from '../bolao-app/src/officialResults/providers/footballDataProvider.js';
+import { fetchEspnWorldCupMatches } from '../bolao-app/src/officialResults/providers/espnWorldCupProvider.js';
 import { fetchOpenFootballMatches } from '../bolao-app/src/officialResults/providers/openFootballProvider.js';
 import { syncOfficialResults } from '../bolao-app/src/officialResults/officialResultSync.js';
 import { gerarJogosIniciais, normalizePersistedGameData } from '../bolao-app/src/matchData.js';
@@ -13,7 +14,7 @@ const REMOTE_PATHS = {
 
 const AUTO_APPLY = process.env.OFFICIAL_RESULTS_AUTO_APPLY !== 'false';
 const DRY_RUN = process.env.OFFICIAL_RESULTS_DRY_RUN === 'true';
-const PROVIDERS = String(process.env.OFFICIAL_RESULTS_PROVIDER || 'football-data')
+const PROVIDERS = String(process.env.OFFICIAL_RESULTS_PROVIDER || 'espn')
   .split(',')
   .map((provider) => provider.trim())
   .filter(Boolean);
@@ -72,6 +73,13 @@ const fetchProviderMatches = async (providerName) => {
       token: process.env.FOOTBALL_DATA_API_TOKEN,
       competitionCode: process.env.FOOTBALL_DATA_COMPETITION_CODE || 'WC',
       season: Number(process.env.FOOTBALL_DATA_SEASON || 2026)
+    });
+  }
+
+  if (providerName === 'espn') {
+    return fetchEspnWorldCupMatches({
+      startDate: process.env.ESPN_WORLD_CUP_START_DATE || '20260611',
+      endDate: process.env.ESPN_WORLD_CUP_END_DATE || '20260719'
     });
   }
 
