@@ -8,6 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "seed:roqueia": "node scripts/seed-roqueia-picks.mjs",
+    "sync:official-results": "node scripts/sync-official-results.mjs",
+    "test:official-results": "node scripts/test-official-results-sync.mjs",
     "test:ranking-positions": "node scripts/test-ranking-positions.mjs",
     "test:ranking-consensus": "node scripts/test-ranking-consensus.mjs",
     "test:user-home-insights": "node scripts/test-user-home-insights.mjs",

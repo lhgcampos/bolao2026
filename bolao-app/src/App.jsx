@@ -7,99 +7,21 @@ import { buildConsensusDashboard } from './rankingConsensus';
 import { buildDenseRanking } from './ranking';
 import { buildUserHomeInsights } from './userHomeInsights';
 import MyBolaoCard from './MyBolaoCard';
-
-// --- DADOS ESTRUTURAIS ---
-const GRUPOS_2026 = {
-  A: ['México', 'África do Sul', 'Coreia do Sul', 'Rep. Tcheca'],
-  B: ['Canadá', 'Bósnia', 'Catar', 'Suíça'],
-  C: ['Brasil', 'Marrocos', 'Haiti', 'Escócia'],
-  D: ['EUA', 'Paraguai', 'Austrália', 'Turquia'],
-  E: ['Alemanha', 'Costa do Marfim', 'Curaçao', 'Equador'],
-  F: ['Holanda', 'Japão', 'Suécia', 'Tunísia'],
-  G: ['Bélgica', 'Egito', 'Irã', 'Nova Zelândia'],
-  H: ['Espanha', 'Cabo Verde', 'Arábia Saudita', 'Uruguai'],
-  I: ['França', 'Senegal', 'Iraque', 'Noruega'],
-  J: ['Argentina', 'Argélia', 'Áustria', 'Jordânia'],
-  K: ['Portugal', 'RD Congo', 'Uzbequistão', 'Colômbia'],
-  L: ['Inglaterra', 'Croácia', 'Gana', 'Panamá']
-};
-
-// Agenda oficial baseada nos horarios locais publicados pela FIFA; a exibicao em tela converte tudo para o horario do Brasil.
-// `kickoffEt` guarda o instante real do jogo com o offset do estadio; `horaEt` preserva a hora local oficial publicada pela FIFA.
-const JOGOS_FASE_DE_GRUPOS = [
-  { id: 1, grupo: 'A', timeA: 'México', timeB: 'África do Sul', kickoffEt: '2026-06-11T13:00:00-06:00', data: '11/06', hora: '16:00', horaEt: '13:00', local: 'Cid. México' },
-  { id: 2, grupo: 'A', timeA: 'Coreia do Sul', timeB: 'Rep. Tcheca', kickoffEt: '2026-06-11T20:00:00-06:00', data: '11/06', hora: '23:00', horaEt: '20:00', local: 'Guadalajara' },
-  { id: 3, grupo: 'A', timeA: 'Rep. Tcheca', timeB: 'África do Sul', kickoffEt: '2026-06-18T12:00:00-04:00', data: '18/06', hora: '13:00', horaEt: '12:00', local: 'Atlanta' },
-  { id: 4, grupo: 'A', timeA: 'México', timeB: 'Coreia do Sul', kickoffEt: '2026-06-18T19:00:00-06:00', data: '18/06', hora: '22:00', horaEt: '19:00', local: 'Guadalajara' },
-  { id: 5, grupo: 'A', timeA: 'Rep. Tcheca', timeB: 'México', kickoffEt: '2026-06-24T19:00:00-06:00', data: '24/06', hora: '22:00', horaEt: '19:00', local: 'Cid. México' },
-  { id: 6, grupo: 'A', timeA: 'África do Sul', timeB: 'Coreia do Sul', kickoffEt: '2026-06-24T19:00:00-06:00', data: '24/06', hora: '22:00', horaEt: '19:00', local: 'Monterrey' },
-  { id: 7, grupo: 'B', timeA: 'Canadá', timeB: 'Bósnia', kickoffEt: '2026-06-12T15:00:00-04:00', data: '12/06', hora: '16:00', horaEt: '15:00', local: 'Toronto' },
-  { id: 8, grupo: 'B', timeA: 'Catar', timeB: 'Suíça', kickoffEt: '2026-06-13T12:00:00-07:00', data: '13/06', hora: '16:00', horaEt: '12:00', local: 'San Francisco Bay Area' },
-  { id: 9, grupo: 'B', timeA: 'Suíça', timeB: 'Bósnia', kickoffEt: '2026-06-18T12:00:00-07:00', data: '18/06', hora: '16:00', horaEt: '12:00', local: 'Los Angeles' },
-  { id: 10, grupo: 'B', timeA: 'Canadá', timeB: 'Catar', kickoffEt: '2026-06-18T15:00:00-07:00', data: '18/06', hora: '19:00', horaEt: '15:00', local: 'Vancouver' },
-  { id: 11, grupo: 'B', timeA: 'Suíça', timeB: 'Canadá', kickoffEt: '2026-06-24T12:00:00-07:00', data: '24/06', hora: '16:00', horaEt: '12:00', local: 'Vancouver' },
-  { id: 12, grupo: 'B', timeA: 'Bósnia', timeB: 'Catar', kickoffEt: '2026-06-24T12:00:00-07:00', data: '24/06', hora: '16:00', horaEt: '12:00', local: 'Seattle' },
-  { id: 13, grupo: 'C', timeA: 'Haiti', timeB: 'Escócia', kickoffEt: '2026-06-13T21:00:00-04:00', data: '13/06', hora: '22:00', horaEt: '21:00', local: 'Boston' },
-  { id: 14, grupo: 'C', timeA: 'Brasil', timeB: 'Marrocos', kickoffEt: '2026-06-13T18:00:00-04:00', data: '13/06', hora: '19:00', horaEt: '18:00', local: 'Nova York/Nova Jersey' },
-  { id: 15, grupo: 'C', timeA: 'Escócia', timeB: 'Marrocos', kickoffEt: '2026-06-19T18:00:00-04:00', data: '19/06', hora: '19:00', horaEt: '18:00', local: 'Boston' },
-  { id: 16, grupo: 'C', timeA: 'Brasil', timeB: 'Haiti', kickoffEt: '2026-06-19T20:30:00-04:00', data: '19/06', hora: '21:30', horaEt: '20:30', local: 'Filadélfia' },
-  { id: 17, grupo: 'C', timeA: 'Escócia', timeB: 'Brasil', kickoffEt: '2026-06-24T18:00:00-04:00', data: '24/06', hora: '19:00', horaEt: '18:00', local: 'Miami' },
-  { id: 18, grupo: 'C', timeA: 'Marrocos', timeB: 'Haiti', kickoffEt: '2026-06-24T18:00:00-04:00', data: '24/06', hora: '19:00', horaEt: '18:00', local: 'Atlanta' },
-  { id: 19, grupo: 'D', timeA: 'EUA', timeB: 'Paraguai', kickoffEt: '2026-06-12T18:00:00-07:00', data: '12/06', hora: '22:00', horaEt: '18:00', local: 'Los Angeles' },
-  { id: 20, grupo: 'D', timeA: 'Austrália', timeB: 'Turquia', kickoffEt: '2026-06-13T21:00:00-07:00', data: '14/06', hora: '01:00', horaEt: '21:00', local: 'Vancouver' },
-  { id: 21, grupo: 'D', timeA: 'Turquia', timeB: 'Paraguai', kickoffEt: '2026-06-19T20:00:00-07:00', data: '20/06', hora: '00:00', horaEt: '20:00', local: 'San Francisco Bay Area' },
-  { id: 22, grupo: 'D', timeA: 'EUA', timeB: 'Austrália', kickoffEt: '2026-06-19T12:00:00-07:00', data: '19/06', hora: '16:00', horaEt: '12:00', local: 'Seattle' },
-  { id: 23, grupo: 'D', timeA: 'Turquia', timeB: 'EUA', kickoffEt: '2026-06-25T19:00:00-07:00', data: '25/06', hora: '23:00', horaEt: '19:00', local: 'Los Angeles' },
-  { id: 24, grupo: 'D', timeA: 'Paraguai', timeB: 'Austrália', kickoffEt: '2026-06-25T19:00:00-07:00', data: '25/06', hora: '23:00', horaEt: '19:00', local: 'San Francisco Bay Area' },
-  { id: 25, grupo: 'E', timeA: 'Costa do Marfim', timeB: 'Equador', kickoffEt: '2026-06-14T19:00:00-04:00', data: '14/06', hora: '20:00', horaEt: '19:00', local: 'Filadélfia' },
-  { id: 26, grupo: 'E', timeA: 'Alemanha', timeB: 'Curaçao', kickoffEt: '2026-06-14T12:00:00-05:00', data: '14/06', hora: '14:00', horaEt: '12:00', local: 'Houston' },
-  { id: 27, grupo: 'E', timeA: 'Alemanha', timeB: 'Costa do Marfim', kickoffEt: '2026-06-20T16:00:00-04:00', data: '20/06', hora: '17:00', horaEt: '16:00', local: 'Toronto' },
-  { id: 28, grupo: 'E', timeA: 'Equador', timeB: 'Curaçao', kickoffEt: '2026-06-20T19:00:00-05:00', data: '20/06', hora: '21:00', horaEt: '19:00', local: 'Kansas City' },
-  { id: 29, grupo: 'E', timeA: 'Curaçao', timeB: 'Costa do Marfim', kickoffEt: '2026-06-25T16:00:00-04:00', data: '25/06', hora: '17:00', horaEt: '16:00', local: 'Filadélfia' },
-  { id: 30, grupo: 'E', timeA: 'Equador', timeB: 'Alemanha', kickoffEt: '2026-06-25T16:00:00-04:00', data: '25/06', hora: '17:00', horaEt: '16:00', local: 'Nova York/Nova Jersey' },
-  { id: 31, grupo: 'F', timeA: 'Holanda', timeB: 'Japão', kickoffEt: '2026-06-14T15:00:00-05:00', data: '14/06', hora: '17:00', horaEt: '15:00', local: 'Dallas' },
-  { id: 32, grupo: 'F', timeA: 'Suécia', timeB: 'Tunísia', kickoffEt: '2026-06-14T20:00:00-06:00', data: '14/06', hora: '23:00', horaEt: '20:00', local: 'Monterrey' },
-  { id: 33, grupo: 'F', timeA: 'Holanda', timeB: 'Suécia', kickoffEt: '2026-06-20T12:00:00-05:00', data: '20/06', hora: '14:00', horaEt: '12:00', local: 'Houston' },
-  { id: 34, grupo: 'F', timeA: 'Tunísia', timeB: 'Japão', kickoffEt: '2026-06-20T22:00:00-06:00', data: '21/06', hora: '01:00', horaEt: '22:00', local: 'Monterrey' },
-  { id: 35, grupo: 'F', timeA: 'Japão', timeB: 'Suécia', kickoffEt: '2026-06-25T18:00:00-05:00', data: '25/06', hora: '20:00', horaEt: '18:00', local: 'Dallas' },
-  { id: 36, grupo: 'F', timeA: 'Tunísia', timeB: 'Holanda', kickoffEt: '2026-06-25T18:00:00-05:00', data: '25/06', hora: '20:00', horaEt: '18:00', local: 'Kansas City' },
-  { id: 37, grupo: 'G', timeA: 'Bélgica', timeB: 'Egito', kickoffEt: '2026-06-15T12:00:00-07:00', data: '15/06', hora: '16:00', horaEt: '12:00', local: 'Seattle' },
-  { id: 38, grupo: 'G', timeA: 'Irã', timeB: 'Nova Zelândia', kickoffEt: '2026-06-15T18:00:00-07:00', data: '15/06', hora: '22:00', horaEt: '18:00', local: 'Los Angeles' },
-  { id: 39, grupo: 'G', timeA: 'Bélgica', timeB: 'Irã', kickoffEt: '2026-06-21T12:00:00-07:00', data: '21/06', hora: '16:00', horaEt: '12:00', local: 'Los Angeles' },
-  { id: 40, grupo: 'G', timeA: 'Nova Zelândia', timeB: 'Egito', kickoffEt: '2026-06-21T18:00:00-07:00', data: '21/06', hora: '22:00', horaEt: '18:00', local: 'Vancouver' },
-  { id: 41, grupo: 'G', timeA: 'Egito', timeB: 'Irã', kickoffEt: '2026-06-26T20:00:00-07:00', data: '27/06', hora: '00:00', horaEt: '20:00', local: 'Seattle' },
-  { id: 42, grupo: 'G', timeA: 'Nova Zelândia', timeB: 'Bélgica', kickoffEt: '2026-06-26T20:00:00-07:00', data: '27/06', hora: '00:00', horaEt: '20:00', local: 'Vancouver' },
-  { id: 43, grupo: 'H', timeA: 'Arábia Saudita', timeB: 'Uruguai', kickoffEt: '2026-06-15T18:00:00-04:00', data: '15/06', hora: '19:00', horaEt: '18:00', local: 'Miami' },
-  { id: 44, grupo: 'H', timeA: 'Espanha', timeB: 'Cabo Verde', kickoffEt: '2026-06-15T12:00:00-04:00', data: '15/06', hora: '13:00', horaEt: '12:00', local: 'Atlanta' },
-  { id: 45, grupo: 'H', timeA: 'Uruguai', timeB: 'Cabo Verde', kickoffEt: '2026-06-21T18:00:00-04:00', data: '21/06', hora: '19:00', horaEt: '18:00', local: 'Miami' },
-  { id: 46, grupo: 'H', timeA: 'Espanha', timeB: 'Arábia Saudita', kickoffEt: '2026-06-21T12:00:00-04:00', data: '21/06', hora: '13:00', horaEt: '12:00', local: 'Atlanta' },
-  { id: 47, grupo: 'H', timeA: 'Cabo Verde', timeB: 'Arábia Saudita', kickoffEt: '2026-06-26T19:00:00-05:00', data: '26/06', hora: '21:00', horaEt: '19:00', local: 'Houston' },
-  { id: 48, grupo: 'H', timeA: 'Uruguai', timeB: 'Espanha', kickoffEt: '2026-06-26T18:00:00-06:00', data: '26/06', hora: '21:00', horaEt: '18:00', local: 'Guadalajara' },
-  { id: 49, grupo: 'I', timeA: 'Iraque', timeB: 'Noruega', kickoffEt: '2026-06-16T18:00:00-04:00', data: '16/06', hora: '19:00', horaEt: '18:00', local: 'Boston' },
-  { id: 50, grupo: 'I', timeA: 'França', timeB: 'Senegal', kickoffEt: '2026-06-16T15:00:00-04:00', data: '16/06', hora: '16:00', horaEt: '15:00', local: 'Nova York/Nova Jersey' },
-  { id: 51, grupo: 'I', timeA: 'Noruega', timeB: 'Senegal', kickoffEt: '2026-06-22T20:00:00-04:00', data: '22/06', hora: '21:00', horaEt: '20:00', local: 'Dallas' },
-  { id: 52, grupo: 'I', timeA: 'França', timeB: 'Iraque', kickoffEt: '2026-06-22T17:00:00-04:00', data: '22/06', hora: '18:00', horaEt: '17:00', local: 'Nova York/Nova Jersey' },
-  { id: 53, grupo: 'I', timeA: 'Noruega', timeB: 'França', kickoffEt: '2026-06-26T15:00:00-04:00', data: '26/06', hora: '16:00', horaEt: '15:00', local: 'Boston' },
-  { id: 54, grupo: 'I', timeA: 'Senegal', timeB: 'Iraque', kickoffEt: '2026-06-26T15:00:00-04:00', data: '26/06', hora: '16:00', horaEt: '15:00', local: 'Toronto' },
-  { id: 55, grupo: 'J', timeA: 'Áustria', timeB: 'Jordânia', kickoffEt: '2026-06-16T21:00:00-07:00', data: '17/06', hora: '01:00', horaEt: '21:00', local: 'San Francisco Bay Area' },
-  { id: 56, grupo: 'J', timeA: 'Argentina', timeB: 'Argélia', kickoffEt: '2026-06-16T20:00:00-05:00', data: '16/06', hora: '22:00', horaEt: '20:00', local: 'Kansas City' },
-  { id: 57, grupo: 'J', timeA: 'Argentina', timeB: 'Áustria', kickoffEt: '2026-06-22T12:00:00-05:00', data: '22/06', hora: '14:00', horaEt: '12:00', local: 'Dallas' },
-  { id: 58, grupo: 'J', timeA: 'Jordânia', timeB: 'Argélia', kickoffEt: '2026-06-22T20:00:00-07:00', data: '23/06', hora: '00:00', horaEt: '20:00', local: 'San Francisco Bay Area' },
-  { id: 59, grupo: 'J', timeA: 'Argélia', timeB: 'Áustria', kickoffEt: '2026-06-27T21:00:00-05:00', data: '27/06', hora: '23:00', horaEt: '21:00', local: 'Kansas City' },
-  { id: 60, grupo: 'J', timeA: 'Jordânia', timeB: 'Argentina', kickoffEt: '2026-06-27T21:00:00-05:00', data: '27/06', hora: '23:00', horaEt: '21:00', local: 'Dallas' },
-  { id: 61, grupo: 'K', timeA: 'Portugal', timeB: 'RD Congo', kickoffEt: '2026-06-17T12:00:00-05:00', data: '17/06', hora: '14:00', horaEt: '12:00', local: 'Houston' },
-  { id: 62, grupo: 'K', timeA: 'Uzbequistão', timeB: 'Colômbia', kickoffEt: '2026-06-17T20:00:00-06:00', data: '17/06', hora: '23:00', horaEt: '20:00', local: 'Cid. México' },
-  { id: 63, grupo: 'K', timeA: 'Portugal', timeB: 'Uzbequistão', kickoffEt: '2026-06-23T12:00:00-05:00', data: '23/06', hora: '14:00', horaEt: '12:00', local: 'Houston' },
-  { id: 64, grupo: 'K', timeA: 'Colômbia', timeB: 'RD Congo', kickoffEt: '2026-06-23T20:00:00-06:00', data: '23/06', hora: '23:00', horaEt: '20:00', local: 'Guadalajara' },
-  { id: 65, grupo: 'K', timeA: 'Colômbia', timeB: 'Portugal', kickoffEt: '2026-06-27T19:30:00-04:00', data: '27/06', hora: '20:30', horaEt: '19:30', local: 'Miami' },
-  { id: 66, grupo: 'K', timeA: 'RD Congo', timeB: 'Uzbequistão', kickoffEt: '2026-06-27T19:30:00-04:00', data: '27/06', hora: '20:30', horaEt: '19:30', local: 'Atlanta' },
-  { id: 67, grupo: 'L', timeA: 'Gana', timeB: 'Panamá', kickoffEt: '2026-06-17T19:00:00-04:00', data: '17/06', hora: '20:00', horaEt: '19:00', local: 'Toronto' },
-  { id: 68, grupo: 'L', timeA: 'Inglaterra', timeB: 'Croácia', kickoffEt: '2026-06-17T15:00:00-05:00', data: '17/06', hora: '17:00', horaEt: '15:00', local: 'Dallas' },
-  { id: 69, grupo: 'L', timeA: 'Inglaterra', timeB: 'Gana', kickoffEt: '2026-06-23T16:00:00-04:00', data: '23/06', hora: '17:00', horaEt: '16:00', local: 'Boston' },
-  { id: 70, grupo: 'L', timeA: 'Panamá', timeB: 'Croácia', kickoffEt: '2026-06-23T19:00:00-04:00', data: '23/06', hora: '20:00', horaEt: '19:00', local: 'Toronto' },
-  { id: 71, grupo: 'L', timeA: 'Panamá', timeB: 'Inglaterra', kickoffEt: '2026-06-27T17:00:00-04:00', data: '27/06', hora: '18:00', horaEt: '17:00', local: 'Nova York/Nova Jersey' },
-  { id: 72, grupo: 'L', timeA: 'Croácia', timeB: 'Gana', kickoffEt: '2026-06-27T17:00:00-04:00', data: '27/06', hora: '18:00', horaEt: '17:00', local: 'Filadélfia' }
-];
+import {
+  GRUPOS_2026,
+  buildChronologicalMatchGroups,
+  formatBrazilMatchSchedule,
+  formatOfficialKickoffHint,
+  gerarJogosIniciais,
+  isMatchFinal,
+  normalizePersistedGameData,
+  parseMatchDateTime,
+  placarPreenchido
+} from './matchData';
+import {
+  applyManualResultCorrection,
+  clearManualResultOverride
+} from './officialResults/applyOfficialResult';
 
 const TODOS_TIMES = Object.values(GRUPOS_2026).flat().sort();
 
@@ -169,35 +91,7 @@ const INSTALLATION_TIPS = {
   ]
 };
 // --- CONFIGURAÇÃO INICIAL ---
-const buildPairKey = (timeA, timeB) => [timeA, timeB].sort().join('||');
-
-const findOfficialMatchForPair = (match) => {
-  if (!match?.grupo || !match?.timeA || !match?.timeB) return null;
-  const pairKey = buildPairKey(match.timeA, match.timeB);
-  return JOGOS_FASE_DE_GRUPOS.find(
-    (officialMatch) => officialMatch.grupo === match.grupo && buildPairKey(officialMatch.timeA, officialMatch.timeB) === pairKey
-  ) || null;
-};
-
 const getShortCountryName = (name) => COUNTRY_SHORT_NAMES[name] || name;
-
-const placarPreenchido = (placarA, placarB) => (
-  placarA !== '' &&
-  placarB !== '' &&
-  placarA !== undefined &&
-  placarB !== undefined &&
-  placarA !== null &&
-  placarB !== null
-);
-
-const isMatchFinal = (match) => Boolean(match?.isFinal ?? match?.resultadoFinal);
-
-const buildEmptyMatchRecord = (match) => ({
-  ...match,
-  placarA: '',
-  placarB: '',
-  isFinal: false
-});
 
 const getMatchResultVariant = (match) => {
   if (!placarPreenchido(match?.placarA, match?.placarB)) return 'pending';
@@ -211,50 +105,58 @@ const countResolvedMatchesByVariant = (matches = []) => matches.reduce((summary,
   return summary;
 }, { final: 0, temporary: 0 });
 
-const normalizePersistedGameData = (matches = [], betsGames = {}) => {
-  const officialMatches = JOGOS_FASE_DE_GRUPOS.map(buildEmptyMatchRecord);
-  const officialById = new Map(officialMatches.map((match) => [match.id, match]));
-  const migrationBySourceId = new Map();
-
-  matches.forEach((match) => {
-    const officialMatch = findOfficialMatchForPair(match);
-    if (!officialMatch) return;
-
-    const swapScores = officialMatch.timeA === match.timeB && officialMatch.timeB === match.timeA;
-    migrationBySourceId.set(String(match.id), { targetId: officialMatch.id, swapScores });
-
-    officialById.set(officialMatch.id, {
-      ...officialById.get(officialMatch.id),
-      placarA: swapScores ? (match.placarB ?? '') : (match.placarA ?? ''),
-      placarB: swapScores ? (match.placarA ?? '') : (match.placarB ?? ''),
-      isFinal: isMatchFinal(match)
-    });
-  });
-
-  const normalizedBetsGames = Object.fromEntries(
-    Object.entries(betsGames || {}).map(([userId, userBets]) => {
-      const nextUserBets = {};
-
-      Object.entries(userBets || {}).forEach(([matchId, bet]) => {
-        const migration = migrationBySourceId.get(String(matchId));
-        if (!migration || !bet) return;
-
-        nextUserBets[migration.targetId] = migration.swapScores
-          ? { ...bet, placarA: bet.placarB ?? '', placarB: bet.placarA ?? '' }
-          : { ...bet };
-      });
-
-      return [userId, nextUserBets];
-    })
-  );
-
-  return {
-    matches: [...officialById.values()],
-    betsGames: normalizedBetsGames
-  };
+const formatResultSourceTimestamp = (timestamp) => {
+  if (!timestamp) return '';
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  }).format(new Date(timestamp));
 };
 
-const gerarJogosIniciais = () => JOGOS_FASE_DE_GRUPOS.map(buildEmptyMatchRecord);
+const getOfficialResultStatus = (match) => {
+  const variant = getMatchResultVariant(match);
+  const alreadyStarted = parseMatchDateTime(match) <= Date.now();
+
+  if (match?.manualOverride) {
+    return {
+      label: 'Corrigido manualmente',
+      tone: 'border-sky-200 bg-sky-50 text-sky-700'
+    };
+  }
+
+  if (variant === 'final' && match?.resultOrigin === 'auto-sync') {
+    return {
+      label: 'Atualizado automaticamente',
+      tone: 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    };
+  }
+
+  if (variant === 'final') {
+    return {
+      label: 'Resultado oficial',
+      tone: 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    };
+  }
+
+  if (variant === 'temporary') {
+    return {
+      label: 'Placar temporário',
+      tone: 'border-orange-200 bg-orange-50 text-orange-700'
+    };
+  }
+
+  if (alreadyStarted) {
+    return {
+      label: 'Aguardando resultado',
+      tone: 'border-amber-200 bg-amber-50 text-amber-700'
+    };
+  }
+
+  return {
+    label: 'Não iniciado',
+    tone: 'border-slate-200 bg-slate-50 text-slate-600'
+  };
+};
 
 // Agenda oficial do mata-mata baseada nos horarios locais publicados pela FIFA; a exibicao em tela usa o horario do Brasil.
 // `kickoffEt` guarda o instante real do jogo com o offset do estadio; `horaEt` preserva a hora local oficial publicada pela FIFA.
@@ -1321,55 +1223,6 @@ const formatSubmissionDate = (timestamp) => {
   }).format(new Date(timestamp));
 };
 
-const formatBrazilMatchSchedule = (match) => {
-  if (match?.kickoffEt) {
-    const kickoff = new Date(match.kickoffEt);
-    const parts = new Intl.DateTimeFormat('pt-BR', {
-      timeZone: 'America/Sao_Paulo',
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }).formatToParts(kickoff);
-
-    const getPart = (type) => parts.find((part) => part.type === type)?.value || '00';
-    const day = Number(getPart('day'));
-    const month = Number(getPart('month'));
-    const time = `${getPart('hour')}:${getPart('minute')}`;
-
-    return {
-      day,
-      month,
-      time,
-      label: `${day}/${month} - ${time} BR`
-    };
-  }
-
-  const [day = '01', month = '01'] = String(match?.data || '01/01').split('/');
-  return {
-    day: Number(day),
-    month: Number(month),
-    time: match?.hora || '00:00',
-    label: `${Number(day)}/${Number(month)} - ${match?.hora || '00:00'} BR`
-  };
-};
-
-const formatOfficialKickoffHint = (match) => {
-  if (!match?.kickoffEt || !match?.horaEt) return null;
-  return `Oficial FIFA: ${match.horaEt} no horario local do estadio`;
-};
-
-const parseMatchDateTime = (match) => {
-  if (match?.kickoffEt) {
-    return new Date(match.kickoffEt).getTime();
-  }
-
-  const [day, month] = String(match.data || '01/01').split('/').map(Number);
-  const [hour, minute] = String(match.hora || '00:00').split(':').map(Number);
-  return new Date(2026, (month || 1) - 1, day || 1, hour || 0, minute || 0).getTime();
-};
-
 const AvatarBadge = ({ user, size = 'md', className = '' }) => {
   const sizes = {
     sm: 'w-7 h-7 text-[11px] lg:w-8 lg:h-8 lg:text-xs',
@@ -1661,6 +1514,7 @@ export default function App() {
   const [gabaritoMataMata, setGabaritoMataMata] = useState(() => JSON.parse(localStorage.getItem('bolao26_official_knockout_v2')) || {});
   const [condutaGrupos, setCondutaGrupos] = useState(() => JSON.parse(localStorage.getItem('bolao26_group_conduct')) || {});
   const [submissoes, setSubmissoes] = useState(() => JSON.parse(localStorage.getItem('bolao26_submissions')) || {});
+  const [adminMatchDrafts, setAdminMatchDrafts] = useState({});
 
   useEffect(() => { localStorage.setItem('bolao26_users', JSON.stringify(usuarios)); }, [usuarios]);
   useEffect(() => { localStorage.setItem('bolao26_matches', JSON.stringify(jogosReais)); }, [jogosReais]);
@@ -1669,6 +1523,14 @@ export default function App() {
   useEffect(() => { localStorage.setItem('bolao26_official_knockout_v2', JSON.stringify(gabaritoMataMata)); }, [gabaritoMataMata]);
   useEffect(() => { localStorage.setItem('bolao26_group_conduct', JSON.stringify(condutaGrupos)); }, [condutaGrupos]);
   useEffect(() => { localStorage.setItem('bolao26_submissions', JSON.stringify(submissoes)); }, [submissoes]);
+  useEffect(() => {
+    setAdminMatchDrafts(Object.fromEntries(
+      jogosReais.map((match) => [match.id, {
+        placarA: match.placarA ?? '',
+        placarB: match.placarB ?? ''
+      }])
+    ));
+  }, [jogosReais]);
 
   const applyAppState = (nextState, nextUpdatedAt = Date.now()) => {
     skipNextRemoteSyncRef.current = true;
@@ -2097,7 +1959,14 @@ export default function App() {
   };
   const atualizarJogo = (id, c, v) => {
     if (modoAdmin) {
-      nextSyncScopeRef.current = 'admin-shared';
+      setAdminMatchDrafts((current) => ({
+        ...current,
+        [id]: {
+          ...(current[id] || { placarA: '', placarB: '' }),
+          [c]: v
+        }
+      }));
+      return;
     }
     setJogosReais((current) => current.map((jogo) => {
       if (jogo.id !== id) return jogo;
@@ -2108,15 +1977,54 @@ export default function App() {
       return nextMatch;
     }));
   };
-  const atualizarStatusFinalJogo = (id, checked) => {
+  const aplicarAtualizacaoManualNoJogo = (id, updater) => {
     if (!modoAdmin) return;
     nextSyncScopeRef.current = 'admin-shared';
     setJogosReais((current) => current.map((jogo) => {
       if (jogo.id !== id) return jogo;
+      const updated = updater(jogo);
+      return updated?.match || jogo;
+    }));
+  };
+  const salvarCorrecaoManualJogo = (id) => {
+    if (!modoAdmin) return;
+    const draft = adminMatchDrafts[id] || { placarA: '', placarB: '' };
+    const hasPartialScore = (draft.placarA === '') !== (draft.placarB === '');
+
+    if (hasPartialScore) {
+      setSyncError('Preencha os dois gols ou deixe os dois campos vazios antes de salvar a correção manual.');
+      return;
+    }
+
+    setSyncError('');
+    aplicarAtualizacaoManualNoJogo(id, (jogo) => applyManualResultCorrection(jogo, {
+      placarA: draft.placarA,
+      placarB: draft.placarB,
+      isFinal: placarPreenchido(draft.placarA, draft.placarB),
+      appliedBy: currentUser?.nome || 'admin',
+      reason: 'admin-correction'
+    }));
+  };
+  const atualizarStatusFinalJogo = (id, checked) => {
+    if (!modoAdmin) return;
+    aplicarAtualizacaoManualNoJogo(id, (jogo) => {
       if (!placarPreenchido(jogo.placarA, jogo.placarB)) {
-        return { ...jogo, isFinal: false };
+        return { changed: false, match: { ...jogo, isFinal: false } };
       }
-      return { ...jogo, isFinal: Boolean(checked) };
+
+      return applyManualResultCorrection(jogo, {
+        placarA: jogo.placarA,
+        placarB: jogo.placarB,
+        isFinal: Boolean(checked),
+        appliedBy: currentUser?.nome || 'admin',
+        reason: checked ? 'admin-final-confirmation' : 'admin-reopened-result'
+      });
+    });
+  };
+  const reativarAutoSyncJogo = (id) => {
+    if (!modoAdmin) return;
+    aplicarAtualizacaoManualNoJogo(id, (jogo) => clearManualResultOverride(jogo, {
+      appliedBy: currentUser?.nome || 'admin'
     }));
   };
   const atualizarPalpite = (id, c, v) => {
@@ -3266,88 +3174,196 @@ export default function App() {
                 </div>
               </div>
             )}
-            {modoAdmin && <div className="bg-red-50 text-red-500 text-xs p-3 rounded-xl text-center border border-red-200 font-bold">MODO GABARITO ATIVO</div>}
-            {Object.keys(GRUPOS_2026).map(grupo => (
-              <div key={grupo} className="relative">
-                <h3 className="mb-4 pl-3 border-l-2 border-yellow-500 text-[15px] font-bold tracking-wide text-slate-700">GRUPO {grupo}</h3>
-                <TabelaClassificacao grupo={grupo} />
-                <div className="space-y-3">
-                  {jogosReais.filter(j => j.grupo === grupo).map(jogo => {
-                    const palpite = palpitesJogos[currentUser.id]?.[jogo.id] || { placarA: '', placarB: '' };
-                    const valA = modoAdmin ? jogo.placarA : palpite.placarA;
-                    const valB = modoAdmin ? jogo.placarB : palpite.placarB;
-                    const schedule = formatBrazilMatchSchedule(jogo);
-                    const officialKickoffHint = formatOfficialKickoffHint(jogo);
-                    const resultadoPreenchido = placarPreenchido(jogo.placarA, jogo.placarB);
-                    const resultadoVariant = getMatchResultVariant(jogo);
-                    return (
-                      <div key={jogo.id} className={`${GLASS_CARD} p-4`}>
-                        <div className="mb-4 flex flex-col gap-2 text-[11px] font-bold uppercase text-slate-500 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="flex flex-col gap-1 min-w-0">
-                            <span className="flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
-                            {officialKickoffHint && <span className="text-[10px] font-semibold normal-case text-slate-500">{officialKickoffHint}</span>}
-                          </div>
-                          <div className="flex flex-wrap items-center justify-end gap-2">
-                            {modoAdmin && resultadoPreenchido && (
-                              <span className={`w-fit rounded-full px-2 py-1 text-[10px] font-bold ${
-                                resultadoVariant === 'final'
-                                  ? 'bg-emerald-50 text-emerald-700'
-                                  : 'bg-orange-50 text-orange-700'
-                              }`}>
-                                {resultadoVariant === 'final' ? 'Definitivo' : 'Temporário'}
-                              </span>
-                            )}
-                            <span className="w-fit rounded-full bg-slate-100 px-2 py-1 text-[10px] text-slate-600">{jogo.local}</span>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
-                          <span className="text-right text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeA}</span>
-                          <div className="flex items-center gap-2">
-                            <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos && !modoAdmin} value={valA} onChange={e => modoAdmin ? atualizarJogo(jogo.id, 'placarA', e.target.value) : atualizarPalpite(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
-                            <span className="text-sm text-slate-500 font-light">X</span>
-                            <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos && !modoAdmin} value={valB} onChange={e => modoAdmin ? atualizarJogo(jogo.id, 'placarB', e.target.value) : atualizarPalpite(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
-                          </div>
-                          <span className="text-left text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeB}</span>
-                        </div>
-                        {modoAdmin && (
-                          <label className={`mt-4 flex items-center justify-between gap-4 rounded-[18px] border px-3 py-3 ${
-                            resultadoPreenchido
-                              ? (jogo.isFinal ? 'border-emerald-200 bg-emerald-50/70' : 'border-orange-200 bg-orange-50/70')
-                              : 'border-slate-200 bg-slate-50/80'
-                          }`}>
-                            <div className="min-w-0">
-                              <div className={`text-[10px] font-bold uppercase tracking-[0.16em] ${
-                                !resultadoPreenchido
-                                  ? 'text-slate-500'
-                                  : jogo.isFinal
-                                    ? 'text-emerald-700'
-                                    : 'text-orange-700'
-                              }`}>
-                                {!resultadoPreenchido ? 'Sem placar lançado' : jogo.isFinal ? 'Resultado definitivo' : 'Placar temporário'}
+            {modoAdmin ? (
+              <>
+                <div className={`${GLASS_CARD} p-5`}>
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-wide text-slate-900">Gabarito cronológico</h3>
+                      <p className={`mt-1 text-xs ${TEXT_MUTED}`}>Os jogos agora aparecem por dia e horário do Brasil. Correções manuais travam o auto-sync até você reativá-lo.</p>
+                    </div>
+                    <div className="inline-flex items-center gap-2 self-start rounded-full border border-red-200 bg-red-50 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-red-600">
+                      <AlertCircle size={12} />
+                      Modo gabarito ativo
+                    </div>
+                  </div>
+                </div>
+                {buildChronologicalMatchGroups(jogosReais).map((dayGroup) => (
+                  <div key={dayGroup.dayKey} className="space-y-3">
+                    <div className="sticky top-20 z-10 inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-700 shadow-sm backdrop-blur">
+                      {dayGroup.dayLabel}
+                    </div>
+                    <div className="space-y-3">
+                      {dayGroup.matches.map((jogo) => {
+                        const draft = adminMatchDrafts[jogo.id] || { placarA: jogo.placarA ?? '', placarB: jogo.placarB ?? '' };
+                        const schedule = formatBrazilMatchSchedule(jogo);
+                        const officialKickoffHint = formatOfficialKickoffHint(jogo);
+                        const status = getOfficialResultStatus(jogo);
+                        const hasPartialDraft = (draft.placarA === '') !== (draft.placarB === '');
+                        const hasDraftChanges = draft.placarA !== (jogo.placarA ?? '') || draft.placarB !== (jogo.placarB ?? '');
+                        const canSaveManual = !hasPartialDraft && (
+                          hasDraftChanges ||
+                          (placarPreenchido(draft.placarA, draft.placarB) && !jogo.manualOverride)
+                        );
+                        const sourceMeta = [
+                          jogo.resultSourceLabel || '',
+                          jogo.resultUpdatedAt ? formatResultSourceTimestamp(jogo.resultUpdatedAt) : ''
+                        ].filter(Boolean).join(' • ');
+
+                        return (
+                          <div key={jogo.id} className={`${GLASS_CARD} p-4 lg:p-5`}>
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                                  <span className="inline-flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
+                                  <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">Grupo {jogo.grupo}</span>
+                                  {jogo.local && <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{jogo.local}</span>}
+                                </div>
+                                {officialKickoffHint && <div className="mt-2 text-[11px] text-slate-500">{officialKickoffHint}</div>}
                               </div>
-                              <div className="mt-1 text-[11px] text-slate-600">
-                                {!resultadoPreenchido
-                                  ? 'Preencha os dois gols para liberar a confirmação final.'
-                                  : jogo.isFinal
-                                    ? 'Este placar já vale como oficial no bolão.'
-                                    : 'Use durante o jogo e marque como definitivo só no apito final.'}
+                              <div className={`self-start rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] ${status.tone}`}>
+                                {status.label}
                               </div>
                             </div>
-                            <input
-                              type="checkbox"
-                              checked={Boolean(jogo.isFinal && resultadoPreenchido)}
-                              disabled={!resultadoPreenchido}
-                              onChange={(event) => atualizarStatusFinalJogo(jogo.id, event.target.checked)}
-                              className="h-5 w-5 shrink-0 accent-emerald-600"
-                            />
-                          </label>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+
+                            <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center">
+                              <div className="text-[14px] font-bold text-slate-900 lg:text-right">{jogo.timeA}</div>
+                              <div className="flex items-center justify-center gap-2">
+                                <input type="number" min="0" inputMode="numeric" value={draft.placarA} onChange={e => atualizarJogo(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} h-12 w-14 text-center text-base font-bold`} />
+                                <span className="text-sm font-light text-slate-500">X</span>
+                                <input type="number" min="0" inputMode="numeric" value={draft.placarB} onChange={e => atualizarJogo(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} h-12 w-14 text-center text-base font-bold`} />
+                              </div>
+                              <div className="text-[14px] font-bold text-slate-900 lg:text-left">{jogo.timeB}</div>
+                            </div>
+
+                            <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                              <label className={`flex items-center justify-between gap-4 rounded-[18px] border px-3 py-3 ${
+                                placarPreenchido(jogo.placarA, jogo.placarB)
+                                  ? (jogo.isFinal ? 'border-emerald-200 bg-emerald-50/70' : 'border-orange-200 bg-orange-50/70')
+                                  : 'border-slate-200 bg-slate-50/80'
+                              }`}>
+                                <div className="min-w-0">
+                                  <div className={`text-[10px] font-bold uppercase tracking-[0.16em] ${
+                                    !placarPreenchido(jogo.placarA, jogo.placarB)
+                                      ? 'text-slate-500'
+                                      : jogo.isFinal
+                                        ? 'text-emerald-700'
+                                        : 'text-orange-700'
+                                  }`}>
+                                    {!placarPreenchido(jogo.placarA, jogo.placarB) ? 'Sem placar salvo' : jogo.isFinal ? 'Resultado definitivo' : 'Placar temporário'}
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-slate-600">
+                                    {hasPartialDraft
+                                      ? 'Complete os dois gols antes de salvar.'
+                                      : jogo.manualOverride
+                                        ? 'Este jogo está protegido contra auto-sync até reativação manual.'
+                                        : 'O auto-sync só aplica resultado final validado.'}
+                                  </div>
+                                </div>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(jogo.isFinal && placarPreenchido(jogo.placarA, jogo.placarB))}
+                                  disabled={!placarPreenchido(jogo.placarA, jogo.placarB)}
+                                  onChange={(event) => atualizarStatusFinalJogo(jogo.id, event.target.checked)}
+                                  className="h-5 w-5 shrink-0 accent-emerald-600"
+                                />
+                              </label>
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  onClick={() => salvarCorrecaoManualJogo(jogo.id)}
+                                  disabled={!canSaveManual}
+                                  className={`${GLASS_BTN_PRIMARY} min-h-12 px-4 py-3 text-[11px] uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-50`}
+                                >
+                                  Salvar correção
+                                </button>
+                                {jogo.manualOverride && (
+                                  <button
+                                    onClick={() => reativarAutoSyncJogo(jogo.id)}
+                                    className={`${GLASS_BTN_SECONDARY} min-h-12 px-4 py-3 text-[11px] uppercase tracking-[0.18em]`}
+                                  >
+                                    Reativar auto-sync
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                              <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
+                                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Origem e atualização</div>
+                                <div className="mt-2 text-[12px] text-slate-700">
+                                  {sourceMeta || 'Nenhum resultado oficial aplicado ainda.'}
+                                </div>
+                                {jogo.resultExternalMatchId && (
+                                  <div className="mt-1 text-[11px] text-slate-500">ID externo: {jogo.resultExternalMatchId}</div>
+                                )}
+                              </div>
+                              <details className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
+                                <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                                  Histórico do jogo ({(jogo.resultHistory || []).length})
+                                </summary>
+                                <div className="mt-3 space-y-2">
+                                  {(jogo.resultHistory || []).slice().reverse().slice(0, 5).map((entry, index) => (
+                                    <div key={`${jogo.id}-history-${index}`} className="rounded-xl border border-white/70 bg-white px-3 py-2 text-[11px] text-slate-600 shadow-sm">
+                                      <div className="font-bold text-slate-800">{entry.source === 'manual-correction' ? 'Correção manual' : entry.source === 'manual-override-clear' ? 'Auto-sync reativado' : 'Auto-sync'}</div>
+                                      <div className="mt-1">
+                                        {entry.previousScore ? `${entry.previousScore.placarA} x ${entry.previousScore.placarB}` : 'Sem placar'}
+                                        {' -> '}
+                                        {entry.newScore ? `${entry.newScore.placarA} x ${entry.newScore.placarB}` : 'Sem placar'}
+                                      </div>
+                                      <div className="mt-1 text-slate-500">
+                                        {(entry.appliedBy || 'sistema')} • {formatResultSourceTimestamp(entry.appliedAt)}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </details>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
+                {Object.keys(GRUPOS_2026).map(grupo => (
+                  <div key={grupo} className="relative">
+                    <h3 className="mb-4 pl-3 border-l-2 border-yellow-500 text-[15px] font-bold tracking-wide text-slate-700">GRUPO {grupo}</h3>
+                    <TabelaClassificacao grupo={grupo} />
+                    <div className="space-y-3">
+                      {jogosReais.filter(j => j.grupo === grupo).map(jogo => {
+                        const palpite = palpitesJogos[currentUser.id]?.[jogo.id] || { placarA: '', placarB: '' };
+                        const valA = palpite.placarA;
+                        const valB = palpite.placarB;
+                        const schedule = formatBrazilMatchSchedule(jogo);
+                        const officialKickoffHint = formatOfficialKickoffHint(jogo);
+                        return (
+                          <div key={jogo.id} className={`${GLASS_CARD} p-4`}>
+                            <div className="mb-4 flex flex-col gap-2 text-[11px] font-bold uppercase text-slate-500 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="flex flex-col gap-1 min-w-0">
+                                <span className="flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
+                                {officialKickoffHint && <span className="text-[10px] font-semibold normal-case text-slate-500">{officialKickoffHint}</span>}
+                              </div>
+                              <span className="w-fit rounded-full bg-slate-100 px-2 py-1 text-[10px] text-slate-600">{jogo.local}</span>
+                            </div>
+                            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
+                              <span className="text-right text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeA}</span>
+                              <div className="flex items-center gap-2">
+                                <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos} value={valA} onChange={e => atualizarPalpite(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
+                                <span className="text-sm text-slate-500 font-light">X</span>
+                                <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos} value={valB} onChange={e => atualizarPalpite(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
+                              </div>
+                              <span className="text-left text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeB}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
 
