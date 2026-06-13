@@ -1467,6 +1467,7 @@ export default function App() {
   const [reviewMode, setReviewMode] = useState('jogos');
   const [reviewSearch, setReviewSearch] = useState('');
   const [reviewGroupFilter, setReviewGroupFilter] = useState('todos');
+  const [reviewGameSort, setReviewGameSort] = useState('date');
   const [reviewPhaseFilter, setReviewPhaseFilter] = useState('todos');
   const [avatarError, setAvatarError] = useState('');
   const [avatarLoading, setAvatarLoading] = useState(false);
@@ -2288,13 +2289,21 @@ export default function App() {
       </div>
     );
 
+    const compareByDate = (a, b) => (
+      parseMatchDateTime(a) - parseMatchDateTime(b) ||
+      a.grupo.localeCompare(b.grupo, 'pt-BR') ||
+      a.id - b.id
+    );
+
+    const compareByGroup = (a, b) => (
+      a.grupo.localeCompare(b.grupo, 'pt-BR') ||
+      parseMatchDateTime(a) - parseMatchDateTime(b) ||
+      a.id - b.id
+    );
+
     const jogosFiltrados = jogosReais
       .filter((jogo) => reviewGroupFilter === 'todos' || jogo.grupo === reviewGroupFilter)
-      .sort((a, b) => (
-        parseMatchDateTime(a) - parseMatchDateTime(b) ||
-        a.grupo.localeCompare(b.grupo, 'pt-BR') ||
-        a.id - b.id
-      ));
+      .sort(reviewGameSort === 'group' ? compareByGroup : compareByDate);
 
     const gameRows = jogosFiltrados.map((jogo) => {
       const realPreenchido = placarPreenchido(jogo.placarA, jogo.placarB);
@@ -2343,13 +2352,27 @@ export default function App() {
       };
     });
 
-    const groupedGameRows = Object.entries(
-      gameRows.reduce((acc, row) => {
-        if (!acc[row.grupo]) acc[row.grupo] = [];
-        acc[row.grupo].push(row);
-        return acc;
-      }, {})
-    ).sort(([grupoA], [grupoB]) => grupoA.localeCompare(grupoB, 'pt-BR'));
+    const gameRowsById = new Map(gameRows.map((row) => [row.id, row]));
+    const groupedGameRows = reviewGameSort === 'group'
+      ? Object.entries(
+        gameRows.reduce((acc, row) => {
+          if (!acc[row.grupo]) acc[row.grupo] = [];
+          acc[row.grupo].push(row);
+          return acc;
+        }, {})
+      ).sort(([grupoA], [grupoB]) => grupoA.localeCompare(grupoB, 'pt-BR'))
+        .map(([grupo, rows]) => ({
+          id: grupo,
+          title: `Grupo ${grupo}`,
+          rows
+        }))
+      : buildChronologicalMatchGroups(jogosFiltrados).map((dayGroup) => ({
+        id: dayGroup.dayKey,
+        title: dayGroup.dayLabel,
+        rows: dayGroup.matches
+          .map((match) => gameRowsById.get(match.id))
+          .filter(Boolean)
+      }));
 
     const knockoutPhaseOptions = [
       { id: 'r32', label: '32-avos' },
@@ -2636,7 +2659,7 @@ export default function App() {
                 {reviewCountLabel}
               </span>
             </div>
-            <div className="grid gap-2 lg:min-w-[520px] lg:grid-cols-[minmax(0,1fr)_210px]">
+            <div className="grid gap-2 lg:min-w-[720px] lg:grid-cols-[minmax(0,1fr)_210px_170px]">
               <input value={reviewSearch} onChange={(e) => setReviewSearch(e.target.value)} placeholder="Filtrar participantes por nome" className={`${GLASS_INPUT} min-h-12 px-3 py-2.5 text-base`} />
               <select
                 value={isGameMode ? reviewGroupFilter : reviewPhaseFilter}
@@ -2649,6 +2672,16 @@ export default function App() {
                   : knockoutPhaseOptions
                 ).map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
               </select>
+              {isGameMode && (
+                <select
+                  value={reviewGameSort}
+                  onChange={(e) => setReviewGameSort(e.target.value)}
+                  className={`${GLASS_INPUT} min-h-12 px-3 py-2.5 text-base`}
+                >
+                  <option value="date">Ordenar por data e hora</option>
+                  <option value="group">Ordenar por grupo</option>
+                </select>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold text-slate-500">
@@ -2682,13 +2715,13 @@ export default function App() {
 
           {reviewMode === 'jogos' ? (
             <>
-              {groupedGameRows.map(([grupo, rows]) => (
-                <div key={grupo} className="space-y-3">
+              {groupedGameRows.map((group) => (
+                <div key={group.id} className="space-y-3">
                   <div className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-sky-700">
-                    Grupo {grupo}
+                    {group.title}
                   </div>
                   <div className="space-y-3">
-                    {rows.map((row) => renderMobileRowCard(row))}
+                    {group.rows.map((row) => renderMobileRowCard(row))}
                   </div>
                 </div>
               ))}
@@ -2736,15 +2769,15 @@ export default function App() {
 
               {reviewMode === 'jogos' ? (
                 <>
-                  {groupedGameRows.map(([grupo, rows]) => (
-                    <div key={grupo} className="border-b border-slate-100 last:border-0">
+                  {groupedGameRows.map((group) => (
+                    <div key={group.id} className="border-b border-slate-100 last:border-0">
                       <div className="border-b border-slate-200 bg-white px-4 py-3">
                         <div className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-sky-700">
-                          Grupo {grupo}
+                          {group.title}
                         </div>
                       </div>
 
-                      {rows.map((row) => (
+                      {group.rows.map((row) => (
                         <div
                           key={row.id}
                           className="grid border-b border-slate-100 bg-white last:border-0"
