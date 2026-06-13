@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { buildUserHomeInsights } from '../bolao-app/src/userHomeInsights.js';
-import { buildCompetitionRanking } from '../bolao-app/src/ranking.js';
+import { buildDenseRanking } from '../bolao-app/src/ranking.js';
 
 const PONTOS = {
   JOGO: { CHEIO: 20, VITORIA: 5 },
   MATA: { CAMPEAO: 100, VICE: 70, TOP3: 50, TOP4: 40, SF: 30, QF: 20, R16: 10, R32: 5 }
 };
+const TEST_NOW = new Date('2026-06-01T12:00:00-03:00').getTime();
 
 const baseUsers = [
   { id: 1, nome: 'Ana', role: 'participant' },
@@ -14,7 +15,7 @@ const baseUsers = [
   { id: 4, nome: 'Davi', role: 'participant' }
 ];
 
-const buildRanking = (entries) => buildCompetitionRanking(entries, (entry) => entry.total, (entry) => entry.nome);
+const buildRanking = (entries) => buildDenseRanking(entries, (entry) => entry.total, (entry) => entry.nome);
 
 const baseMatch = { id: 1, grupo: 'A', timeA: 'Brasil', timeB: 'Japao', data: '12/06', hora: '16:00', placarA: '', placarB: '' };
 
@@ -27,7 +28,8 @@ const lockedInsight = buildUserHomeInsights({
   scoringRules: PONTOS,
   unlocked: false,
   pendingGroupPicksCount: 5,
-  knockoutComplete: false
+  knockoutComplete: false,
+  nowMs: TEST_NOW
 });
 
 assert.equal(lockedInsight.locked, true);
@@ -46,7 +48,8 @@ const allZeroInsight = buildUserHomeInsights({
   ranking: buildRanking(baseUsers.map((user) => ({ ...user, total: 0 }))),
   scoringRules: PONTOS,
   unlocked: true,
-  knockoutComplete: true
+  knockoutComplete: true,
+  nowMs: TEST_NOW
 });
 
 assert.equal(allZeroInsight.rank, 1);
@@ -67,7 +70,8 @@ const tiedUserInsight = buildUserHomeInsights({
   ]),
   scoringRules: PONTOS,
   unlocked: true,
-  knockoutComplete: true
+  knockoutComplete: true,
+  nowMs: TEST_NOW
 });
 
 assert.match(tiedUserInsight.secondaryLine, /empatado com 1 pessoa/);
@@ -85,7 +89,8 @@ const isolatedLeaderInsight = buildUserHomeInsights({
   ]),
   scoringRules: PONTOS,
   unlocked: true,
-  knockoutComplete: true
+  knockoutComplete: true,
+  nowMs: TEST_NOW
 });
 
 assert.equal(isolatedLeaderInsight.leaderLine, 'Voce esta liderando por 3 pontos.');
@@ -108,7 +113,8 @@ const top3OpportunityInsight = buildUserHomeInsights({
   ]),
   scoringRules: PONTOS,
   unlocked: true,
-  knockoutComplete: true
+  knockoutComplete: true,
+  nowMs: TEST_NOW
 });
 
 assert.ok(top3OpportunityInsight.insights.some((entry) => entry.type === 'next-match-overtake'));
@@ -127,7 +133,8 @@ const noMoveInsight = buildUserHomeInsights({
   ]),
   scoringRules: PONTOS,
   unlocked: true,
-  knockoutComplete: true
+  knockoutComplete: true,
+  nowMs: TEST_NOW
 });
 
 assert.ok(!noMoveInsight.insights.some((entry) => entry.type === 'next-match-overtake'));
@@ -145,7 +152,8 @@ const uniquePickInsight = buildUserHomeInsights({
   ranking: buildRanking(baseUsers.map((user) => ({ ...user, total: 0 }))),
   scoringRules: PONTOS,
   unlocked: true,
-  knockoutComplete: true
+  knockoutComplete: true,
+  nowMs: TEST_NOW
 });
 
 assert.ok(uniquePickInsight.insights.some((entry) => entry.type === 'unique-prediction'));
@@ -163,7 +171,8 @@ const commonPickInsight = buildUserHomeInsights({
   ranking: buildRanking(baseUsers.map((user) => ({ ...user, total: 0 }))),
   scoringRules: PONTOS,
   unlocked: true,
-  knockoutComplete: true
+  knockoutComplete: true,
+  nowMs: TEST_NOW
 });
 
 assert.ok(commonPickInsight.insights.some((entry) => entry.type === 'most-common-prediction'));
@@ -185,7 +194,8 @@ const championEliminatedInsight = buildUserHomeInsights({
   },
   knockoutPredictions: {
     campeao: 'Brasil'
-  }
+  },
+  nowMs: TEST_NOW
 });
 
 assert.ok(championEliminatedInsight.insights.some((entry) => entry.type === 'champion-eliminated'));
@@ -214,7 +224,8 @@ const noChanceInsight = buildUserHomeInsights({
   },
   knockoutPredictions: {
     campeao: 'Brasil'
-  }
+  },
+  nowMs: TEST_NOW
 });
 
 assert.ok(noChanceInsight.insights.some((entry) => entry.type === 'no-mathematical-chance'));
@@ -241,9 +252,31 @@ const notEnoughProofInsight = buildUserHomeInsights({
     quartas: ['Brasil', 'Franca', 'Espanha', 'Alemanha'],
     oitavas: ['Brasil'],
     dezeszeseisavos: ['Brasil']
-  }
+  },
+  nowMs: TEST_NOW
 });
 
 assert.ok(!notEnoughProofInsight.insights.some((entry) => entry.type === 'no-mathematical-chance'));
+
+const pastUnresolvedMatchInsight = buildUserHomeInsights({
+  currentUserId: 1,
+  users: baseUsers,
+  matches: [{ ...baseMatch, data: '10/06', hora: '16:00' }],
+  predictions: {
+    1: { 1: { placarA: '2', placarB: '1' } },
+    2: { 1: { placarA: '1', placarB: '0' } }
+  },
+  ranking: buildRanking([
+    { ...baseUsers[1], total: 12 },
+    { ...baseUsers[0], total: 10 }
+  ]),
+  scoringRules: PONTOS,
+  unlocked: true,
+  knockoutComplete: true,
+  nowMs: new Date('2026-06-12T18:00:00-03:00').getTime()
+});
+
+assert.ok(!pastUnresolvedMatchInsight.insights.some((entry) => entry.type === 'next-match-focus'));
+assert.ok(pastUnresolvedMatchInsight.insights.some((entry) => entry.type === 'awaiting-results'));
 
 console.log('user home insights tests: ok');

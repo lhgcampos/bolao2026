@@ -181,8 +181,38 @@ const findOfficialMatchForPair = (match) => {
 
 const getShortCountryName = (name) => COUNTRY_SHORT_NAMES[name] || name;
 
+const placarPreenchido = (placarA, placarB) => (
+  placarA !== '' &&
+  placarB !== '' &&
+  placarA !== undefined &&
+  placarB !== undefined &&
+  placarA !== null &&
+  placarB !== null
+);
+
+const isMatchFinal = (match) => Boolean(match?.isFinal ?? match?.resultadoFinal);
+
+const buildEmptyMatchRecord = (match) => ({
+  ...match,
+  placarA: '',
+  placarB: '',
+  isFinal: false
+});
+
+const getMatchResultVariant = (match) => {
+  if (!placarPreenchido(match?.placarA, match?.placarB)) return 'pending';
+  return isMatchFinal(match) ? 'final' : 'temporary';
+};
+
+const countResolvedMatchesByVariant = (matches = []) => matches.reduce((summary, match) => {
+  const variant = getMatchResultVariant(match);
+  if (variant === 'final') summary.final += 1;
+  if (variant === 'temporary') summary.temporary += 1;
+  return summary;
+}, { final: 0, temporary: 0 });
+
 const normalizePersistedGameData = (matches = [], betsGames = {}) => {
-  const officialMatches = JOGOS_FASE_DE_GRUPOS.map((match) => ({ ...match, placarA: '', placarB: '' }));
+  const officialMatches = JOGOS_FASE_DE_GRUPOS.map(buildEmptyMatchRecord);
   const officialById = new Map(officialMatches.map((match) => [match.id, match]));
   const migrationBySourceId = new Map();
 
@@ -196,7 +226,8 @@ const normalizePersistedGameData = (matches = [], betsGames = {}) => {
     officialById.set(officialMatch.id, {
       ...officialById.get(officialMatch.id),
       placarA: swapScores ? (match.placarB ?? '') : (match.placarA ?? ''),
-      placarB: swapScores ? (match.placarA ?? '') : (match.placarB ?? '')
+      placarB: swapScores ? (match.placarA ?? '') : (match.placarB ?? ''),
+      isFinal: isMatchFinal(match)
     });
   });
 
@@ -223,7 +254,7 @@ const normalizePersistedGameData = (matches = [], betsGames = {}) => {
   };
 };
 
-const gerarJogosIniciais = () => JOGOS_FASE_DE_GRUPOS.map((match) => ({ ...match, placarA: '', placarB: '' }));
+const gerarJogosIniciais = () => JOGOS_FASE_DE_GRUPOS.map(buildEmptyMatchRecord);
 
 // Agenda oficial do mata-mata baseada nos horarios locais publicados pela FIFA; a exibicao em tela usa o horario do Brasil.
 // `kickoffEt` guarda o instante real do jogo com o offset do estadio; `horaEt` preserva a hora local oficial publicada pela FIFA.
@@ -482,15 +513,6 @@ const resolverConfrontosTerceiros = (melhoresTerceiros, slotsDisponiveis) => {
   return solucao || {};
 };
 
-const placarPreenchido = (placarA, placarB) => (
-  placarA !== '' &&
-  placarB !== '' &&
-  placarA !== undefined &&
-  placarB !== undefined &&
-  placarA !== null &&
-  placarB !== null
-);
-
 const faseDeGruposCompleta = (jogos, palpitesUsuario) => jogos.every((jogo) => {
   if (placarPreenchido(jogo.placarA, jogo.placarB)) return true;
   const palpite = palpitesUsuario?.[jogo.id];
@@ -694,7 +716,8 @@ const buildPlanilhaDemoData = () => {
   const matches = gerarJogosIniciais().map((match, index) => ({
     ...match,
     placarA: String((index + 2) % 4),
-    placarB: String(index % 3)
+    placarB: String(index % 3),
+    isFinal: true
   }));
 
   const users = [
@@ -1918,6 +1941,10 @@ export default function App() {
     () => usuarios.filter((user) => !isAdminUser(user)),
     [usuarios]
   );
+  const matchResultSummary = useMemo(
+    () => countResolvedMatchesByVariant(jogosReais),
+    [jogosReais]
+  );
   const ranking = useMemo(() => {
     const rankingEntries = usuarios.filter((user) => !isAdminUser(user)).map((user) => {
       let ptsJogos = 0;
@@ -2072,7 +2099,25 @@ export default function App() {
     if (modoAdmin) {
       nextSyncScopeRef.current = 'admin-shared';
     }
-    setJogosReais(p => p.map(j => j.id === id ? { ...j, [c]: v } : j));
+    setJogosReais((current) => current.map((jogo) => {
+      if (jogo.id !== id) return jogo;
+      const nextMatch = { ...jogo, [c]: v };
+      if (!placarPreenchido(nextMatch.placarA, nextMatch.placarB)) {
+        nextMatch.isFinal = false;
+      }
+      return nextMatch;
+    }));
+  };
+  const atualizarStatusFinalJogo = (id, checked) => {
+    if (!modoAdmin) return;
+    nextSyncScopeRef.current = 'admin-shared';
+    setJogosReais((current) => current.map((jogo) => {
+      if (jogo.id !== id) return jogo;
+      if (!placarPreenchido(jogo.placarA, jogo.placarB)) {
+        return { ...jogo, isFinal: false };
+      }
+      return { ...jogo, isFinal: Boolean(checked) };
+    }));
   };
   const atualizarPalpite = (id, c, v) => {
     if (palpitesTravadosJogos) return;
@@ -2224,7 +2269,17 @@ export default function App() {
     return (
       <div className="space-y-4 animate-fade-in">
         <div className={`${GLASS_CARD} p-4 text-center`}>
-          <p className={`text-xs ${TEXT_MUTED}`}>A pontuação só aparece quando o <strong className="text-slate-900">Admin</strong> preenche os resultados.</p>
+          {matchResultSummary.temporary > 0 ? (
+            <p className={`text-xs ${TEXT_MUTED}`}>
+              Ranking provisório ao vivo: <strong className="text-amber-700">{matchResultSummary.temporary} placar{matchResultSummary.temporary === 1 ? '' : 'es'} temporário{matchResultSummary.temporary === 1 ? '' : 's'}</strong> ainda podem mudar até o Admin marcar o resultado como definitivo.
+            </p>
+          ) : matchResultSummary.final > 0 ? (
+            <p className={`text-xs ${TEXT_MUTED}`}>
+              Ranking fechado com <strong className="text-slate-900">{matchResultSummary.final} resultado{matchResultSummary.final === 1 ? '' : 's'} definitivo{matchResultSummary.final === 1 ? '' : 's'}</strong> já lançado{matchResultSummary.final === 1 ? '' : 's'} pelo Admin.
+            </p>
+          ) : (
+            <p className={`text-xs ${TEXT_MUTED}`}>A pontuação só aparece quando o <strong className="text-slate-900">Admin</strong> preenche os resultados.</p>
+          )}
         </div>
         <div className="space-y-3 lg:hidden">
           {ranking.map((user) => (
@@ -2298,7 +2353,7 @@ export default function App() {
     const participantColumnMinWidth = isGameMode ? 142 : 148;
     const reviewGridTemplate = `${reviewSummaryWidth}px repeat(${participantColumnCount}, minmax(${participantColumnMinWidth}px, 1fr))`;
     const reviewDescription = isGameMode
-      ? 'Cada confronto fica resumido na primeira coluna, deixando mais espaço para comparar os placares dos participantes.'
+      ? 'Cada confronto fica resumido na primeira coluna, deixando mais espaço para comparar os placares dos participantes. Placares temporários aparecem sinalizados.'
       : 'Cada vaga do mata-mata e do pódio fica condensada numa coluna-resumo, com foco total na leitura dos apostadores.';
     const reviewSubmissionField = isGameMode ? SUBMISSION_FIELDS.JOGOS : SUBMISSION_FIELDS.MATA;
 
@@ -2309,6 +2364,7 @@ export default function App() {
       if (variant === 'error') return { label: 'Errou', tone: 'border-rose-200 bg-rose-50 text-rose-700', dot: 'bg-rose-500' };
       if (variant === 'waiting-real') return { label: 'Aguardando real', tone: 'border-amber-200 bg-amber-50 text-amber-700', dot: 'bg-amber-500' };
       if (variant === 'waiting-official') return { label: 'Aguardando oficial', tone: 'border-amber-200 bg-amber-50 text-amber-700', dot: 'bg-amber-500' };
+      if (variant === 'temporary') return { label: 'Temporário', tone: 'border-orange-200 bg-orange-50 text-orange-700', dot: 'bg-orange-500' };
       return { label: 'Sem palpite', tone: 'border-slate-200 bg-slate-50 text-slate-500', dot: 'bg-slate-400' };
     };
 
@@ -2335,6 +2391,7 @@ export default function App() {
     const gameRows = jogosFiltrados.map((jogo) => {
       const realPreenchido = placarPreenchido(jogo.placarA, jogo.placarB);
       const schedule = formatBrazilMatchSchedule(jogo);
+      const resultVariant = getMatchResultVariant(jogo);
 
       return {
         id: jogo.id,
@@ -2344,6 +2401,16 @@ export default function App() {
         timeA: jogo.timeA,
         timeB: jogo.timeB,
         real: realPreenchido ? `${jogo.placarA} x ${jogo.placarB}` : '—',
+        realStatus: resultVariant === 'final'
+          ? buildStatus('correct')
+          : resultVariant === 'temporary'
+            ? buildStatus('temporary')
+            : null,
+        realStatusLabel: resultVariant === 'final'
+          ? 'Placar oficial'
+          : resultVariant === 'temporary'
+            ? 'Placar temporário'
+            : 'Aguardando definição',
         palpites: usersFiltrados.map((user) => {
           const palpite = palpitesJogos[user.id]?.[jogo.id];
           const palpitePreenchido = placarPreenchido(palpite?.placarA, palpite?.placarB);
@@ -2533,7 +2600,9 @@ export default function App() {
                 <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-sky-700">Grupo {row.grupo} • {row.dataHora}</div>
               </div>
               <div className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-black text-slate-900 shadow-sm">
-                <span className="mr-1 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-400">Oficial</span>
+                <span className="mr-1 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                  {row.realStatusLabel === 'Placar temporário' ? 'Ao vivo' : 'Oficial'}
+                </span>
                 {row.real}
               </div>
             </div>
@@ -2552,7 +2621,12 @@ export default function App() {
 
             <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-slate-500">
               <span className="truncate">{row.local}</span>
-              <span className="truncate text-right font-semibold">{row.real === '—' ? 'Aguardando definição' : 'Placar oficial'}</span>
+              <span className={`inline-flex items-center gap-1 truncate rounded-full px-2 py-1 text-right font-semibold ${
+                row.realStatus?.tone || 'bg-slate-100 text-slate-500'
+              }`}>
+                {row.realStatus && <span className={`h-2 w-2 rounded-full ${row.realStatus.dot}`}></span>}
+                {row.realStatusLabel}
+              </span>
             </div>
           </div>
         );
@@ -2822,6 +2896,8 @@ export default function App() {
 
   const TabelaClassificacao = ({ grupo }) => {
     const tabela = calcularTabelaGrupo(grupo, jogosReais, palpitesJogos[currentUser.id], condutaGrupos);
+    const jogosDoGrupo = jogosReais.filter((jogo) => jogo.grupo === grupo);
+    const grupoTemporario = jogosDoGrupo.some((jogo) => getMatchResultVariant(jogo) === 'temporary');
     const statColumns = [
       { key: 'p', label: 'P' },
       { key: 'j', label: 'J' },
@@ -2837,7 +2913,15 @@ export default function App() {
       <div className={`${GLASS_CARD} overflow-hidden mb-4`}>
         <div className="bg-white/5 px-2.5 py-2.5 flex justify-between items-center border-b border-white/5 gap-2">
           <span className="font-bold text-[12px] uppercase tracking-[0.16em] text-slate-700">Classificação - Grupo {grupo}</span>
-          <span className="shrink-0 rounded-full bg-blue-400/10 px-2 py-0.5 text-[10px] font-semibold text-blue-500">{modoAdmin ? 'Oficial' : 'Simulada'}</span>
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+            !modoAdmin
+              ? 'bg-blue-400/10 text-blue-500'
+              : grupoTemporario
+                ? 'bg-orange-100 text-orange-700'
+                : 'bg-emerald-100 text-emerald-700'
+          }`}>
+            {!modoAdmin ? 'Simulada' : grupoTemporario ? 'Ao vivo' : 'Oficial'}
+          </span>
         </div>
         <div className="overflow-x-auto overscroll-x-contain">
         <table className="min-w-[420px] w-full table-fixed text-[10px] text-slate-700 sm:text-[11px]">
@@ -3194,6 +3278,8 @@ export default function App() {
                     const valB = modoAdmin ? jogo.placarB : palpite.placarB;
                     const schedule = formatBrazilMatchSchedule(jogo);
                     const officialKickoffHint = formatOfficialKickoffHint(jogo);
+                    const resultadoPreenchido = placarPreenchido(jogo.placarA, jogo.placarB);
+                    const resultadoVariant = getMatchResultVariant(jogo);
                     return (
                       <div key={jogo.id} className={`${GLASS_CARD} p-4`}>
                         <div className="mb-4 flex flex-col gap-2 text-[11px] font-bold uppercase text-slate-500 sm:flex-row sm:items-start sm:justify-between">
@@ -3201,7 +3287,18 @@ export default function App() {
                             <span className="flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
                             {officialKickoffHint && <span className="text-[10px] font-semibold normal-case text-slate-500">{officialKickoffHint}</span>}
                           </div>
-                          <span className="w-fit rounded-full bg-slate-100 px-2 py-1 text-[10px] text-slate-600">{jogo.local}</span>
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            {modoAdmin && resultadoPreenchido && (
+                              <span className={`w-fit rounded-full px-2 py-1 text-[10px] font-bold ${
+                                resultadoVariant === 'final'
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : 'bg-orange-50 text-orange-700'
+                              }`}>
+                                {resultadoVariant === 'final' ? 'Definitivo' : 'Temporário'}
+                              </span>
+                            )}
+                            <span className="w-fit rounded-full bg-slate-100 px-2 py-1 text-[10px] text-slate-600">{jogo.local}</span>
+                          </div>
                         </div>
                         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
                           <span className="text-right text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeA}</span>
@@ -3212,6 +3309,39 @@ export default function App() {
                           </div>
                           <span className="text-left text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeB}</span>
                         </div>
+                        {modoAdmin && (
+                          <label className={`mt-4 flex items-center justify-between gap-4 rounded-[18px] border px-3 py-3 ${
+                            resultadoPreenchido
+                              ? (jogo.isFinal ? 'border-emerald-200 bg-emerald-50/70' : 'border-orange-200 bg-orange-50/70')
+                              : 'border-slate-200 bg-slate-50/80'
+                          }`}>
+                            <div className="min-w-0">
+                              <div className={`text-[10px] font-bold uppercase tracking-[0.16em] ${
+                                !resultadoPreenchido
+                                  ? 'text-slate-500'
+                                  : jogo.isFinal
+                                    ? 'text-emerald-700'
+                                    : 'text-orange-700'
+                              }`}>
+                                {!resultadoPreenchido ? 'Sem placar lançado' : jogo.isFinal ? 'Resultado definitivo' : 'Placar temporário'}
+                              </div>
+                              <div className="mt-1 text-[11px] text-slate-600">
+                                {!resultadoPreenchido
+                                  ? 'Preencha os dois gols para liberar a confirmação final.'
+                                  : jogo.isFinal
+                                    ? 'Este placar já vale como oficial no bolão.'
+                                    : 'Use durante o jogo e marque como definitivo só no apito final.'}
+                              </div>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={Boolean(jogo.isFinal && resultadoPreenchido)}
+                              disabled={!resultadoPreenchido}
+                              onChange={(event) => atualizarStatusFinalJogo(jogo.id, event.target.checked)}
+                              className="h-5 w-5 shrink-0 accent-emerald-600"
+                            />
+                          </label>
+                        )}
                       </div>
                     );
                   })}

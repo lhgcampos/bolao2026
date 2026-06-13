@@ -6,7 +6,7 @@ import {
   calculateDivergenceScore,
   getConsensusEligibleUsers
 } from '../bolao-app/src/rankingConsensus.js';
-import { buildCompetitionRanking } from '../bolao-app/src/ranking.js';
+import { buildDenseRanking } from '../bolao-app/src/ranking.js';
 
 const submissionFields = {
   JOGOS: 'jogosAt',
@@ -36,8 +36,8 @@ const usuarioPreencheuMataCompleta = (bracket = {}) => (
 );
 
 const games = [
-  { id: 1, timeA: 'Brasil', timeB: 'Marrocos', placarA: '2', placarB: '1' },
-  { id: 2, timeA: 'Haiti', timeB: 'Escócia', placarA: '1', placarB: '1' },
+  { id: 1, timeA: 'Brasil', timeB: 'Marrocos', placarA: '2', placarB: '1', isFinal: true },
+  { id: 2, timeA: 'Haiti', timeB: 'Escócia', placarA: '1', placarB: '1', isFinal: true },
   { id: 3, timeA: 'Sem Rank', timeB: 'Brasil', placarA: '', placarB: '' }
 ];
 
@@ -118,7 +118,7 @@ const betsKnockout = {
   99: structuredClone(completeBracket)
 };
 
-const ranking = buildCompetitionRanking([
+const ranking = buildDenseRanking([
   { id: 1, nome: 'Ana', ptsJogos: 40, ptsMataMata: 120, total: 160, exatos: 2 },
   { id: 2, nome: 'Beto', ptsJogos: 20, ptsMataMata: 90, total: 110, exatos: 1 }
 ], (user) => user.total, (user) => user.nome);
@@ -175,6 +175,17 @@ assert.equal(dashboard.knockoutConsensus.champion[0].supporterNames[0], 'Ana', '
 assert.equal(dashboard.biggestUpset.supporterNames[0], 'Ana', 'a zebra deve carregar o nome de quem bancou o resultado');
 assert.equal(dashboard.finalizedMatches[0].match.id, 2, 'o ultimo jogo finalizado deve aparecer primeiro para a narrativa');
 
+const temporaryOnlyConsensus = buildGameConsensus({
+  matches: [{ id: 99, timeA: 'Brasil', timeB: 'Marrocos', placarA: '1', placarB: '0', isFinal: false }],
+  eligibleUsers,
+  betsGames: {
+    1: { 99: { placarA: '1', placarB: '0' } },
+    2: { 99: { placarA: '2', placarB: '0' } }
+  },
+  teamRankings
+});
+assert.equal(temporaryOnlyConsensus.finalizedMatches.length, 0, 'placar temporario nao pode entrar como resultado oficial na narrativa');
+
 const smallDashboard = buildConsensusDashboard({
   users: [users[0]],
   submissions,
@@ -199,7 +210,7 @@ assert.ok(narrativeA.some((line) => line.includes('Ana')), 'linhas narrativas de
 
 const zeroRankingNarrative = buildNarrativeLines({
   dashboard,
-  ranking: buildCompetitionRanking([
+  ranking: buildDenseRanking([
     { id: 1, nome: 'Ana', ptsJogos: 0, ptsMataMata: 0, total: 0, exatos: 0 },
     { id: 2, nome: 'Beto', ptsJogos: 0, ptsMataMata: 0, total: 0, exatos: 0 }
   ], (user) => user.total, (user) => user.nome)
@@ -209,7 +220,7 @@ assert.ok(!zeroRankingNarrative.some((line) => line.includes('lidera o mata-mata
 
 const tiedTopNarrative = buildNarrativeLines({
   dashboard,
-  ranking: buildCompetitionRanking([
+  ranking: buildDenseRanking([
     { id: 1, nome: 'Ana', ptsJogos: 20, ptsMataMata: 10, total: 30, exatos: 1 },
     { id: 2, nome: 'Beto', ptsJogos: 18, ptsMataMata: 12, total: 30, exatos: 3 },
     { id: 3, nome: 'Caio', ptsJogos: 10, ptsMataMata: 5, total: 15, exatos: 0 }

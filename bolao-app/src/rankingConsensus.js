@@ -5,6 +5,7 @@ const compareText = (a = '', b = '') => COLLATOR.compare(a, b);
 const isFilled = (value) => value !== '' && value !== null && value !== undefined;
 
 const isFilledScore = (pick) => isFilled(pick?.placarA) && isFilled(pick?.placarB);
+const isFinalMatch = (match) => Boolean(match?.isFinal ?? match?.resultadoFinal);
 
 const normalizeScoreValue = (value) => {
   if (!isFilled(value)) return null;
@@ -215,7 +216,7 @@ export function buildGameConsensus({ matches, eligibleUsers, betsGames, teamRank
     divergenceCandidates.push(summary);
 
     const officialOutcome = getOutcomeFromScore(match.placarA, match.placarB);
-    if (officialOutcome) {
+    if (officialOutcome && isFinalMatch(match)) {
       const officialScoreLabel = formatScorePick(match.placarA, match.placarB);
       const exactHitUsers = scoreSupporters.get(officialScoreLabel) || [];
       const correctOutcomeUsers = outcomeSupporters.get(officialOutcome) || [];
@@ -229,7 +230,7 @@ export function buildGameConsensus({ matches, eligibleUsers, betsGames, teamRank
         officialOutcome
       });
     }
-    if (officialOutcome && !scoreCounts.has(formatScorePick(match.placarA, match.placarB))) {
+    if (officialOutcome && isFinalMatch(match) && !scoreCounts.has(formatScorePick(match.placarA, match.placarB))) {
       finalizedWithoutExactHits.push({
         match,
         matchName: summary.matchName

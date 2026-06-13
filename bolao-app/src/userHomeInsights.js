@@ -6,6 +6,7 @@ const PHASE_LENGTHS = {
   quartas: 8,
   semis: 4
 };
+const MATCH_ACTIONABLE_BUFFER_MS = 0;
 
 const isFilled = (value) => value !== '' && value !== null && value !== undefined;
 
@@ -49,6 +50,8 @@ const formatScheduleLabel = (match) => {
   const [day = '1', month = '1'] = String(match?.data || '01/01').split('/');
   return `${Number(day)}/${Number(month)} às ${match?.hora || '00:00'} BR`;
 };
+
+const formatPointsGap = (points) => `${points} ponto${points === 1 ? '' : 's'}`;
 
 const getOutcome = (scoreA, scoreB) => {
   const normalizedA = parseScore(scoreA);
@@ -161,11 +164,95 @@ const buildNoMathematicalChanceInsight = ({ currentEntry, leaderEntry, matches, 
   return null;
 };
 
-const getNextPendingMatch = (matches = []) => (
+const getNextActionableMatch = (matches = [], nowMs = Date.now()) => (
   [...matches]
-    .filter((match) => !isFilled(match?.placarA) || !isFilled(match?.placarB))
+    .filter((match) => {
+      if (isFilled(match?.placarA) && isFilled(match?.placarB)) return false;
+      return parseMatchDateTime(match) > nowMs + MATCH_ACTIONABLE_BUFFER_MS;
+    })
     .sort((a, b) => parseMatchDateTime(a) - parseMatchDateTime(b))[0] || null
 );
+
+const getAwaitingResultMatches = (matches = [], nowMs = Date.now()) => (
+  [...matches]
+    .filter((match) => {
+      if (isFilled(match?.placarA) && isFilled(match?.placarB)) return false;
+      return parseMatchDateTime(match) <= nowMs + MATCH_ACTIONABLE_BUFFER_MS;
+    })
+    .sort((a, b) => parseMatchDateTime(a) - parseMatchDateTime(b))
+);
+
+const buildAwaitingResultsInsight = ({ matches = [], nowMs = Date.now() }) => {
+  const awaitingMatches = getAwaitingResultMatches(matches, nowMs);
+  if (!awaitingMatches.length) return null;
+
+  const latestPastDueMatch = awaitingMatches[awaitingMatches.length - 1];
+  const count = awaitingMatches.length;
+
+  return {
+    type: 'awaiting-results',
+    tone: 'neutral',
+    text: count === 1
+      ? `${getMatchName(latestPastDueMatch)} ja comecou e ainda aguarda resultado oficial no bolao.`
+      : `${count} jogos ja comecaram e ainda aguardam resultado oficial no bolao.`
+  };
+};
+
+const buildRankingPressureInsight = ({ currentEntry, ranking = [] }) => {
+  if (!currentEntry || !ranking.length) return null;
+
+  const currentIndex = ranking.findIndex((entry) => entry.id === currentEntry.id);
+  if (currentIndex === -1) return null;
+
+  const entryAbove = ranking.slice(0, currentIndex).reverse().find((entry) => getCurrentPoints(entry) > getCurrentPoints(currentEntry)) || null;
+  const entryBelow = ranking.slice(currentIndex + 1).find((entry) => getCurrentPoints(entry) < getCurrentPoints(currentEntry)) || null;
+
+  if (currentEntry.rank === 1) {
+    if (!entryBelow) return {
+      type: 'ranking-pressure',
+      tone: 'positive',
+      text: 'Voce esta sozinho na lideranca neste momento.'
+    };
+
+    const lead = getCurrentPoints(currentEntry) - getCurrentPoints(entryBelow);
+    return {
+      type: 'ranking-pressure',
+      tone: 'positive',
+      text: `A vantagem para ${entryBelow.nome} e de ${formatPointsGap(lead)}.`
+    };
+  }
+
+  if (entryAbove && entryBelow) {
+    const gapAbove = getCurrentPoints(entryAbove) - getCurrentPoints(currentEntry);
+    const cushionBelow = getCurrentPoints(currentEntry) - getCurrentPoints(entryBelow);
+
+    return {
+      type: 'ranking-pressure',
+      tone: 'neutral',
+      text: `Voce esta a ${formatPointsGap(gapAbove)} de ${entryAbove.nome} e ${formatPointsGap(cushionBelow)} a frente de ${entryBelow.nome}.`
+    };
+  }
+
+  if (entryAbove) {
+    const gapAbove = getCurrentPoints(entryAbove) - getCurrentPoints(currentEntry);
+    return {
+      type: 'ranking-pressure',
+      tone: 'neutral',
+      text: `Voce esta a ${formatPointsGap(gapAbove)} de ${entryAbove.nome}.`
+    };
+  }
+
+  if (entryBelow) {
+    const cushionBelow = getCurrentPoints(currentEntry) - getCurrentPoints(entryBelow);
+    return {
+      type: 'ranking-pressure',
+      tone: 'positive',
+      text: `Voce tem ${formatPointsGap(cushionBelow)} de vantagem para ${entryBelow.nome}.`
+    };
+  }
+
+  return null;
+};
 
 const buildNextMatchOvertakeInsight = ({ currentEntry, ranking, predictionsByUser, nextMatch, scoringRules }) => {
   const currentPick = predictionsByUser?.[currentEntry.id]?.[nextMatch.id];
@@ -316,7 +403,8 @@ export function buildUserHomeInsights({
   pendingGroupPicksCount = 0,
   knockoutComplete = false,
   officialKnockout = {},
-  knockoutPredictions = {}
+  knockoutPredictions = {},
+  nowMs = Date.now()
 }) {
   const title = 'Seu Bolao';
   const currentEntry = ranking.find((entry) => entry.id === currentUserId) || null;
@@ -347,7 +435,7 @@ export function buildUserHomeInsights({
   const leaderEntry = ranking[0] || currentEntry;
   const leaderGap = Math.max(getCurrentPoints(leaderEntry) - currentPoints, 0);
 
-  const nextMatch = getNextPendingMatch(matches);
+  const nextMatch = getNextActionableMatch(matches, nowMs);
   const participantUsers = users.filter((user) => user.id !== currentUserId ? user.role !== 'admin' : true);
 
   const insightCandidates = [];
@@ -368,6 +456,12 @@ export function buildUserHomeInsights({
   });
   if (noMathematicalChanceInsight) insightCandidates.push(noMathematicalChanceInsight);
 
+  const rankingPressureInsight = buildRankingPressureInsight({
+    currentEntry,
+    ranking
+  });
+  if (rankingPressureInsight) insightCandidates.push(rankingPressureInsight);
+
   if (nextMatch) {
     const overtakeInsight = buildNextMatchOvertakeInsight({
       currentEntry,
@@ -386,6 +480,12 @@ export function buildUserHomeInsights({
         nextMatch
       })
     );
+  } else {
+    const awaitingResultsInsight = buildAwaitingResultsInsight({
+      matches,
+      nowMs
+    });
+    if (awaitingResultsInsight) insightCandidates.push(awaitingResultsInsight);
   }
 
   const uniqueInsights = insightCandidates.filter((insight, index, list) => (
