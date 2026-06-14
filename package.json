@@ -9,6 +9,7 @@
     "lint": "eslint bolao-app/src scripts eslint.config.js",
     "seed:roqueia": "node scripts/seed-roqueia-picks.mjs",
     "sync:official-results": "node scripts/sync-official-results.mjs",
+    "backup:remote-state": "node scripts/backup-remote-state.mjs",
     "test:official-results": "node scripts/test-official-results-sync.mjs",
     "test:ranking-positions": "node scripts/test-ranking-positions.mjs",
     "test:ranking-consensus": "node scripts/test-ranking-consensus.mjs",

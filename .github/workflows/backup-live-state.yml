@@ -1,0 +1,35 @@
+name: Backup Live State
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      OFFICIAL_RESULTS_REMOTE_BASE: https://mantledb.sh/v2
+      OFFICIAL_RESULTS_REMOTE_NAMESPACE: lhgcampos-bolao2026-live-20260609
+      REMOTE_BACKUP_OUTPUT_DIR: tmp/remote-backups
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Export remote state
+        run: node scripts/backup-remote-state.mjs
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: remote-state-backup
+          path: tmp/remote-backups/*.json
+          if-no-files-found: error

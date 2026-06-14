@@ -447,12 +447,48 @@ const usuarioPreencheuMataCompleta = (palpitesUsuario = {}) => (
   [palpitesUsuario.campeao, palpitesUsuario.vice, palpitesUsuario.terceiro, palpitesUsuario.quarto].every(Boolean)
 );
 
-const sanitizeSubmissionMap = (submissions = {}, betsKnockout = {}) => Object.fromEntries(
+const normalizeKnockoutRound = (values = [], size = 0) => Array.from(
+  { length: size },
+  (_, index) => (typeof values?.[index] === 'string' ? values[index] : '')
+);
+
+const normalizeKnockoutBracketShape = (bracket = {}) => ({
+  dezeszeseisavos: normalizeKnockoutRound(bracket.dezeszeseisavos, MATA_MATA_CONFIG.r32.length),
+  oitavas: normalizeKnockoutRound(bracket.oitavas, MATA_MATA_CONFIG.r16.length),
+  quartas: normalizeKnockoutRound(bracket.quartas, MATA_MATA_CONFIG.qf.length),
+  semis: normalizeKnockoutRound(bracket.semis, MATA_MATA_CONFIG.sf.length),
+  campeao: typeof bracket.campeao === 'string' ? bracket.campeao : '',
+  vice: typeof bracket.vice === 'string' ? bracket.vice : '',
+  terceiro: typeof bracket.terceiro === 'string' ? bracket.terceiro : '',
+  quarto: typeof bracket.quarto === 'string' ? bracket.quarto : ''
+});
+
+const countFilledKnockoutSelections = (bracket = {}) => (
+  ['dezeszeseisavos', 'oitavas', 'quartas', 'semis'].reduce(
+    (total, field) => total + (Array.isArray(bracket?.[field]) ? bracket[field].filter(Boolean).length : 0),
+    0
+  ) +
+  ['campeao', 'vice', 'terceiro', 'quarto'].filter((field) => Boolean(bracket?.[field])).length
+);
+
+const mergeSubmissionEntry = (baseEntry = {}, localEntry = {}) => {
+  const next = {
+    ...(baseEntry && typeof baseEntry === 'object' ? baseEntry : {}),
+    ...(localEntry && typeof localEntry === 'object' ? localEntry : {})
+  };
+
+  const jogosAt = Math.max(baseEntry?.jogosAt || 0, localEntry?.jogosAt || 0);
+  const mataAt = Math.max(baseEntry?.mataAt || 0, localEntry?.mataAt || 0);
+
+  if (jogosAt) next.jogosAt = jogosAt;
+  if (mataAt) next.mataAt = mataAt;
+
+  return next;
+};
+
+const sanitizeSubmissionMap = (submissions = {}) => Object.fromEntries(
   Object.entries(submissions || {}).map(([userId, entry]) => {
-    const normalizedEntry = entry && typeof entry === 'object' ? { ...entry } : {};
-    if (normalizedEntry.mataAt && !usuarioPreencheuMataCompleta(betsKnockout?.[userId])) {
-      delete normalizedEntry.mataAt;
-    }
+    const normalizedEntry = mergeSubmissionEntry({}, entry);
     return [userId, normalizedEntry];
   })
 );
@@ -486,15 +522,6 @@ const createEmptyKnockoutBracket = () => ({
   quarto: ''
 });
 
-const isResolvedKnockoutTeam = (team) => (
-  Boolean(team) &&
-  team !== 'A definir' &&
-  team !== '???' &&
-  !team.startsWith('3º de ') &&
-  !team.includes('Venc.') &&
-  !team.includes('Aguardando')
-);
-
 const buildThirdPlaceAllocation = (jogos, palpitesUsuario, condutaGrupos, gruposCompletos = faseDeGruposCompleta(jogos, palpitesUsuario)) => {
   if (!gruposCompletos) return {};
   const tabelaGeral = {};
@@ -512,31 +539,6 @@ const buildThirdPlaceAllocation = (jogos, palpitesUsuario, condutaGrupos, grupos
   );
 };
 
-const getKnockoutMatchOptions = ({
-  match,
-  phaseKey,
-  source,
-  jogos,
-  palpitesUsuario,
-  condutaGrupos,
-  gruposCompletos,
-  alocacaoTerceiros
-}) => {
-  if (phaseKey === 'dezeszeseisavos') {
-    const teamA = getR32Team(match.refA, jogos, palpitesUsuario, condutaGrupos, gruposCompletos);
-    const teamB = match.refThirdGroups
-      ? getThirdPlaceCandidate(match, alocacaoTerceiros, gruposCompletos)
-      : getR32Team(match.refB, jogos, palpitesUsuario, condutaGrupos, gruposCompletos);
-    return [teamA, teamB].filter((team, index, list) => (
-      isResolvedKnockoutTeam(team) && list.indexOf(team) === index
-    ));
-  }
-
-  return [getWinnerOfMatch(match.feedA, source), getWinnerOfMatch(match.feedB, source)].filter((team, index, list) => (
-    isResolvedKnockoutTeam(team) && list.indexOf(team) === index
-  ));
-};
-
 const getRunnerUp = (winner, teamA, teamB) => {
   if (!winner || !teamA || !teamB) return '';
   if (winner === teamA) return teamB;
@@ -544,51 +546,10 @@ const getRunnerUp = (winner, teamA, teamB) => {
   return '';
 };
 
-const sanitizeKnockoutBracket = ({ bracket = {}, jogos, palpitesUsuario, condutaGrupos = {} }) => {
-  const sanitized = createEmptyKnockoutBracket();
+const sanitizeKnockoutBracket = ({ bracket = {}, jogos, palpitesUsuario }) => {
+  const sanitized = normalizeKnockoutBracketShape(bracket);
   const gruposCompletos = faseDeGruposCompleta(jogos, palpitesUsuario);
   if (!gruposCompletos) return sanitized;
-
-  const alocacaoTerceiros = buildThirdPlaceAllocation(jogos, palpitesUsuario, condutaGrupos, gruposCompletos);
-  const phaseConfigs = [
-    ['dezeszeseisavos', MATA_MATA_CONFIG.r32],
-    ['oitavas', MATA_MATA_CONFIG.r16],
-    ['quartas', MATA_MATA_CONFIG.qf],
-    ['semis', MATA_MATA_CONFIG.sf]
-  ];
-
-  phaseConfigs.forEach(([phaseKey, matches]) => {
-    matches.forEach((match, idx) => {
-      const options = getKnockoutMatchOptions({
-        match,
-        phaseKey,
-        source: sanitized,
-        jogos,
-        palpitesUsuario,
-        condutaGrupos,
-        gruposCompletos,
-        alocacaoTerceiros
-      });
-
-      sanitized[phaseKey][idx] = options.length === 2 && options.includes(bracket[phaseKey]?.[idx])
-        ? bracket[phaseKey][idx]
-        : '';
-    });
-  });
-
-  const finalistas = sanitized.semis.filter(Boolean);
-  if (finalistas.length === 2 && finalistas.includes(bracket.campeao)) {
-    sanitized.campeao = bracket.campeao;
-    sanitized.vice = finalistas.find((time) => time !== bracket.campeao) || '';
-  }
-
-  const runnerUpSemi1 = getRunnerUp(sanitized.semis[0], sanitized.quartas[0], sanitized.quartas[1]);
-  const runnerUpSemi2 = getRunnerUp(sanitized.semis[1], sanitized.quartas[2], sanitized.quartas[3]);
-  const disputantes3 = [runnerUpSemi1, runnerUpSemi2].filter(Boolean);
-  if (disputantes3.length === 2 && disputantes3.includes(bracket.terceiro)) {
-    sanitized.terceiro = bracket.terceiro;
-    sanitized.quarto = disputantes3.find((time) => time !== bracket.terceiro) || '';
-  }
 
   return sanitized;
 };
@@ -730,7 +691,7 @@ const buildStateDocument = ({
   betsKnockout,
   officialKnockout,
   conduct,
-  submissions: sanitizeSubmissionMap(submissions, betsKnockout)
+  submissions: sanitizeSubmissionMap(submissions)
 });
 
 const buildStateSnapshot = (state) => JSON.stringify(buildStateDocument(state, { includeUpdatedAt: false }));
@@ -772,7 +733,7 @@ const parseRemotePayload = (payload) => {
     betsKnockout,
     officialKnockout: payload.officialKnockout || {},
     conduct: payload.conduct || {},
-    submissions: sanitizeSubmissionMap(payload.submissions || {}, betsKnockout)
+    submissions: sanitizeSubmissionMap(payload.submissions || {})
   };
 };
 
@@ -937,17 +898,53 @@ const mergeRemoteState = (baseState, localState, { currentUserId = null, isAdmin
     return next;
   };
 
+  const mergedSubmissions = (() => {
+    if (isAdmin) return sanitizeSubmissionMap(baseState.submissions || {});
+    const next = { ...(baseState.submissions || {}) };
+    if (currentUserId) {
+      next[currentUserId] = mergeSubmissionEntry(
+        baseState.submissions?.[currentUserId],
+        localState.submissions?.[currentUserId]
+      );
+    }
+    return next;
+  })();
+
+  const mergedBetsKnockout = (() => {
+    const next = mergeOwnedRecordMap(baseState.betsKnockout, localState.betsKnockout);
+    if (!isAdmin && currentUserId) {
+      const remoteBracket = normalizeKnockoutBracketShape(baseState.betsKnockout?.[currentUserId] || {});
+      const localHasOwnBracket = Object.prototype.hasOwnProperty.call(localState.betsKnockout || {}, currentUserId);
+      const localBracket = localHasOwnBracket
+        ? normalizeKnockoutBracketShape(localState.betsKnockout?.[currentUserId] || {})
+        : remoteBracket;
+      const remoteSubmitted = Boolean(baseState.submissions?.[currentUserId]?.mataAt);
+      const localSubmitted = Boolean(localState.submissions?.[currentUserId]?.mataAt);
+      const remoteCount = countFilledKnockoutSelections(remoteBracket);
+      const localCount = countFilledKnockoutSelections(localBracket);
+      const sameBracket = JSON.stringify(remoteBracket) === JSON.stringify(localBracket);
+
+      if (
+        !localHasOwnBracket ||
+        (remoteSubmitted && !sameBracket) ||
+        (remoteCount > localCount && !localSubmitted)
+      ) {
+        next[currentUserId] = remoteBracket;
+      } else {
+        next[currentUserId] = localBracket;
+      }
+    }
+    return next;
+  })();
+
   return {
     users: mergedUsers,
     matches: isAdmin ? (localState.matches || baseState.matches || gerarJogosIniciais()) : (baseState.matches || gerarJogosIniciais()),
     betsGames: mergeOwnedRecordMap(baseState.betsGames, localState.betsGames),
-    betsKnockout: mergeOwnedRecordMap(baseState.betsKnockout, localState.betsKnockout),
+    betsKnockout: mergedBetsKnockout,
     officialKnockout: isAdmin ? (localState.officialKnockout || baseState.officialKnockout || {}) : (baseState.officialKnockout || {}),
     conduct: isAdmin ? (localState.conduct || baseState.conduct || {}) : (baseState.conduct || {}),
-    submissions: sanitizeSubmissionMap(
-      mergeOwnedRecordMap(baseState.submissions, localState.submissions),
-      mergeOwnedRecordMap(baseState.betsKnockout, localState.betsKnockout)
-    )
+    submissions: sanitizeSubmissionMap(mergedSubmissions)
   };
 };
 
@@ -1792,7 +1789,7 @@ export default function App() {
   const mataEnviadosAt = currentUser ? submissoes[currentUser.id]?.[SUBMISSION_FIELDS.MATA] : null;
   const mataCompletaUsuarioAtual = usuarioPreencheuMataCompleta(palpitesMataUsuarioAtual);
   const palpitesTravadosJogos = !modoAdmin && Boolean(jogosEnviadosAt);
-  const palpitesTravadosMata = !modoAdmin && Boolean(mataEnviadosAt) && mataCompletaUsuarioAtual;
+  const palpitesTravadosMata = !modoAdmin && Boolean(mataEnviadosAt);
   const jogosPendentesUsuario = currentUser ? contarJogosPendentes(jogosReais, palpitesUsuarioAtual) : 0;
   const currentUserCanSeeConsensusPanel = modoAdmin || (
     Boolean(jogosEnviadosAt) &&
@@ -2938,6 +2935,9 @@ export default function App() {
     }
     const currentValue = modoAdmin ? gabaritoMataMata[phaseKey]?.[idx] : palpitesMataMata[currentUser.id]?.[phaseKey]?.[idx];
     const options = [timeA, timeB].filter(t => t && t !== 'A definir' && !t.includes("Aguardando") && !t.includes("Venc.") && !t.startsWith('3º de '));
+    const normalizedOptions = currentValue && !options.includes(currentValue)
+      ? [currentValue, ...options]
+      : options;
     const isReady = options.length === 2;
     const isLocked = !modoAdmin && palpitesTravadosMata;
     let feedback = null;
@@ -2970,7 +2970,8 @@ export default function App() {
         <div className="relative">
           {(!isReady || isLocked) && <Lock size={12} className={`absolute left-3 top-4 ${TEXT_MUTED}`} />}
           <select value={currentValue || ""} onChange={(e) => atualizarMataMata(phaseKey, e.target.value, idx)} disabled={!isReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base font-medium appearance-none ${(!isReady || isLocked) && 'pl-8 text-slate-400'}`}>
-            <option value="">{isLocked ? "Palpite enviado" : isReady ? "Quem vence?" : "Defina os anteriores"}</option>{isReady && <><option value={timeA}>{timeA}</option><option value={timeB}>{timeB}</option></>}
+            <option value="">{isLocked ? "Palpite enviado" : isReady ? "Quem vence?" : "Defina os anteriores"}</option>
+            {normalizedOptions.map((team) => <option key={team} value={team}>{team}</option>)}
           </select>
           {!isLocked && isReady && <ChevronDown size={14} className={`absolute right-3 top-4 pointer-events-none ${TEXT_MUTED}`} />}
         </div>
@@ -3028,7 +3029,8 @@ export default function App() {
               <label className="mb-3 block text-center text-[10px] font-bold uppercase text-amber-700">Grande Final {renderFeedback('campeao')}</label>
               <div className={`${GLASS_CARD} bg-amber-50/60 p-4`}>
                 <select value={dataSource.campeao || ""} onChange={e => { atualizarMataMata('campeao', e.target.value, null); const vice = finalistas.find(f => f !== e.target.value); if (vice) atualizarMataMata('vice', vice, null); }} disabled={!isFinalReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base border-yellow-500/30 focus:border-yellow-500 text-slate-800`}>
-                  <option value="">Quem será Campeão?</option>{isFinalReady && finalistas.map(t => <option key={t} value={t}>{t}</option>)}
+                  <option value="">Quem será Campeão?</option>
+                  {[dataSource.campeao, ...finalistas].filter((team, index, list) => team && list.indexOf(team) === index).map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
                 {dataSource.vice && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>Vice: <span className="text-slate-800">{dataSource.vice}</span> {renderFeedback('vice')}</div>}
               </div>
@@ -3037,7 +3039,8 @@ export default function App() {
               <label className="mb-3 block text-center text-[10px] font-bold uppercase text-orange-700">3º Lugar {renderFeedback('terceiro')}</label>
               <div className={`${GLASS_CARD} bg-orange-50/60 p-4`}>
                 <select value={dataSource.terceiro || ""} onChange={e => { atualizarMataMata('terceiro', e.target.value, null); const quarto = disputantes3.find(t => t !== e.target.value); if (quarto) atualizarMataMata('quarto', quarto, null); }} disabled={!is3rdReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base border-orange-500/30 focus:border-orange-500 text-slate-800`}>
-                  <option value="">Quem fica em 3º?</option>{is3rdReady && disputantes3.map(t => <option key={t} value={t}>{t}</option>)}
+                  <option value="">Quem fica em 3º?</option>
+                  {[dataSource.terceiro, ...disputantes3].filter((team, index, list) => team && list.indexOf(team) === index).map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
                 {dataSource.quarto && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>4º Lugar: <span className="text-slate-800">{dataSource.quarto}</span> {renderFeedback('quarto')}</div>}
               </div>
