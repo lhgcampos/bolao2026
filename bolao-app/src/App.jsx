@@ -2272,7 +2272,7 @@ export default function App() {
                 <td className={`p-4 text-center font-bold ${TEXT_MUTED}`}>{user.rank}</td>
                 <td className={`p-4 ${user.id === currentUser.id ? 'text-sky-700' : TEXT_HIGHLIGHT}`}>
                   <div className="flex items-center gap-3">
-                    <AvatarBadge user={user} size="sm" className="lg:w-12 lg:h-12 lg:text-base" />
+                    <AvatarBadge user={user} size="md" className="shrink-0 lg:w-14 lg:h-14 lg:text-lg" />
                     <span className="font-bold">{user.nome} {user.id === currentUser.id && '(Você)'}</span>
                   </div>
                 </td>
