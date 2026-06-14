@@ -26,6 +26,7 @@ import {
   buildGabaritoTimeline,
   countResolvedMatchesByVariant,
   formatResultSourceTimestamp,
+  getOfficialCompetitionLabel,
   getMatchResultVariant
 } from './officialResults/officialResultsView';
 
@@ -3238,40 +3239,11 @@ export default function App() {
         {abaAtiva === 'jogos' && (
           <div className="space-y-8 animate-fade-in">
             {!modoAdmin && homeInsightCard && <MyBolaoCard insight={homeInsightCard} />}
-            {!modoAdmin && (
-              <div className={`${GLASS_CARD} p-5 flex flex-col gap-4`}>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Envio da fase de grupos</h3>
-                    <p className={`text-xs mt-1 ${TEXT_MUTED}`}>Depois de enviar, seus placares desta etapa ficam travados.</p>
-                  </div>
-                  {palpitesTravadosJogos && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700"><Check size={12} /> Enviado</span>}
-                </div>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <span className={`text-xs ${TEXT_MUTED}`}>
-                    {palpitesTravadosJogos
-                      ? `Enviado em ${formatSubmissionDate(jogosEnviadosAt)}`
-                      : jogosPendentesUsuario > 0
-                        ? `Faltam ${jogosPendentesUsuario} jogo${jogosPendentesUsuario === 1 ? '' : 's'} para liberar o envio.`
-                        : 'Tudo pronto para enviar.'}
-                  </span>
-                  {!palpitesTravadosJogos && (
-                    <button
-                      onClick={() => handleSubmitSection(SUBMISSION_FIELDS.JOGOS)}
-                      disabled={!usuarioPreencheuTodosOsJogos(jogosReais, palpitesUsuarioAtual)}
-                      className={`${GLASS_BTN_PRIMARY} min-h-12 px-4 py-3 text-xs uppercase tracking-widest disabled:cursor-not-allowed disabled:opacity-50`}
-                    >
-                      Enviar palpites
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
             <>
               <div className={`${GLASS_CARD} p-5`}>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <h3 className="text-sm font-bold uppercase tracking-wide text-slate-900">Gabarito cronológico</h3>
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-slate-900">{modoAdmin ? 'Gabarito cronológico' : 'Resultados oficiais em ordem cronológica'}</h3>
                     <p className={`mt-1 text-xs ${TEXT_MUTED}`}>
                       {modoAdmin
                         ? 'O auto-sync roda sozinho no servidor. Correções manuais travam novas sobrescritas até você reativar o jogo.'
@@ -3372,9 +3344,9 @@ export default function App() {
                           <div key={jogo.id} className={`${GLASS_CARD} p-4 lg:p-5`}>
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                               <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-                                  <span className="inline-flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
-                                  <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">Grupo {jogo.grupo}</span>
+                              <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                                <span className="inline-flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
+                                  <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{timelineMatch.competitionLabel || getOfficialCompetitionLabel(jogo)}</span>
                                   {jogo.local && <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{jogo.local}</span>}
                                 </div>
                                 {officialKickoffHint && <div className="mt-2 text-[11px] text-slate-500">{officialKickoffHint}</div>}
@@ -3414,7 +3386,7 @@ export default function App() {
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
                                 <span className="inline-flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
-                                <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">Grupo {jogo.grupo}</span>
+                                <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{timelineMatch.competitionLabel || getOfficialCompetitionLabel(jogo)}</span>
                                 {jogo.local && <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{jogo.local}</span>}
                               </div>
                               {officialKickoffHint && <div className="mt-2 text-[11px] text-slate-500">{officialKickoffHint}</div>}
@@ -3524,7 +3496,34 @@ export default function App() {
               ))}
 
               {!modoAdmin && (
-                <>
+                <div className="space-y-5">
+                  <div className={`${GLASS_CARD} p-5 flex flex-col gap-4`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Seus palpites da fase de grupos</h3>
+                        <p className={`text-xs mt-1 ${TEXT_MUTED}`}>Esta parte serve apenas para envio e revisão dos seus placares. O gabarito oficial acima continua sendo sincronizado separadamente.</p>
+                      </div>
+                      {palpitesTravadosJogos && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700"><Check size={12} /> Enviado</span>}
+                    </div>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <span className={`text-xs ${TEXT_MUTED}`}>
+                        {palpitesTravadosJogos
+                          ? `Enviado em ${formatSubmissionDate(jogosEnviadosAt)}`
+                          : jogosPendentesUsuario > 0
+                            ? `Faltam ${jogosPendentesUsuario} jogo${jogosPendentesUsuario === 1 ? '' : 's'} para liberar o envio.`
+                            : 'Tudo pronto para enviar.'}
+                      </span>
+                      {!palpitesTravadosJogos && (
+                        <button
+                          onClick={() => handleSubmitSection(SUBMISSION_FIELDS.JOGOS)}
+                          disabled={!usuarioPreencheuTodosOsJogos(jogosReais, palpitesUsuarioAtual)}
+                          className={`${GLASS_BTN_PRIMARY} min-h-12 px-4 py-3 text-xs uppercase tracking-widest disabled:cursor-not-allowed disabled:opacity-50`}
+                        >
+                          Enviar palpites
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   {Object.keys(GRUPOS_2026).map(grupo => (
                     <div key={grupo} className="relative">
                       <h3 className="mb-4 pl-3 border-l-2 border-yellow-500 text-[15px] font-bold tracking-wide text-slate-700">GRUPO {grupo}</h3>
@@ -3560,7 +3559,7 @@ export default function App() {
                       </div>
                     </div>
                   ))}
-                </>
+                </div>
               )}
             </>
           </div>

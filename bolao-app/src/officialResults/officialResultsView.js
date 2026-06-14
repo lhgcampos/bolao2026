@@ -70,11 +70,18 @@ const buildSourceMeta = (match) => [
   match?.resultUpdatedAt ? formatResultSourceTimestamp(match.resultUpdatedAt) : ''
 ].filter(Boolean).join(' • ');
 
+export const getOfficialCompetitionLabel = (match) => {
+  if (match?.grupo) return `Grupo ${match.grupo}`;
+  if (match?.fase) return match.fase;
+  return 'Fase oficial';
+};
+
 export const buildGabaritoTimeline = (matches = [], { isAdmin = false, nowMs = Date.now() } = {}) => (
   buildChronologicalMatchGroups(matches).map((dayGroup) => ({
     ...dayGroup,
     matches: dayGroup.matches.map((match) => ({
       match,
+      competitionLabel: getOfficialCompetitionLabel(match),
       status: getOfficialResultStatus(match, { nowMs }),
       sourceMeta: buildSourceMeta(match),
       showAdminControls: isAdmin,
