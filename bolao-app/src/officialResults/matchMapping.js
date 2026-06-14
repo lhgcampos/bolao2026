@@ -1,7 +1,7 @@
 import { TEAM_FIFA_RANKINGS } from '../fifaTeamRankings.js';
 import { JOGOS_FASE_DE_GRUPOS, parseMatchDateTime } from '../matchData.js';
 
-const MAX_KICKOFF_DRIFT_MS = 12 * 60 * 60 * 1000;
+const MAX_KICKOFF_DRIFT_MS = 4 * 60 * 60 * 1000;
 
 const normalizeText = (value) => String(value || '')
   .normalize('NFD')

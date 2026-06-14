@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 
-import { applyManualResultCorrection } from '../bolao-app/src/officialResults/applyOfficialResult.js';
+import { applyManualResultCorrection, clearManualResultLock } from '../bolao-app/src/officialResults/applyOfficialResult.js';
+import { buildGabaritoTimeline } from '../bolao-app/src/officialResults/officialResultsView.js';
 import { syncOfficialResults } from '../bolao-app/src/officialResults/officialResultSync.js';
 import { buildChronologicalMatchGroups, gerarJogosIniciais, sortMatchesChronologically } from '../bolao-app/src/matchData.js';
-import { deriveOfficialKnockout, getTournamentSyncWindowState, mergeOfficialKnockout } from '../bolao-app/src/officialResults/tournamentSync.js';
+import { deriveOfficialKnockout, mergeOfficialKnockout } from '../bolao-app/src/officialResults/tournamentSync.js';
 
 const baseMatches = gerarJogosIniciais();
 const baseMatch = baseMatches.find((match) => match.id === 1);
@@ -27,7 +28,16 @@ const buildExternalMatch = (override = {}) => ({
     externalMatches: [buildExternalMatch({ status: 'LIVE' })],
     autoApply: true
   });
-  assert.equal(result.report.applied.length, 0, 'nao aplica jogo sem status final');
+  assert.equal(result.report.applied.length, 0, 'nao aplica jogo ao vivo ou parcial');
+}
+
+{
+  const result = syncOfficialResults({
+    matches: baseMatches,
+    externalMatches: [buildExternalMatch({ status: 'SCHEDULED' })],
+    autoApply: true
+  });
+  assert.equal(result.report.applied.length, 0, 'nao aplica resultado sem status final');
 }
 
 {
@@ -97,8 +107,25 @@ const buildExternalMatch = (override = {}) => ({
     appliedAt: 1_800_000_000_003,
     appliedBy: 'Admin'
   }).match;
+  assert.equal(corrected.manualLock, true, 'correcao manual ativa lock explicito');
   assert.equal(corrected.resultHistory.length, 1, 'registra historico de correcao manual');
   assert.equal(corrected.resultHistory[0].source, 'manual-correction', 'marca historico manual');
+  assert.equal(corrected.resultHistory[0].manualLock, true, 'historico manual registra lock');
+}
+
+{
+  const corrected = applyManualResultCorrection(baseMatch, {
+    placarA: 2,
+    placarB: 2,
+    appliedAt: 1_800_000_000_004,
+    appliedBy: 'Admin'
+  }).match;
+  const unlocked = clearManualResultLock(corrected, {
+    appliedAt: 1_800_000_000_005,
+    appliedBy: 'Admin'
+  }).match;
+  assert.equal(unlocked.manualLock, false, 'admin pode reativar o auto-sync apos lock manual');
+  assert.equal(unlocked.resultHistory.at(-1)?.source, 'manual-override-clear', 'reativacao manual entra no historico');
 }
 
 {
@@ -127,10 +154,19 @@ const buildExternalMatch = (override = {}) => ({
 }
 
 {
-  const activeWindow = getTournamentSyncWindowState(new Date('2026-06-12T19:10:00Z').getTime());
-  const inactiveWindow = getTournamentSyncWindowState(new Date('2026-06-12T23:59:00Z').getTime());
-  assert.equal(activeWindow.active, true, 'janela ativa precisa ser detectada');
-  assert.equal(inactiveWindow.active, false, 'janela inativa precisa ser detectada');
+  const timeline = buildGabaritoTimeline([
+    baseMatches.find((match) => match.id === 20),
+    baseMatches.find((match) => match.id === 7),
+    baseMatches.find((match) => match.id === 19)
+  ], { isAdmin: false });
+  const orderedIds = timeline.flatMap((dayGroup) => dayGroup.matches.map((entry) => entry.match.id));
+  assert.deepEqual(orderedIds, [7, 19, 20], 'timeline do gabarito segue ordem cronologica');
+  assert.equal(timeline[0].matches[0].showAdminControls, false, 'usuario comum nao recebe controles admin no gabarito');
+}
+
+{
+  const timeline = buildGabaritoTimeline([baseMatch], { isAdmin: true });
+  assert.equal(timeline[0].matches[0].showAdminControls, true, 'admin recebe controles do gabarito');
 }
 
 {

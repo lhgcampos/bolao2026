@@ -13,15 +13,21 @@ import {
   formatBrazilMatchSchedule,
   formatOfficialKickoffHint,
   gerarJogosIniciais,
-  isMatchFinal,
+  isManualResultLocked,
   normalizePersistedGameData,
   parseMatchDateTime,
   placarPreenchido
 } from './matchData';
 import {
   applyManualResultCorrection,
-  clearManualResultOverride
+  clearManualResultLock
 } from './officialResults/applyOfficialResult';
+import {
+  buildGabaritoTimeline,
+  countResolvedMatchesByVariant,
+  formatResultSourceTimestamp,
+  getMatchResultVariant
+} from './officialResults/officialResultsView';
 
 const TODOS_TIMES = Object.values(GRUPOS_2026).flat().sort();
 
@@ -44,13 +50,15 @@ const SUBMISSION_FIELDS = {
 };
 const REMOTE_STORE_BASE = 'https://mantledb.sh/v2';
 const REMOTE_NAMESPACE = 'lhgcampos-bolao2026-live-20260609';
-const REMOTE_SCHEMA_VERSION = 3;
+const REMOTE_SCHEMA_VERSION = 4;
 const REMOTE_LEGACY_STATE_PATH = 'state';
 const REMOTE_PATHS = {
   meta: 'meta',
   usersIndex: 'users-index',
   matches: 'matches',
   officialKnockout: 'official-knockout',
+  officialResultsSyncStatus: 'official-results-sync-status',
+  officialResultsSyncHistory: 'official-results-sync-history',
   conduct: 'conduct',
   betsGames: 'bets-games',
   betsKnockout: 'bets-knockout',
@@ -95,70 +103,6 @@ const INSTALLATION_TIPS = {
 // --- CONFIGURAÇÃO INICIAL ---
 const getShortCountryName = (name) => COUNTRY_SHORT_NAMES[name] || name;
 
-const getMatchResultVariant = (match) => {
-  if (!placarPreenchido(match?.placarA, match?.placarB)) return 'pending';
-  return isMatchFinal(match) ? 'final' : 'temporary';
-};
-
-const countResolvedMatchesByVariant = (matches = []) => matches.reduce((summary, match) => {
-  const variant = getMatchResultVariant(match);
-  if (variant === 'final') summary.final += 1;
-  if (variant === 'temporary') summary.temporary += 1;
-  return summary;
-}, { final: 0, temporary: 0 });
-
-const formatResultSourceTimestamp = (timestamp) => {
-  if (!timestamp) return '';
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  }).format(new Date(timestamp));
-};
-
-const getOfficialResultStatus = (match) => {
-  const variant = getMatchResultVariant(match);
-  const alreadyStarted = parseMatchDateTime(match) <= Date.now();
-
-  if (match?.manualOverride) {
-    return {
-      label: 'Corrigido manualmente',
-      tone: 'border-sky-200 bg-sky-50 text-sky-700'
-    };
-  }
-
-  if (variant === 'final' && match?.resultOrigin === 'auto-sync') {
-    return {
-      label: 'Atualizado automaticamente',
-      tone: 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    };
-  }
-
-  if (variant === 'final') {
-    return {
-      label: 'Resultado oficial',
-      tone: 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    };
-  }
-
-  if (variant === 'temporary') {
-    return {
-      label: 'Placar temporário',
-      tone: 'border-orange-200 bg-orange-50 text-orange-700'
-    };
-  }
-
-  if (alreadyStarted) {
-    return {
-      label: 'Aguardando resultado',
-      tone: 'border-amber-200 bg-amber-50 text-amber-700'
-    };
-  }
-
-  return {
-    label: 'Não iniciado',
-    tone: 'border-slate-200 bg-slate-50 text-slate-600'
-  };
-};
 
 // Agenda oficial do mata-mata baseada nos horarios locais publicados pela FIFA; a exibicao em tela usa o horario do Brasil.
 // `kickoffEt` guarda o instante real do jogo com o offset do estadio; `horaEt` preserva a hora local oficial publicada pela FIFA.
@@ -676,6 +620,8 @@ const createInitialAppState = () => ({
   betsGames: {},
   betsKnockout: {},
   officialKnockout: {},
+  officialResultsSyncStatus: {},
+  officialResultsSyncHistory: [],
   conduct: {},
   submissions: {}
 });
@@ -738,6 +684,8 @@ const parseRemotePayload = (payload) => {
     betsGames: normalizedGameData.betsGames,
     betsKnockout,
     officialKnockout: payload.officialKnockout || {},
+    officialResultsSyncStatus: payload.officialResultsSyncStatus || {},
+    officialResultsSyncHistory: Array.isArray(payload.officialResultsSyncHistory) ? payload.officialResultsSyncHistory : [],
     conduct: payload.conduct || {},
     submissions: sanitizeSubmissionMap(payload.submissions || {})
   };
@@ -771,15 +719,17 @@ const fetchRemoteEntry = async (path) => {
 const fetchLegacyRemoteState = async () => fetchRemoteEntry(REMOTE_LEGACY_STATE_PATH);
 
 const fetchShardedRemoteState = async () => {
-  const [metaDoc, usersIndexDoc, matchesDoc, officialKnockoutDoc, conductDoc] = await Promise.all([
+  const [metaDoc, usersIndexDoc, matchesDoc, officialKnockoutDoc, officialResultsSyncStatusDoc, officialResultsSyncHistoryDoc, conductDoc] = await Promise.all([
     fetchRemoteEntry(REMOTE_PATHS.meta),
     fetchRemoteEntry(REMOTE_PATHS.usersIndex),
     fetchRemoteEntry(REMOTE_PATHS.matches),
     fetchRemoteEntry(REMOTE_PATHS.officialKnockout),
+    fetchRemoteEntry(REMOTE_PATHS.officialResultsSyncStatus),
+    fetchRemoteEntry(REMOTE_PATHS.officialResultsSyncHistory),
     fetchRemoteEntry(REMOTE_PATHS.conduct)
   ]);
 
-  const hasShardState = [metaDoc, usersIndexDoc, matchesDoc, officialKnockoutDoc, conductDoc].some((entry) => entry !== null);
+  const hasShardState = [metaDoc, usersIndexDoc, matchesDoc, officialKnockoutDoc, officialResultsSyncStatusDoc, officialResultsSyncHistoryDoc, conductDoc].some((entry) => entry !== null);
   if (!hasShardState) return null;
 
   const usersIndex = usersIndexDoc && typeof usersIndexDoc === 'object' && !Array.isArray(usersIndexDoc) ? usersIndexDoc : {};
@@ -843,12 +793,16 @@ const fetchShardedRemoteState = async () => {
     betsGames,
     betsKnockout,
     officialKnockout: officialKnockoutDoc || {},
+    officialResultsSyncStatus: officialResultsSyncStatusDoc || {},
+    officialResultsSyncHistory: Array.isArray(officialResultsSyncHistoryDoc) ? officialResultsSyncHistoryDoc : [],
     conduct: conductDoc || {},
     submissions,
     __authoritative: {
       users: usersIndexDoc !== null,
       matches: matchesDoc !== null,
       officialKnockout: officialKnockoutDoc !== null,
+      officialResultsSyncStatus: officialResultsSyncStatusDoc !== null,
+      officialResultsSyncHistory: officialResultsSyncHistoryDoc !== null,
       conduct: conductDoc !== null
     }
   };
@@ -879,6 +833,14 @@ const mergeRemotePayloads = (legacyPayload, shardedPayload) => {
     officialKnockout: authoritative.officialKnockout
       ? (shardedPayload.officialKnockout || {})
       : (shardedPayload.officialKnockout || legacyPayload.officialKnockout || {}),
+    officialResultsSyncStatus: authoritative.officialResultsSyncStatus
+      ? (shardedPayload.officialResultsSyncStatus || {})
+      : (shardedPayload.officialResultsSyncStatus || legacyPayload.officialResultsSyncStatus || {}),
+    officialResultsSyncHistory: authoritative.officialResultsSyncHistory
+      ? (Array.isArray(shardedPayload.officialResultsSyncHistory) ? shardedPayload.officialResultsSyncHistory : [])
+      : (Array.isArray(shardedPayload.officialResultsSyncHistory) && shardedPayload.officialResultsSyncHistory.length
+        ? shardedPayload.officialResultsSyncHistory
+        : (Array.isArray(legacyPayload.officialResultsSyncHistory) ? legacyPayload.officialResultsSyncHistory : [])),
     conduct: authoritative.conduct
       ? (shardedPayload.conduct || {})
       : (shardedPayload.conduct || legacyPayload.conduct || {}),
@@ -1589,6 +1551,8 @@ export default function App() {
   const [palpitesJogos, setPalpitesJogos] = useState(() => bootstrapState.betsGames);
   const [palpitesMataMata, setPalpitesMataMata] = useState(() => JSON.parse(localStorage.getItem('bolao26_bets_knockout_v2')) || {});
   const [gabaritoMataMata, setGabaritoMataMata] = useState(() => JSON.parse(localStorage.getItem('bolao26_official_knockout_v2')) || {});
+  const [officialResultsSyncStatus, setOfficialResultsSyncStatus] = useState(() => bootstrapState.officialResultsSyncStatus || {});
+  const [officialResultsSyncHistory, setOfficialResultsSyncHistory] = useState(() => bootstrapState.officialResultsSyncHistory || []);
   const [condutaGrupos, setCondutaGrupos] = useState(() => JSON.parse(localStorage.getItem('bolao26_group_conduct')) || {});
   const [submissoes, setSubmissoes] = useState(() => JSON.parse(localStorage.getItem('bolao26_submissions')) || {});
   const [adminMatchDrafts, setAdminMatchDrafts] = useState({});
@@ -1616,6 +1580,8 @@ export default function App() {
     setPalpitesJogos(nextState.betsGames || {});
     setPalpitesMataMata(nextState.betsKnockout || {});
     setGabaritoMataMata(nextState.officialKnockout || {});
+    setOfficialResultsSyncStatus(nextState.officialResultsSyncStatus || {});
+    setOfficialResultsSyncHistory(Array.isArray(nextState.officialResultsSyncHistory) ? nextState.officialResultsSyncHistory : []);
     setCondutaGrupos(nextState.conduct || {});
     setSubmissoes(nextState.submissions || {});
     remoteUpdatedAtRef.current = nextUpdatedAt;
@@ -2100,7 +2066,7 @@ export default function App() {
   };
   const reativarAutoSyncJogo = (id) => {
     if (!modoAdmin) return;
-    aplicarAtualizacaoManualNoJogo(id, (jogo) => clearManualResultOverride(jogo, {
+    aplicarAtualizacaoManualNoJogo(id, (jogo) => clearManualResultLock(jogo, {
       appliedBy: currentUser?.nome || 'admin'
     }));
   };
@@ -3150,6 +3116,18 @@ export default function App() {
     { id: 'painel', icon: Medal, label: 'Painel' },
     { id: 'regras', icon: List, label: 'Pontuação' }
   ];
+  const gabaritoTimeline = buildGabaritoTimeline(jogosReais, { isAdmin: modoAdmin });
+  const syncDiagnosticsSummary = {
+    lastRunAt: formatResultSourceTimestamp(officialResultsSyncStatus?.lastRunAt),
+    lastSuccessAt: formatResultSourceTimestamp(officialResultsSyncStatus?.lastSuccessAt),
+    lastAppliedAt: formatResultSourceTimestamp(officialResultsSyncStatus?.lastAppliedAt),
+    updatedMatches: Number(officialResultsSyncStatus?.updatedMatches || 0),
+    skippedMatches: Number(officialResultsSyncStatus?.skippedMatches || 0),
+    conflictMatches: Number(officialResultsSyncStatus?.conflictMatches || 0),
+    lastOutcome: officialResultsSyncStatus?.lastOutcome || 'pending',
+    providers: Array.isArray(officialResultsSyncStatus?.providers) ? officialResultsSyncStatus.providers : [],
+    providerErrors: Array.isArray(officialResultsSyncStatus?.providerErrors) ? officialResultsSyncStatus.providerErrors : []
+  };
 
   return (
     <div className="app-shell min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#f4f7fb_100%)] text-slate-900 font-sans pb-28 lg:pb-10">
@@ -3289,42 +3267,107 @@ export default function App() {
                 </div>
               </div>
             )}
-            {modoAdmin ? (
-              <>
-                <div className={`${GLASS_CARD} p-5`}>
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold uppercase tracking-wide text-slate-900">Gabarito cronológico</h3>
-                      <p className={`mt-1 text-xs ${TEXT_MUTED}`}>Os jogos agora aparecem por dia e horário do Brasil. Correções manuais travam o auto-sync até você reativá-lo.</p>
-                    </div>
-                    <div className="inline-flex items-center gap-2 self-start rounded-full border border-red-200 bg-red-50 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-red-600">
-                      <AlertCircle size={12} />
-                      Modo gabarito ativo
-                    </div>
+            <>
+              <div className={`${GLASS_CARD} p-5`}>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-slate-900">Gabarito cronológico</h3>
+                    <p className={`mt-1 text-xs ${TEXT_MUTED}`}>
+                      {modoAdmin
+                        ? 'O auto-sync roda sozinho no servidor. Correções manuais travam novas sobrescritas até você reativar o jogo.'
+                        : 'Resultados oficiais por dia e horário do Brasil. O ranking acompanha essas atualizações automaticamente.'}
+                    </p>
+                  </div>
+                  <div className={`inline-flex items-center gap-2 self-start rounded-full border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] ${
+                    modoAdmin
+                      ? 'border-red-200 bg-red-50 text-red-600'
+                      : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  }`}>
+                    <AlertCircle size={12} />
+                    {modoAdmin ? 'Modo gabarito ativo' : 'Leitura oficial'}
                   </div>
                 </div>
-                {buildChronologicalMatchGroups(jogosReais).map((dayGroup) => (
-                  <div key={dayGroup.dayKey} className="space-y-3">
-                    <div className="sticky top-20 z-10 inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-700 shadow-sm backdrop-blur">
-                      {dayGroup.dayLabel}
-                    </div>
-                    <div className="space-y-3">
-                      {dayGroup.matches.map((jogo) => {
-                        const draft = adminMatchDrafts[jogo.id] || { placarA: jogo.placarA ?? '', placarB: jogo.placarB ?? '' };
-                        const schedule = formatBrazilMatchSchedule(jogo);
-                        const officialKickoffHint = formatOfficialKickoffHint(jogo);
-                        const status = getOfficialResultStatus(jogo);
-                        const hasPartialDraft = (draft.placarA === '') !== (draft.placarB === '');
-                        const hasDraftChanges = draft.placarA !== (jogo.placarA ?? '') || draft.placarB !== (jogo.placarB ?? '');
-                        const canSaveManual = !hasPartialDraft && (
-                          hasDraftChanges ||
-                          (placarPreenchido(draft.placarA, draft.placarB) && !jogo.manualOverride)
-                        );
-                        const sourceMeta = [
-                          jogo.resultSourceLabel || '',
-                          jogo.resultUpdatedAt ? formatResultSourceTimestamp(jogo.resultUpdatedAt) : ''
-                        ].filter(Boolean).join(' • ');
+              </div>
 
+              {modoAdmin && (
+                <div className={`${GLASS_CARD} p-5`}>
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Último auto-sync</div>
+                      <div className="mt-2 text-sm font-bold text-slate-900">{syncDiagnosticsSummary.lastRunAt || 'Ainda não registrado'}</div>
+                      <div className="mt-1 text-[11px] text-slate-500">Status: {syncDiagnosticsSummary.lastOutcome}</div>
+                    </div>
+                    <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Último sucesso</div>
+                      <div className="mt-2 text-sm font-bold text-slate-900">{syncDiagnosticsSummary.lastSuccessAt || 'Sem sucesso ainda'}</div>
+                      <div className="mt-1 text-[11px] text-slate-500">Última aplicação: {syncDiagnosticsSummary.lastAppliedAt || 'Sem alteração'}</div>
+                    </div>
+                    <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Resumo da rodada</div>
+                      <div className="mt-2 text-sm font-bold text-slate-900">{syncDiagnosticsSummary.updatedMatches} atualizados</div>
+                      <div className="mt-1 text-[11px] text-slate-500">{syncDiagnosticsSummary.skippedMatches} ignorados • {syncDiagnosticsSummary.conflictMatches} conflitos</div>
+                    </div>
+                    <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Fonte ativa</div>
+                      <div className="mt-2 text-sm font-bold text-slate-900">
+                        {syncDiagnosticsSummary.providers.length
+                          ? syncDiagnosticsSummary.providers.map((provider) => provider.provider).join(', ')
+                          : 'Aguardando job'}
+                      </div>
+                      <div className="mt-1 text-[11px] text-slate-500">
+                        {syncDiagnosticsSummary.providerErrors.length
+                          ? `Erros: ${syncDiagnosticsSummary.providerErrors.length}`
+                          : 'Sem erros no último ciclo'}
+                      </div>
+                    </div>
+                  </div>
+                  {syncDiagnosticsSummary.providerErrors.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {syncDiagnosticsSummary.providerErrors.map((error, index) => (
+                        <div key={`sync-error-${index}`} className="rounded-[16px] border border-rose-200 bg-rose-50 px-4 py-3 text-[12px] text-rose-700">
+                          <span className="font-bold">{error.provider}</span>: {error.message}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {officialResultsSyncHistory.length > 0 && (
+                    <details className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                      <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                        Histórico resumido do auto-sync ({officialResultsSyncHistory.length})
+                      </summary>
+                      <div className="mt-3 space-y-2">
+                        {officialResultsSyncHistory.slice(0, 5).map((entry, index) => (
+                          <div key={`sync-history-${index}`} className="rounded-xl border border-white/70 bg-white px-3 py-2 text-[11px] text-slate-600 shadow-sm">
+                            <div className="font-bold text-slate-800">{formatResultSourceTimestamp(entry.runAt)} • {entry.outcome}</div>
+                            <div className="mt-1">{entry.updatedMatches} atualizados • {entry.skippedMatches} ignorados • {entry.conflictMatches} conflitos</div>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                </div>
+              )}
+
+              {gabaritoTimeline.map((dayGroup) => (
+                <div key={dayGroup.dayKey} className="space-y-3">
+                  <div className="sticky top-20 z-10 inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-700 shadow-sm backdrop-blur">
+                    {dayGroup.dayLabel}
+                  </div>
+                  <div className="space-y-3">
+                    {dayGroup.matches.map((timelineMatch) => {
+                      const jogo = timelineMatch.match;
+                      const draft = adminMatchDrafts[jogo.id] || { placarA: jogo.placarA ?? '', placarB: jogo.placarB ?? '' };
+                      const schedule = formatBrazilMatchSchedule(jogo);
+                      const officialKickoffHint = formatOfficialKickoffHint(jogo);
+                      const isLocked = isManualResultLocked(jogo);
+                      const hasPartialDraft = (draft.placarA === '') !== (draft.placarB === '');
+                      const hasDraftChanges = draft.placarA !== (jogo.placarA ?? '') || draft.placarB !== (jogo.placarB ?? '');
+                      const canSaveManual = !hasPartialDraft && (
+                        hasDraftChanges ||
+                        (placarPreenchido(draft.placarA, draft.placarB) && !isLocked)
+                      );
+
+                      if (!timelineMatch.showAdminControls) {
                         return (
                           <div key={jogo.id} className={`${GLASS_CARD} p-4 lg:p-5`}>
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -3336,149 +3379,190 @@ export default function App() {
                                 </div>
                                 {officialKickoffHint && <div className="mt-2 text-[11px] text-slate-500">{officialKickoffHint}</div>}
                               </div>
-                              <div className={`self-start rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] ${status.tone}`}>
-                                {status.label}
+                              <div className={`self-start rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] ${timelineMatch.status.tone}`}>
+                                {timelineMatch.status.label}
                               </div>
                             </div>
-
-                            <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center">
-                              <div className="text-[14px] font-bold text-slate-900 lg:text-right">{jogo.timeA}</div>
-                              <div className="flex items-center justify-center gap-2">
-                                <input type="number" min="0" inputMode="numeric" value={draft.placarA} onChange={e => atualizarJogo(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} h-12 w-14 text-center text-base font-bold`} />
-                                <span className="text-sm font-light text-slate-500">X</span>
-                                <input type="number" min="0" inputMode="numeric" value={draft.placarB} onChange={e => atualizarJogo(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} h-12 w-14 text-center text-base font-bold`} />
+                            <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+                              <div className="text-right text-[14px] font-bold text-slate-900">{jogo.timeA}</div>
+                              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-center text-base font-black text-slate-900">
+                                {placarPreenchido(jogo.placarA, jogo.placarB) ? `${jogo.placarA} x ${jogo.placarB}` : '—'}
                               </div>
-                              <div className="text-[14px] font-bold text-slate-900 lg:text-left">{jogo.timeB}</div>
+                              <div className="text-left text-[14px] font-bold text-slate-900">{jogo.timeB}</div>
                             </div>
-
-                            <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-                              <label className={`flex items-center justify-between gap-4 rounded-[18px] border px-3 py-3 ${
-                                placarPreenchido(jogo.placarA, jogo.placarB)
-                                  ? (jogo.isFinal ? 'border-emerald-200 bg-emerald-50/70' : 'border-orange-200 bg-orange-50/70')
-                                  : 'border-slate-200 bg-slate-50/80'
-                              }`}>
-                                <div className="min-w-0">
-                                  <div className={`text-[10px] font-bold uppercase tracking-[0.16em] ${
-                                    !placarPreenchido(jogo.placarA, jogo.placarB)
-                                      ? 'text-slate-500'
-                                      : jogo.isFinal
-                                        ? 'text-emerald-700'
-                                        : 'text-orange-700'
-                                  }`}>
-                                    {!placarPreenchido(jogo.placarA, jogo.placarB) ? 'Sem placar salvo' : jogo.isFinal ? 'Resultado definitivo' : 'Placar temporário'}
-                                  </div>
-                                  <div className="mt-1 text-[11px] text-slate-600">
-                                    {hasPartialDraft
-                                      ? 'Complete os dois gols antes de salvar.'
-                                      : jogo.manualOverride
-                                        ? 'Este jogo está protegido contra auto-sync até reativação manual.'
-                                        : 'O auto-sync só aplica resultado final validado.'}
-                                  </div>
-                                </div>
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(jogo.isFinal && placarPreenchido(jogo.placarA, jogo.placarB))}
-                                  disabled={!placarPreenchido(jogo.placarA, jogo.placarB)}
-                                  onChange={(event) => atualizarStatusFinalJogo(jogo.id, event.target.checked)}
-                                  className="h-5 w-5 shrink-0 accent-emerald-600"
-                                />
-                              </label>
-                              <div className="flex flex-wrap gap-2">
-                                <button
-                                  onClick={() => salvarCorrecaoManualJogo(jogo.id)}
-                                  disabled={!canSaveManual}
-                                  className={`${GLASS_BTN_PRIMARY} min-h-12 px-4 py-3 text-[11px] uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-50`}
-                                >
-                                  Salvar correção
-                                </button>
-                                {jogo.manualOverride && (
-                                  <button
-                                    onClick={() => reativarAutoSyncJogo(jogo.id)}
-                                    className={`${GLASS_BTN_SECONDARY} min-h-12 px-4 py-3 text-[11px] uppercase tracking-[0.18em]`}
-                                  >
-                                    Reativar auto-sync
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-
                             <div className="mt-4 grid gap-3 lg:grid-cols-2">
                               <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
                                 <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Origem e atualização</div>
                                 <div className="mt-2 text-[12px] text-slate-700">
-                                  {sourceMeta || 'Nenhum resultado oficial aplicado ainda.'}
+                                  {timelineMatch.sourceMeta || 'Aguardando publicação do placar final.'}
                                 </div>
-                                {jogo.resultExternalMatchId && (
-                                  <div className="mt-1 text-[11px] text-slate-500">ID externo: {jogo.resultExternalMatchId}</div>
-                                )}
                               </div>
-                              <details className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
-                                <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-                                  Histórico do jogo ({(jogo.resultHistory || []).length})
-                                </summary>
-                                <div className="mt-3 space-y-2">
-                                  {(jogo.resultHistory || []).slice().reverse().slice(0, 5).map((entry, index) => (
-                                    <div key={`${jogo.id}-history-${index}`} className="rounded-xl border border-white/70 bg-white px-3 py-2 text-[11px] text-slate-600 shadow-sm">
-                                      <div className="font-bold text-slate-800">{entry.source === 'manual-correction' ? 'Correção manual' : entry.source === 'manual-override-clear' ? 'Auto-sync reativado' : 'Auto-sync'}</div>
-                                      <div className="mt-1">
-                                        {entry.previousScore ? `${entry.previousScore.placarA} x ${entry.previousScore.placarB}` : 'Sem placar'}
-                                        {' -> '}
-                                        {entry.newScore ? `${entry.newScore.placarA} x ${entry.newScore.placarB}` : 'Sem placar'}
-                                      </div>
-                                      <div className="mt-1 text-slate-500">
-                                        {(entry.appliedBy || 'sistema')} • {formatResultSourceTimestamp(entry.appliedAt)}
-                                      </div>
+                              <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
+                                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Status oficial</div>
+                                <div className="mt-2 text-[12px] text-slate-700">
+                                  {isLocked ? 'Corrigido manualmente pelo admin.' : 'Atualizado pelo fluxo oficial quando o placar final é validado.'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div key={jogo.id} className={`${GLASS_CARD} p-4 lg:p-5`}>
+                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                                <span className="inline-flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
+                                <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">Grupo {jogo.grupo}</span>
+                                {jogo.local && <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{jogo.local}</span>}
+                              </div>
+                              {officialKickoffHint && <div className="mt-2 text-[11px] text-slate-500">{officialKickoffHint}</div>}
+                            </div>
+                            <div className={`self-start rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] ${timelineMatch.status.tone}`}>
+                              {timelineMatch.status.label}
+                            </div>
+                          </div>
+
+                          <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center">
+                            <div className="text-[14px] font-bold text-slate-900 lg:text-right">{jogo.timeA}</div>
+                            <div className="flex items-center justify-center gap-2">
+                              <input type="number" min="0" inputMode="numeric" value={draft.placarA} onChange={e => atualizarJogo(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} h-12 w-14 text-center text-base font-bold`} />
+                              <span className="text-sm font-light text-slate-500">X</span>
+                              <input type="number" min="0" inputMode="numeric" value={draft.placarB} onChange={e => atualizarJogo(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} h-12 w-14 text-center text-base font-bold`} />
+                            </div>
+                            <div className="text-[14px] font-bold text-slate-900 lg:text-left">{jogo.timeB}</div>
+                          </div>
+
+                          <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                            <label className={`flex items-center justify-between gap-4 rounded-[18px] border px-3 py-3 ${
+                              placarPreenchido(jogo.placarA, jogo.placarB)
+                                ? (jogo.isFinal ? 'border-emerald-200 bg-emerald-50/70' : 'border-orange-200 bg-orange-50/70')
+                                : 'border-slate-200 bg-slate-50/80'
+                            }`}>
+                              <div className="min-w-0">
+                                <div className={`text-[10px] font-bold uppercase tracking-[0.16em] ${
+                                  !placarPreenchido(jogo.placarA, jogo.placarB)
+                                    ? 'text-slate-500'
+                                    : jogo.isFinal
+                                      ? 'text-emerald-700'
+                                      : 'text-orange-700'
+                                }`}>
+                                  {!placarPreenchido(jogo.placarA, jogo.placarB) ? 'Sem placar salvo' : jogo.isFinal ? 'Resultado definitivo' : 'Placar temporário'}
+                                </div>
+                                <div className="mt-1 text-[11px] text-slate-600">
+                                  {hasPartialDraft
+                                    ? 'Complete os dois gols antes de salvar.'
+                                    : isLocked
+                                      ? 'Este jogo está protegido contra auto-sync até reativação manual.'
+                                      : 'O auto-sync só aplica resultado final validado.'}
+                                </div>
+                              </div>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(jogo.isFinal && placarPreenchido(jogo.placarA, jogo.placarB))}
+                                disabled={!placarPreenchido(jogo.placarA, jogo.placarB)}
+                                onChange={(event) => atualizarStatusFinalJogo(jogo.id, event.target.checked)}
+                                className="h-5 w-5 shrink-0 accent-emerald-600"
+                              />
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                onClick={() => salvarCorrecaoManualJogo(jogo.id)}
+                                disabled={!canSaveManual}
+                                className={`${GLASS_BTN_PRIMARY} min-h-12 px-4 py-3 text-[11px] uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-50`}
+                              >
+                                Salvar correção
+                              </button>
+                              {isLocked && (
+                                <button
+                                  onClick={() => reativarAutoSyncJogo(jogo.id)}
+                                  className={`${GLASS_BTN_SECONDARY} min-h-12 px-4 py-3 text-[11px] uppercase tracking-[0.18em]`}
+                                >
+                                  Reativar auto-sync
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                            <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
+                              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Origem e atualização</div>
+                              <div className="mt-2 text-[12px] text-slate-700">
+                                {timelineMatch.sourceMeta || 'Nenhum resultado oficial aplicado ainda.'}
+                              </div>
+                              {jogo.resultExternalMatchId && (
+                                <div className="mt-1 text-[11px] text-slate-500">ID externo: {jogo.resultExternalMatchId}</div>
+                              )}
+                            </div>
+                            <details className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
+                              <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                                Histórico do jogo ({(jogo.resultHistory || []).length})
+                              </summary>
+                              <div className="mt-3 space-y-2">
+                                {(jogo.resultHistory || []).slice().reverse().slice(0, 5).map((entry, index) => (
+                                  <div key={`${jogo.id}-history-${index}`} className="rounded-xl border border-white/70 bg-white px-3 py-2 text-[11px] text-slate-600 shadow-sm">
+                                    <div className="font-bold text-slate-800">{entry.source === 'manual-correction' ? 'Correção manual' : entry.source === 'manual-override-clear' ? 'Auto-sync reativado' : 'Auto-sync'}</div>
+                                    <div className="mt-1">
+                                      {entry.previousScore ? `${entry.previousScore.placarA} x ${entry.previousScore.placarB}` : 'Sem placar'}
+                                      {' -> '}
+                                      {entry.newScore ? `${entry.newScore.placarA} x ${entry.newScore.placarB}` : 'Sem placar'}
                                     </div>
-                                  ))}
+                                    <div className="mt-1 text-slate-500">
+                                      {(entry.appliedBy || 'sistema')} • {formatResultSourceTimestamp(entry.appliedAt)}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </details>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {!modoAdmin && (
+                <>
+                  {Object.keys(GRUPOS_2026).map(grupo => (
+                    <div key={grupo} className="relative">
+                      <h3 className="mb-4 pl-3 border-l-2 border-yellow-500 text-[15px] font-bold tracking-wide text-slate-700">GRUPO {grupo}</h3>
+                      <TabelaClassificacao grupo={grupo} />
+                      <div className="space-y-3">
+                        {jogosReais.filter(j => j.grupo === grupo).map(jogo => {
+                          const palpite = palpitesJogos[currentUser.id]?.[jogo.id] || { placarA: '', placarB: '' };
+                          const valA = palpite.placarA;
+                          const valB = palpite.placarB;
+                          const schedule = formatBrazilMatchSchedule(jogo);
+                          const officialKickoffHint = formatOfficialKickoffHint(jogo);
+                          return (
+                            <div key={jogo.id} className={`${GLASS_CARD} p-4`}>
+                              <div className="mb-4 flex flex-col gap-2 text-[11px] font-bold uppercase text-slate-500 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="flex flex-col gap-1 min-w-0">
+                                  <span className="flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
+                                  {officialKickoffHint && <span className="text-[10px] font-semibold normal-case text-slate-500">{officialKickoffHint}</span>}
                                 </div>
-                              </details>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </>
-            ) : (
-              <>
-                {Object.keys(GRUPOS_2026).map(grupo => (
-                  <div key={grupo} className="relative">
-                    <h3 className="mb-4 pl-3 border-l-2 border-yellow-500 text-[15px] font-bold tracking-wide text-slate-700">GRUPO {grupo}</h3>
-                    <TabelaClassificacao grupo={grupo} />
-                    <div className="space-y-3">
-                      {jogosReais.filter(j => j.grupo === grupo).map(jogo => {
-                        const palpite = palpitesJogos[currentUser.id]?.[jogo.id] || { placarA: '', placarB: '' };
-                        const valA = palpite.placarA;
-                        const valB = palpite.placarB;
-                        const schedule = formatBrazilMatchSchedule(jogo);
-                        const officialKickoffHint = formatOfficialKickoffHint(jogo);
-                        return (
-                          <div key={jogo.id} className={`${GLASS_CARD} p-4`}>
-                            <div className="mb-4 flex flex-col gap-2 text-[11px] font-bold uppercase text-slate-500 sm:flex-row sm:items-start sm:justify-between">
-                              <div className="flex flex-col gap-1 min-w-0">
-                                <span className="flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
-                                {officialKickoffHint && <span className="text-[10px] font-semibold normal-case text-slate-500">{officialKickoffHint}</span>}
+                                <span className="w-fit rounded-full bg-slate-100 px-2 py-1 text-[10px] text-slate-600">{jogo.local}</span>
                               </div>
-                              <span className="w-fit rounded-full bg-slate-100 px-2 py-1 text-[10px] text-slate-600">{jogo.local}</span>
-                            </div>
-                            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
-                              <span className="text-right text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeA}</span>
-                              <div className="flex items-center gap-2">
-                                <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos} value={valA} onChange={e => atualizarPalpite(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
-                                <span className="text-sm text-slate-500 font-light">X</span>
-                                <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos} value={valB} onChange={e => atualizarPalpite(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
+                              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
+                                <span className="text-right text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeA}</span>
+                                <div className="flex items-center gap-2">
+                                  <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos} value={valA} onChange={e => atualizarPalpite(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
+                                  <span className="text-sm text-slate-500 font-light">X</span>
+                                  <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos} value={valB} onChange={e => atualizarPalpite(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
+                                </div>
+                                <span className="text-left text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeB}</span>
                               </div>
-                              <span className="text-left text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeB}</span>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </>
-            )}
+                  ))}
+                </>
+              )}
+            </>
           </div>
         )}
 

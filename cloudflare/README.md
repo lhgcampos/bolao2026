@@ -45,3 +45,28 @@ Configure no build do Vite:
 - `VITE_AVATAR_PUBLIC_BASE_URL`
 
 Se `VITE_AVATAR_UPLOAD_URL` não estiver configurada, o app mantém fallback inline comprimido para não quebrar usuários existentes.
+
+## Official Results Sync Worker
+
+O arquivo [cloudflare/official-results-sync.wrangler.toml](/Users/luizcampos/Desktop/PROJ/bolao2026/cloudflare/official-results-sync.wrangler.toml) configura o worker cron do auto-sync oficial.
+
+Pontos principais:
+
+- entrypoint: [workers/official-results-sync.js](/Users/luizcampos/Desktop/PROJ/bolao2026/workers/official-results-sync.js)
+- cron: `*/10 * * * *`
+- provider principal: `football-data`
+- fallback opcional: `api-football`
+
+Secrets esperados no deploy:
+
+- `FOOTBALL_DATA_API_TOKEN`
+- `API_FOOTBALL_KEY` opcional
+
+Esse worker atualiza:
+
+- `matches`
+- `official-knockout`
+- `official-results-sync-status`
+- `official-results-sync-history`
+
+O frontend só consome esse estado remoto; ele não chama providers externos nem exige confirmação manual para aplicar placares finais.

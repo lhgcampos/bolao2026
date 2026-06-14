@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint bolao-app/src scripts eslint.config.js",
+    "lint": "eslint \"bolao-app/src/**/*.{js,jsx}\" \"scripts/**/*.mjs\" \"workers/**/*.js\" \"cloudflare/**/*.js\" eslint.config.js",
     "seed:roqueia": "node scripts/seed-roqueia-picks.mjs",
     "sync:official-results": "node scripts/sync-official-results.mjs",
     "backup:remote-state": "node scripts/backup-remote-state.mjs",

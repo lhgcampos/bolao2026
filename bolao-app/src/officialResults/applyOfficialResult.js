@@ -1,15 +1,5 @@
-import { placarPreenchido } from '../matchData.js';
-
-const buildScoreSnapshot = (match) => (
-  placarPreenchido(match?.placarA, match?.placarB)
-    ? { placarA: String(match.placarA), placarB: String(match.placarB), isFinal: Boolean(match?.isFinal) }
-    : null
-);
-
-const appendHistoryEntry = (match, entry) => ({
-  ...match,
-  resultHistory: [...(Array.isArray(match?.resultHistory) ? match.resultHistory : []), entry]
-});
+import { isManualResultLocked, placarPreenchido } from '../matchData.js';
+import { appendResultHistoryEntry, buildScoreSnapshot } from './resultHistory.js';
 
 const sameScore = (match, scoreHome, scoreAway) => (
   String(match?.placarA ?? '') === String(scoreHome) &&
@@ -27,7 +17,7 @@ export const applyAutomaticOfficialResult = (match, externalMatch, { appliedAt =
   const scoreAlreadyApplied = sameScore(match, nextScoreA, nextScoreB)
     && match?.resultSource === externalMatch.provider
     && match?.resultExternalStatus === externalMatch.status
-    && !match?.manualOverride;
+    && !isManualResultLocked(match);
 
   if (scoreAlreadyApplied) {
     return {
@@ -51,12 +41,13 @@ export const applyAutomaticOfficialResult = (match, externalMatch, { appliedAt =
     appliedAt,
     appliedBy: 'auto-sync',
     confidence: externalMatch.confidence || 'high',
-    reason: 'external-final-score'
+    reason: 'external-final-score',
+    manualLock: false
   };
 
   return {
     changed: true,
-    match: appendHistoryEntry({
+    match: appendResultHistoryEntry({
       ...match,
       placarA: nextScoreA,
       placarB: nextScoreB,
@@ -97,7 +88,7 @@ export const applyManualResultCorrection = (
     String(match?.placarA ?? '') !== nextScoreA ||
     String(match?.placarB ?? '') !== nextScoreB ||
     Boolean(match?.isFinal) !== nextIsFinal ||
-    !match?.manualOverride
+    !isManualResultLocked(match)
   );
 
   if (!changed) {
@@ -111,12 +102,13 @@ export const applyManualResultCorrection = (
     source: 'manual-correction',
     appliedAt,
     appliedBy,
-    reason
+    reason,
+    manualLock: true
   };
 
   return {
     changed: true,
-    match: appendHistoryEntry({
+    match: appendResultHistoryEntry({
       ...match,
       placarA: nextScoreA,
       placarB: nextScoreB,
@@ -128,6 +120,10 @@ export const applyManualResultCorrection = (
       resultUpdatedAt: appliedAt,
       resultConfidence: 'high',
       resultOrigin: 'manual',
+      manualLock: true,
+      manualLockAt: appliedAt,
+      manualLockBy: appliedBy,
+      manualLockReason: reason,
       manualOverride: true,
       manualOverrideAt: appliedAt,
       manualOverrideBy: appliedBy,
@@ -136,8 +132,8 @@ export const applyManualResultCorrection = (
   };
 };
 
-export const clearManualResultOverride = (match, { appliedAt = Date.now(), appliedBy = 'admin' } = {}) => {
-  if (!match?.manualOverride) {
+export const clearManualResultLock = (match, { appliedAt = Date.now(), appliedBy = 'admin' } = {}) => {
+  if (!isManualResultLocked(match)) {
     return { changed: false, match };
   }
 
@@ -148,13 +144,18 @@ export const clearManualResultOverride = (match, { appliedAt = Date.now(), appli
     source: 'manual-override-clear',
     appliedAt,
     appliedBy,
-    reason: 'manual-override-cleared'
+    reason: 'manual-override-cleared',
+    manualLock: false
   };
 
   return {
     changed: true,
-    match: appendHistoryEntry({
+    match: appendResultHistoryEntry({
       ...match,
+      manualLock: false,
+      manualLockAt: 0,
+      manualLockBy: '',
+      manualLockReason: '',
       manualOverride: false,
       manualOverrideAt: 0,
       manualOverrideBy: '',
@@ -162,3 +163,5 @@ export const clearManualResultOverride = (match, { appliedAt = Date.now(), appli
     }, nextEntry)
   };
 };
+
+export const clearManualResultOverride = clearManualResultLock;

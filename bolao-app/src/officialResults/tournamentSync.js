@@ -1,5 +1,3 @@
-import { JOGOS_FASE_DE_GRUPOS } from '../matchData.js';
-
 export const TOURNAMENT_KNOCKOUT_SCHEDULE = {
   r32: [
     { id: 73, kickoffEt: '2026-06-28T12:00:00-07:00' },
@@ -41,30 +39,6 @@ export const TOURNAMENT_KNOCKOUT_SCHEDULE = {
   ],
   bronzeFinal: [{ id: 103, kickoffEt: '2026-07-18T17:00:00-04:00' }],
   final: [{ id: 104, kickoffEt: '2026-07-19T15:00:00-04:00' }]
-};
-
-const ACTIVE_WINDOW_BEFORE_MS = 30 * 60 * 1000;
-const ACTIVE_WINDOW_AFTER_MS = 180 * 60 * 1000;
-
-const parseKickoffMs = (match) => (
-  match?.kickoffEt ? new Date(match.kickoffEt).getTime() : Number.NaN
-);
-
-const allTournamentMatches = () => [
-  ...JOGOS_FASE_DE_GRUPOS,
-  ...Object.values(TOURNAMENT_KNOCKOUT_SCHEDULE).flat()
-];
-
-export const getTournamentSyncWindowState = (now = Date.now()) => {
-  const activeMatch = allTournamentMatches().find((match) => {
-    const kickoffMs = parseKickoffMs(match);
-    return Number.isFinite(kickoffMs) && now >= (kickoffMs - ACTIVE_WINDOW_BEFORE_MS) && now <= (kickoffMs + ACTIVE_WINDOW_AFTER_MS);
-  });
-
-  return {
-    active: Boolean(activeMatch),
-    activeMatchId: activeMatch?.id || null
-  };
 };
 
 const getWinnerName = (externalMatch) => {

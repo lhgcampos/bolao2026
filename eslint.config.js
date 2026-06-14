@@ -10,6 +10,7 @@ export default defineConfig([
     'bolao-app/dist',
     'dist',
     'incident-backups',
+    'cloudflare/.wrangler',
   ]),
   {
     files: ['bolao-app/src/**/*.{js,jsx}'],
@@ -35,11 +36,14 @@ export default defineConfig([
     },
   },
   {
-    files: ['scripts/**/*.mjs', 'eslint.config.js'],
+    files: ['scripts/**/*.mjs', 'workers/**/*.js', 'cloudflare/**/*.js', 'eslint.config.js'],
     extends: [js.configs.recommended],
     languageOptions: {
       ecmaVersion: 'latest',
-      globals: globals.node,
+      globals: {
+        ...globals.node,
+        ...globals.serviceworker,
+      },
       sourceType: 'module',
     },
     rules: {

@@ -1,0 +1,19 @@
+name = "bolao2026-official-results-sync"
+main = "../workers/official-results-sync.js"
+compatibility_date = "2026-06-13"
+account_id = "e8617b066fa6d5275555be09fd366d52"
+
+[vars]
+OFFICIAL_RESULTS_PROVIDER = "football-data"
+OFFICIAL_RESULTS_AUTO_APPLY = "true"
+OFFICIAL_RESULTS_DRY_RUN = "false"
+OFFICIAL_RESULTS_REMOTE_BASE = "https://mantledb.sh/v2"
+OFFICIAL_RESULTS_REMOTE_NAMESPACE = "lhgcampos-bolao2026-live-20260609"
+FOOTBALL_DATA_COMPETITION_CODE = "WC"
+FOOTBALL_DATA_SEASON = "2026"
+API_FOOTBALL_LEAGUE_ID = "1"
+API_FOOTBALL_SEASON = "2026"
+OFFICIAL_RESULTS_SYNC_HISTORY_LIMIT = "40"
+
+[triggers]
+crons = ["*/10 * * * *"]

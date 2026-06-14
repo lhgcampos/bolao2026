@@ -4,4 +4,5 @@ bolao-app/dist/
 reports/
 backups/
 quarentena/
+incident-backups/
 .DS_Store

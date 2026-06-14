@@ -102,6 +102,7 @@ export const placarPreenchido = (placarA, placarB) => (
 );
 
 export const isMatchFinal = (match) => Boolean(match?.isFinal ?? match?.resultadoFinal);
+export const isManualResultLocked = (match) => Boolean(match?.manualLock ?? match?.manualOverride);
 
 const buildResultHistory = (match) => (
   Array.isArray(match?.resultHistory)
@@ -122,6 +123,10 @@ export const buildEmptyMatchRecord = (match) => ({
   resultUpdatedAt: 0,
   resultConfidence: '',
   resultOrigin: '',
+  manualLock: false,
+  manualLockAt: 0,
+  manualLockBy: '',
+  manualLockReason: '',
   manualOverride: false,
   manualOverrideAt: 0,
   manualOverrideBy: '',
@@ -142,10 +147,14 @@ const mergePersistedMatchState = (baseMatch, persistedMatch, override = {}) => (
   resultUpdatedAt: Number(persistedMatch?.resultUpdatedAt || 0),
   resultConfidence: persistedMatch?.resultConfidence || '',
   resultOrigin: persistedMatch?.resultOrigin || '',
-  manualOverride: Boolean(persistedMatch?.manualOverride),
-  manualOverrideAt: Number(persistedMatch?.manualOverrideAt || 0),
-  manualOverrideBy: persistedMatch?.manualOverrideBy || '',
-  manualOverrideReason: persistedMatch?.manualOverrideReason || '',
+  manualLock: Boolean(persistedMatch?.manualLock ?? persistedMatch?.manualOverride),
+  manualLockAt: Number((persistedMatch?.manualLockAt ?? persistedMatch?.manualOverrideAt) || 0),
+  manualLockBy: persistedMatch?.manualLockBy || persistedMatch?.manualOverrideBy || '',
+  manualLockReason: persistedMatch?.manualLockReason || persistedMatch?.manualOverrideReason || '',
+  manualOverride: Boolean(persistedMatch?.manualLock ?? persistedMatch?.manualOverride),
+  manualOverrideAt: Number((persistedMatch?.manualLockAt ?? persistedMatch?.manualOverrideAt) || 0),
+  manualOverrideBy: persistedMatch?.manualLockBy || persistedMatch?.manualOverrideBy || '',
+  manualOverrideReason: persistedMatch?.manualLockReason || persistedMatch?.manualOverrideReason || '',
   lastAutoSyncAt: Number(persistedMatch?.lastAutoSyncAt || 0)
 });
 
