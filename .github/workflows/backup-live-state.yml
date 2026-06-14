@@ -24,6 +24,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Seal locked bets
+        run: node scripts/seal-locked-bets.mjs
+
       - name: Export remote state
         run: node scripts/backup-remote-state.mjs
 

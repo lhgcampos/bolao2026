@@ -54,6 +54,8 @@ const REMOTE_PATHS = {
   conduct: 'conduct',
   betsGames: 'bets-games',
   betsKnockout: 'bets-knockout',
+  sealedBetsGames: 'sealed-bets-games',
+  sealedBetsKnockout: 'sealed-bets-knockout',
   submissions: 'submissions',
   userProfiles: 'user-profiles'
 };
@@ -471,6 +473,10 @@ const countFilledKnockoutSelections = (bracket = {}) => (
   ['campeao', 'vice', 'terceiro', 'quarto'].filter((field) => Boolean(bracket?.[field])).length
 );
 
+const countFilledGameSelections = (bets = {}) => Object.values(bets || {}).reduce((total, bet) => (
+  placarPreenchido(bet?.placarA, bet?.placarB) ? total + 1 : total
+), 0);
+
 const mergeSubmissionEntry = (baseEntry = {}, localEntry = {}) => {
   const next = {
     ...(baseEntry && typeof baseEntry === 'object' ? baseEntry : {}),
@@ -740,6 +746,21 @@ const parseRemotePayload = (payload) => {
 const getRemotePathUrl = (path) => `${REMOTE_STORE_BASE}/${REMOTE_NAMESPACE}/${path}`;
 const getRemoteUserShardPath = (prefix, userId) => `${prefix}/${userId}`;
 
+const chooseSealedRecord = ({ liveRecord = {}, sealedRecord = null, hasSubmission = false, countFilled }) => {
+  if (!sealedRecord || typeof sealedRecord !== 'object') {
+    return liveRecord && typeof liveRecord === 'object' ? liveRecord : {};
+  }
+
+  const liveCount = countFilled(liveRecord || {});
+  const sealedCount = countFilled(sealedRecord || {});
+
+  if (hasSubmission || sealedCount >= liveCount) {
+    return sealedRecord;
+  }
+
+  return liveRecord && typeof liveRecord === 'object' ? liveRecord : {};
+};
+
 const fetchRemoteEntry = async (path) => {
   const response = await fetch(getRemotePathUrl(path));
   if (response.status === 404) return null;
@@ -767,10 +788,12 @@ const fetchShardedRemoteState = async () => {
     ...((metaDoc?.userIds || []).map((userId) => String(userId)))
   ]));
 
-  const [userProfiles, betsGamesDocs, betsKnockoutDocs, submissionsDocs] = await Promise.all([
+  const [userProfiles, betsGamesDocs, betsKnockoutDocs, sealedBetsGamesDocs, sealedBetsKnockoutDocs, submissionsDocs] = await Promise.all([
     Promise.all(userIds.map((userId) => fetchRemoteEntry(getRemoteUserShardPath(REMOTE_PATHS.userProfiles, userId)))),
     Promise.all(userIds.map((userId) => fetchRemoteEntry(getRemoteUserShardPath(REMOTE_PATHS.betsGames, userId)))),
     Promise.all(userIds.map((userId) => fetchRemoteEntry(getRemoteUserShardPath(REMOTE_PATHS.betsKnockout, userId)))),
+    Promise.all(userIds.map((userId) => fetchRemoteEntry(getRemoteUserShardPath(REMOTE_PATHS.sealedBetsGames, userId)))),
+    Promise.all(userIds.map((userId) => fetchRemoteEntry(getRemoteUserShardPath(REMOTE_PATHS.sealedBetsKnockout, userId)))),
     Promise.all(userIds.map((userId) => fetchRemoteEntry(getRemoteUserShardPath(REMOTE_PATHS.submissions, userId))))
   ]);
 
@@ -787,15 +810,29 @@ const fetchShardedRemoteState = async () => {
         ...(userProfiles[index] || {})
       });
     }
-    if (betsGamesDocs[index] && typeof betsGamesDocs[index] === 'object') {
-      betsGames[userId] = betsGamesDocs[index];
-    }
-    if (betsKnockoutDocs[index] && typeof betsKnockoutDocs[index] === 'object') {
-      betsKnockout[userId] = betsKnockoutDocs[index];
-    }
     if (submissionsDocs[index] && typeof submissionsDocs[index] === 'object') {
       submissions[userId] = submissionsDocs[index];
     }
+
+    const submissionEntry = submissions[userId] || {};
+    const liveBetsGames = betsGamesDocs[index] && typeof betsGamesDocs[index] === 'object' ? betsGamesDocs[index] : {};
+    const liveBetsKnockout = betsKnockoutDocs[index] && typeof betsKnockoutDocs[index] === 'object' ? betsKnockoutDocs[index] : {};
+    const sealedBetsGames = sealedBetsGamesDocs[index] && typeof sealedBetsGamesDocs[index] === 'object' ? sealedBetsGamesDocs[index] : null;
+    const sealedBetsKnockout = sealedBetsKnockoutDocs[index] && typeof sealedBetsKnockoutDocs[index] === 'object' ? sealedBetsKnockoutDocs[index] : null;
+
+    betsGames[userId] = chooseSealedRecord({
+      liveRecord: liveBetsGames,
+      sealedRecord: sealedBetsGames,
+      hasSubmission: Boolean(submissionEntry.jogosAt),
+      countFilled: countFilledGameSelections
+    });
+
+    betsKnockout[userId] = chooseSealedRecord({
+      liveRecord: liveBetsKnockout,
+      sealedRecord: sealedBetsKnockout,
+      hasSubmission: Boolean(submissionEntry.mataAt),
+      countFilled: countFilledKnockoutSelections
+    });
   });
 
   return {
@@ -937,10 +974,35 @@ const mergeRemoteState = (baseState, localState, { currentUserId = null, isAdmin
     return next;
   })();
 
+  const mergedBetsGames = (() => {
+    const next = mergeOwnedRecordMap(baseState.betsGames, localState.betsGames);
+    if (!isAdmin && currentUserId) {
+      const remoteBets = baseState.betsGames?.[currentUserId] || {};
+      const localHasOwnBets = Object.prototype.hasOwnProperty.call(localState.betsGames || {}, currentUserId);
+      const localBets = localHasOwnBets ? (localState.betsGames?.[currentUserId] || {}) : remoteBets;
+      const remoteSubmitted = Boolean(baseState.submissions?.[currentUserId]?.jogosAt);
+      const localSubmitted = Boolean(localState.submissions?.[currentUserId]?.jogosAt);
+      const remoteCount = countFilledGameSelections(remoteBets);
+      const localCount = countFilledGameSelections(localBets);
+      const sameBets = JSON.stringify(remoteBets) === JSON.stringify(localBets);
+
+      if (
+        !localHasOwnBets ||
+        (remoteSubmitted && !sameBets) ||
+        (remoteCount > localCount && !localSubmitted)
+      ) {
+        next[currentUserId] = remoteBets;
+      } else {
+        next[currentUserId] = localBets;
+      }
+    }
+    return next;
+  })();
+
   return {
     users: mergedUsers,
     matches: isAdmin ? (localState.matches || baseState.matches || gerarJogosIniciais()) : (baseState.matches || gerarJogosIniciais()),
-    betsGames: mergeOwnedRecordMap(baseState.betsGames, localState.betsGames),
+    betsGames: mergedBetsGames,
     betsKnockout: mergedBetsKnockout,
     officialKnockout: isAdmin ? (localState.officialKnockout || baseState.officialKnockout || {}) : (baseState.officialKnockout || {}),
     conduct: isAdmin ? (localState.conduct || baseState.conduct || {}) : (baseState.conduct || {}),
@@ -1032,12 +1094,29 @@ const writeRemoteState = async (state, { currentUserId = null, isAdmin = false }
       const user = normalizedUsers.find((candidate) => String(candidate.id) === normalizedId);
       if (!user) return;
 
+      const jogosEnviadosAt = state.submissions?.[userId]?.[SUBMISSION_FIELDS.JOGOS] || 0;
+      const mataEnviadosAt = state.submissions?.[userId]?.[SUBMISSION_FIELDS.MATA] || 0;
+
       entries.push(
         [getRemoteUserShardPath(REMOTE_PATHS.userProfiles, normalizedId), buildRemoteUserProfileRecord(user)],
         [getRemoteUserShardPath(REMOTE_PATHS.betsGames, normalizedId), state.betsGames?.[userId] || {}],
         [getRemoteUserShardPath(REMOTE_PATHS.betsKnockout, normalizedId), state.betsKnockout?.[userId] || {}],
         [getRemoteUserShardPath(REMOTE_PATHS.submissions, normalizedId), state.submissions?.[userId] || {}]
       );
+
+      if (jogosEnviadosAt) {
+        entries.push([
+          getRemoteUserShardPath(REMOTE_PATHS.sealedBetsGames, normalizedId),
+          state.betsGames?.[userId] || {}
+        ]);
+      }
+
+      if (mataEnviadosAt) {
+        entries.push([
+          getRemoteUserShardPath(REMOTE_PATHS.sealedBetsKnockout, normalizedId),
+          state.betsKnockout?.[userId] || {}
+        ]);
+      }
     });
   }
 

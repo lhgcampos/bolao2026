@@ -17,6 +17,8 @@ const REMOTE_PATHS = {
   userProfiles: 'user-profiles',
   betsGames: 'bets-games',
   betsKnockout: 'bets-knockout',
+  sealedBetsGames: 'sealed-bets-games',
+  sealedBetsKnockout: 'sealed-bets-knockout',
   submissions: 'submissions'
 };
 
@@ -48,10 +50,12 @@ const main = async () => {
   ])).sort();
 
   const perUserEntries = await Promise.all(userIds.map(async (userId) => {
-    const [profile, betsGames, betsKnockout, submissions] = await Promise.all([
+    const [profile, betsGames, betsKnockout, sealedBetsGames, sealedBetsKnockout, submissions] = await Promise.all([
       fetchRemoteEntry(`${REMOTE_PATHS.userProfiles}/${userId}`),
       fetchRemoteEntry(`${REMOTE_PATHS.betsGames}/${userId}`),
       fetchRemoteEntry(`${REMOTE_PATHS.betsKnockout}/${userId}`),
+      fetchRemoteEntry(`${REMOTE_PATHS.sealedBetsGames}/${userId}`),
+      fetchRemoteEntry(`${REMOTE_PATHS.sealedBetsKnockout}/${userId}`),
       fetchRemoteEntry(`${REMOTE_PATHS.submissions}/${userId}`)
     ]);
 
@@ -61,6 +65,8 @@ const main = async () => {
         profile,
         betsGames,
         betsKnockout,
+        sealedBetsGames,
+        sealedBetsKnockout,
         submissions
       }
     ];
