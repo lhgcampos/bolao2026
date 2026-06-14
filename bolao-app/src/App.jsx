@@ -3243,7 +3243,7 @@ export default function App() {
               <div className={`${GLASS_CARD} p-5`}>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <h3 className="text-sm font-bold uppercase tracking-wide text-slate-900">{modoAdmin ? 'Gabarito cronológico' : 'Resultados oficiais em ordem cronológica'}</h3>
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-slate-900">Gabarito cronológico</h3>
                     <p className={`mt-1 text-xs ${TEXT_MUTED}`}>
                       {modoAdmin
                         ? 'O auto-sync roda sozinho no servidor. Correções manuais travam novas sobrescritas até você reativar o jogo.'

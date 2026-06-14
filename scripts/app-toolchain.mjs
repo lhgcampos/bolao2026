@@ -15,7 +15,7 @@ export const PUBLIC_DIR = path.join(APP_DIR, 'public');
 export const DIST_DIR = path.join(APP_DIR, 'dist');
 export const HTML_TEMPLATE_PATH = path.join(APP_DIR, 'index.html');
 export const CSS_RUNTIME_PATH = path.join(SRC_DIR, 'index.prebuilt.css');
-export const JS_ENTRY_PATH = path.join(SRC_DIR, 'main.jsx');
+export const APP_ENTRY_PATH = path.join(SRC_DIR, 'App.jsx');
 
 const MIME_TYPES = {
   '.css': 'text/css; charset=utf-8',
@@ -66,11 +66,16 @@ async function copyDirectory(sourceDir, targetDir) {
   }));
 }
 
+async function copyCssRuntime(outdir) {
+  await fs.mkdir(path.join(outdir, 'assets'), { recursive: true });
+  await fs.copyFile(CSS_RUNTIME_PATH, path.join(outdir, 'assets', 'index.css'));
+}
+
 async function writeIndexHtml({ base, outdir }) {
   const template = await fs.readFile(HTML_TEMPLATE_PATH, 'utf8');
   const rootedTemplate = template
-    .replace(/(href|src)="\/(?!\/)/g, `$1="${base}`)
-    .replace(/\s*<script type="module" src="\/src\/main\.jsx"><\/script>\s*/u, '\n');
+    .replace(/\s*<script type="module" src="\/src\/main\.jsx"><\/script>\s*/u, '\n')
+    .replace(/(href|src)="\/(?!\/)/g, `$1="${base}`);
   const assetMarkup = [
     `    <link rel="stylesheet" href="${base}assets/index.css" />`,
     `    <script type="module" src="${base}assets/index.js"></script>`,
@@ -81,8 +86,13 @@ async function writeIndexHtml({ base, outdir }) {
 
 function createVirtualEntry() {
   return [
-    `import ${JSON.stringify(CSS_RUNTIME_PATH)};`,
-    `import ${JSON.stringify(JS_ENTRY_PATH)};`,
+    `import React, { StrictMode } from "react";`,
+    `import { createRoot } from "react-dom/client";`,
+    `import App from ${JSON.stringify(APP_ENTRY_PATH)};`,
+    ``,
+    `createRoot(document.getElementById("root")).render(`,
+    `  React.createElement(StrictMode, null, React.createElement(App, null))`,
+    `);`,
     '',
   ].join('\n');
 }
@@ -118,12 +128,15 @@ export async function buildApp({ mode = 'production', outdir = DIST_DIR } = {}) 
         '.webp': 'file',
       },
       minify: mode === 'production',
+      nodePaths: [path.join(ROOT_DIR, 'node_modules')],
       outdir,
       platform: 'browser',
       publicPath: base,
       sourcemap: false,
       target: ['es2020'],
     });
+    console.log('copying css runtime');
+    await copyCssRuntime(outdir);
     console.log('copying public assets');
     await copyDirectory(PUBLIC_DIR, outdir);
     console.log('writing html shell');
