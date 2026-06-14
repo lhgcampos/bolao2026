@@ -1,6 +1,7 @@
-@import "tailwindcss";
+/* Tailwind source reference. Runtime imports index.prebuilt.css. */
+@import "tailwindcss" source(none);
 @source "../index.html";
-@source "./**/*.{js,jsx}";
+@source "../src";
 
 :root {
   font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;

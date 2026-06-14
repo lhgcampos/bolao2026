@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint \"bolao-app/src/**/*.{js,jsx}\" \"scripts/**/*.mjs\" \"workers/**/*.js\" \"cloudflare/**/*.js\" eslint.config.js",
+    "dev": "node scripts/dev-app.mjs",
+    "build": "node scripts/build-app.mjs",
+    "lint": "node scripts/lint-project.mjs",
     "seed:roqueia": "node scripts/seed-roqueia-picks.mjs",
     "sync:official-results": "node scripts/sync-official-results.mjs",
     "backup:remote-state": "node scripts/backup-remote-state.mjs",
@@ -16,7 +16,7 @@
     "test:ranking-consensus": "node scripts/test-ranking-consensus.mjs",
     "test:user-home-insights": "node scripts/test-user-home-insights.mjs",
     "validate:roqueia": "node scripts/seed-roqueia-picks.mjs --validate-only",
-    "preview": "vite preview"
+    "preview": "node scripts/dev-app.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.556.0",
