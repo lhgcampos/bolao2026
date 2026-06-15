@@ -3428,35 +3428,31 @@ export default function App() {
                               </div>
                               <div className="text-left text-[15px] font-bold text-slate-900 lg:text-[18px]">{jogo.timeB}</div>
                             </div>
-                            <div className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.1fr)]">
+                            <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
                               <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
                                 <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu palpite</div>
-                                <div className="mt-3 text-[22px] font-black text-slate-900">
+                                <div className="mt-3 text-[24px] font-black text-slate-900 lg:text-[28px]">
                                   {formatScoreDisplay(palpite.placarA, palpite.placarB, 'Sem palpite')}
                                 </div>
                                 <div className="mt-2 text-[13px] leading-snug text-slate-500">
-                                  {hasPrediction ? 'Comparado com o resultado oficial exibido acima.' : 'Preencha os dois placares na sua área de palpites para liberar a comparação.'}
+                                  {hasPrediction ? 'Comparado com o resultado oficial acima.' : 'Preencha os dois placares para comparar.'}
                                 </div>
                               </div>
                               <div className={`rounded-[20px] border px-4 py-4 ${betReview.tone}`}>
                                 <div className="text-[11px] font-bold uppercase tracking-[0.16em]">{betReview.label}</div>
-                                <div className="mt-3 text-[18px] font-black">{betReview.detail}</div>
+                                <div className="mt-3 text-[20px] font-black lg:text-[24px]">{betReview.detail}</div>
                                 <div className="mt-2 text-[13px] leading-snug opacity-80">
                                   {placarPreenchido(jogo.placarA, jogo.placarB)
                                     ? 'O placar oficial já foi sincronizado neste jogo.'
                                     : 'A pontuação aparece assim que o placar oficial for publicado.'}
                                 </div>
                               </div>
-                              {timelineMatch.sourceMeta && (
-                                <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Atualização oficial</div>
-                                  <div className="mt-3 text-[16px] font-bold leading-snug text-slate-900">{timelineMatch.sourceMeta}</div>
-                                  <div className="mt-2 text-[13px] leading-snug text-slate-500">
-                                    Fonte e horário da última sincronização aplicada ao gabarito.
-                                  </div>
-                                </div>
-                              )}
                             </div>
+                            {timelineMatch.sourceMeta && (
+                              <div className="text-[13px] leading-snug text-slate-500">
+                                <span className="font-bold uppercase tracking-[0.14em] text-slate-400">Fonte/última atualização:</span> {timelineMatch.sourceMeta}
+                              </div>
+                            )}
                           </div>
                         );
                       }
