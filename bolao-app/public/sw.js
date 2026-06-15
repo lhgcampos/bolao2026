@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bolao2026-pwa-v3';
+const CACHE_NAME = 'bolao2026-pwa-v4';
 const scopePath = new URL(self.registration.scope).pathname;
 const APP_SHELL = [
   scopePath,
@@ -9,6 +9,11 @@ const APP_SHELL = [
   `${scopePath}icons/maskable-512.png`,
   `${scopePath}icons/apple-touch-icon.png`
 ];
+
+const isAppRuntimeAsset = (requestUrl) => {
+  if (!requestUrl.pathname.startsWith(scopePath)) return false;
+  return ['.js', '.css', '.html', '.webmanifest'].some((extension) => requestUrl.pathname.endsWith(extension));
+};
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -44,6 +49,20 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => caches.match(scopePath))
+    );
+    return;
+  }
+
+  if (isAppRuntimeAsset(requestUrl)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (!response.ok || response.type !== 'basic') return response;
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
     );
     return;
   }

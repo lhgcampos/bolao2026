@@ -1583,6 +1583,8 @@ export default function App() {
 
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, {
       scope: import.meta.env.BASE_URL
+    }).then((registration) => {
+      registration.update().catch(() => {});
     }).catch((error) => {
       console.error('Falha ao registrar service worker', error);
     });
