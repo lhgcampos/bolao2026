@@ -3398,6 +3398,13 @@ export default function App() {
                       );
 
                       if (!timelineMatch.showAdminControls) {
+                        const palpite = palpitesJogos[currentUser.id]?.[jogo.id] || { placarA: '', placarB: '' };
+                        const betReview = buildGroupBetReview({
+                          palpiteA: palpite.placarA,
+                          palpiteB: palpite.placarB,
+                          jogo
+                        });
+
                         return (
                           <div key={jogo.id} className={`${GLASS_CARD} p-4 lg:p-5`}>
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -3420,18 +3427,22 @@ export default function App() {
                               </div>
                               <div className="text-left text-[14px] font-bold text-slate-900">{jogo.timeB}</div>
                             </div>
-                            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                            <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
                               <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
-                                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Origem e atualização</div>
-                                <div className="mt-2 text-[12px] text-slate-700">
-                                  {timelineMatch.sourceMeta || 'Aguardando publicação do placar final.'}
+                                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu palpite</div>
+                                <div className="mt-2 text-[13px] font-bold text-slate-900">
+                                  {formatScoreDisplay(palpite.placarA, palpite.placarB, 'Sem palpite')}
                                 </div>
                               </div>
                               <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
-                                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Status oficial</div>
-                                <div className="mt-2 text-[12px] text-slate-700">
-                                  {isLocked ? 'Corrigido manualmente pelo admin.' : 'Atualizado pelo fluxo oficial quando o placar final é validado.'}
+                                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Resultado oficial</div>
+                                <div className="mt-2 text-[13px] font-bold text-slate-900">
+                                  {formatScoreDisplay(jogo.placarA, jogo.placarB, 'Aguardando')}
                                 </div>
+                              </div>
+                              <div className={`rounded-[18px] border px-3 py-3 ${betReview.tone}`}>
+                                <div className="text-[10px] font-bold uppercase tracking-[0.16em]">{betReview.label}</div>
+                                <div className="mt-2 text-[12px] font-semibold">{betReview.detail}</div>
                               </div>
                             </div>
                           </div>
