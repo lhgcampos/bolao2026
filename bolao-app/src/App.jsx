@@ -573,6 +573,38 @@ const buildGroupBetReview = ({ palpiteA, palpiteB, jogo }) => {
   };
 };
 
+const buildChoiceReview = ({ choice, official, points, successLabel = 'Acertou a escolha' }) => {
+  if (!official) {
+    return {
+      label: 'Aguardando oficial',
+      detail: 'A pontuação aparece quando a definição oficial sair.',
+      tone: 'border-slate-200 bg-slate-50 text-slate-600'
+    };
+  }
+
+  if (!choice) {
+    return {
+      label: 'Sem palpite',
+      detail: 'Nenhuma escolha foi registrada para comparar.',
+      tone: 'border-slate-200 bg-slate-50 text-slate-600'
+    };
+  }
+
+  if (choice === official) {
+    return {
+      label: successLabel,
+      detail: `${points} pts`,
+      tone: 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    };
+  }
+
+  return {
+    label: 'Não acertou',
+    detail: '0 pts',
+    tone: 'border-rose-200 bg-rose-50 text-rose-700'
+  };
+};
+
 const getWinnerOfMatch = (matchId, source) => {
   if (!source) return null;
   if (matchId >= 73 && matchId <= 88) return source.dezeszeseisavos?.[matchId - 73];
@@ -3044,14 +3076,69 @@ export default function App() {
       : options;
     const isReady = options.length === 2;
     const isLocked = !modoAdmin && palpitesTravadosMata;
-    let feedback = null;
-    if (!modoAdmin && gabaritoMataMata[phaseKey]?.[idx]) {
-      const officialWinner = gabaritoMataMata[phaseKey][idx];
-      if (currentValue === officialWinner) { feedback = <div className="text-center text-[10px] bg-green-500/20 text-green-400 font-bold border border-green-500/30 rounded-lg p-1.5 mb-3 backdrop-blur-sm">Acertou!</div>; } 
-      else { feedback = <div className="text-center text-[10px] bg-red-500/20 text-red-400 font-bold border border-red-500/30 rounded-lg p-1.5 mb-3 backdrop-blur-sm">Errou (Era {officialWinner})</div>; }
-    }
+    const officialWinner = gabaritoMataMata[phaseKey]?.[idx] || '';
+    const review = buildChoiceReview({
+      choice: currentValue,
+      official: officialWinner,
+      points: phaseKey === 'dezeszeseisavos'
+        ? PONTOS.MATA.R32
+        : phaseKey === 'oitavas'
+          ? PONTOS.MATA.R16
+          : phaseKey === 'quartas'
+            ? PONTOS.MATA.QF
+            : PONTOS.MATA.SF,
+      successLabel: 'Acertou o classificado'
+    });
     const schedule = formatBrazilMatchSchedule(match);
     const officialKickoffHint = formatOfficialKickoffHint(match);
+    const showReviewMode = !modoAdmin && isLocked;
+
+    if (showReviewMode) {
+      return (
+        <div className={`${GLASS_CARD} mb-3 p-4 lg:p-5 ${!isReady ? 'opacity-60' : ''}`}>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                <span>{schedule.day}/{schedule.month} • {schedule.time} BR</span>
+                {match.local && <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{match.local}</span>}
+                <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">Jogo {match.id}</span>
+              </div>
+              {officialKickoffHint && <div className="mt-2 text-[13px] text-slate-500">{officialKickoffHint}</div>}
+            </div>
+            <div className={`self-start rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] ${review.tone}`}>
+              {review.label}
+            </div>
+          </div>
+          <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+            <div className={`text-right text-[15px] font-bold lg:text-[18px] ${isReady ? 'text-slate-900' : 'text-slate-400'}`}>{timeA}</div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-center text-sm font-black uppercase tracking-[0.18em] text-slate-500 lg:min-w-[112px]">
+              x
+            </div>
+            <div className={`text-left text-[15px] font-bold lg:text-[18px] ${isReady ? 'text-slate-900' : 'text-slate-400'}`}>{timeB}</div>
+          </div>
+          <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
+            <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+              <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu palpite</div>
+              <div className="mt-3 text-[22px] font-black text-slate-900 lg:text-[26px]">
+                {currentValue || 'Sem palpite'}
+              </div>
+              <div className="mt-2 text-[13px] leading-snug text-slate-500">
+                {currentValue ? 'Escolha enviada para este confronto.' : 'Nenhum classificado foi escolhido neste confronto.'}
+              </div>
+            </div>
+            <div className={`rounded-[20px] border px-4 py-4 ${review.tone}`}>
+              <div className="text-[11px] font-bold uppercase tracking-[0.16em]">{review.label}</div>
+              <div className="mt-3 text-[20px] font-black lg:text-[24px]">{review.detail}</div>
+              <div className="mt-2 text-[13px] leading-snug opacity-80">
+                {officialWinner
+                  ? `Classificado oficial: ${officialWinner}`
+                  : 'A comparação aparece quando o classificado oficial for definido.'}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className={`${GLASS_CARD} p-4 mb-3 ${(!isReady || isLocked) && 'opacity-60'}`}>
@@ -3070,7 +3157,6 @@ export default function App() {
           <span className={`text-[10px] px-2 ${TEXT_MUTED}`}>vs</span>
           <span className={`text-xs font-bold truncate max-w-[45%] text-left ${isReady ? 'text-slate-800' : TEXT_MUTED}`}>{timeB}</span>
         </div>
-        {feedback}
         <div className="relative">
           {(!isReady || isLocked) && <Lock size={12} className={`absolute left-3 top-4 ${TEXT_MUTED}`} />}
           <select value={currentValue || ""} onChange={(e) => atualizarMataMata(phaseKey, e.target.value, idx)} disabled={!isReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base font-medium appearance-none ${(!isReady || isLocked) && 'pl-8 text-slate-400'}`}>
@@ -3109,46 +3195,140 @@ export default function App() {
       if (dataSource[field] === gabaritoMataMata[field]) return <span className="ml-2 text-[10px] text-green-400 font-bold">(Acertou!)</span>;
       return <span className="ml-2 text-[10px] text-red-400 font-bold">(X)</span>;
     };
+    const showReviewMode = !modoAdmin && isLocked;
+    const podiumReviewCards = [
+      {
+        id: 'campeao',
+        title: 'Campeão',
+        schedule: finalSchedule,
+        location: finalInfo.local,
+        kickoffHint: finalKickoffHint,
+        choice: dataSource.campeao,
+        official: gabaritoMataMata.campeao || '',
+        points: PONTOS.MATA.CAMPEAO
+      },
+      {
+        id: 'vice',
+        title: 'Vice',
+        schedule: finalSchedule,
+        location: finalInfo.local,
+        kickoffHint: finalKickoffHint,
+        choice: dataSource.vice,
+        official: gabaritoMataMata.vice || '',
+        points: PONTOS.MATA.VICE
+      },
+      {
+        id: 'terceiro',
+        title: '3º lugar',
+        schedule: bronzeSchedule,
+        location: bronzeInfo.local,
+        kickoffHint: bronzeKickoffHint,
+        choice: dataSource.terceiro,
+        official: gabaritoMataMata.terceiro || '',
+        points: PONTOS.MATA.TOP3
+      },
+      {
+        id: 'quarto',
+        title: '4º lugar',
+        schedule: bronzeSchedule,
+        location: bronzeInfo.local,
+        kickoffHint: bronzeKickoffHint,
+        choice: dataSource.quarto,
+        official: gabaritoMataMata.quarto || '',
+        points: PONTOS.MATA.TOP4
+      }
+    ];
 
     return (
       <div className={`${GLASS_CARD} mb-3 transition-all ${secaoExpandida === 'podium' ? 'ring-1 ring-yellow-500/50' : ''}`}>
         <button onClick={() => setSecaoExpandida(secaoExpandida === 'podium' ? null : 'podium')} className="flex min-h-13 w-full items-center justify-between bg-gradient-to-r from-yellow-500/10 to-transparent p-4"><div className="flex items-center gap-3"><Crown className="text-yellow-500" size={18} /><span className="font-bold text-sm text-slate-900 uppercase tracking-wide">Pódio Final</span></div>{secaoExpandida === 'podium' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
         {secaoExpandida === 'podium' && (
           <div className="space-y-4 border-t border-slate-200 p-4">
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className={`${GLASS_CARD} bg-amber-50/70 p-3`}>
-                <div className="text-[10px] font-bold uppercase text-amber-700">Final oficial</div>
-                <div className="mt-2 text-xs font-semibold text-slate-900">{finalSchedule.day}/{finalSchedule.month} • {finalSchedule.time} BR</div>
-                <div className={`mt-1 text-[10px] ${TEXT_MUTED}`}>{finalInfo.local}</div>
-                {finalKickoffHint && <div className="mt-1 text-[10px] text-slate-400">{finalKickoffHint}</div>}
+            {showReviewMode ? (
+              <div className="grid gap-3 lg:grid-cols-2">
+                {podiumReviewCards.map((card) => {
+                  const review = buildChoiceReview({
+                    choice: card.choice,
+                    official: card.official,
+                    points: card.points,
+                    successLabel: 'Acertou a posição'
+                  });
+
+                  return (
+                    <div key={card.id} className={`${GLASS_CARD} p-4 lg:p-5`}>
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                            <span>{card.schedule.day}/{card.schedule.month} • {card.schedule.time} BR</span>
+                            {card.location && <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{card.location}</span>}
+                          </div>
+                          {card.kickoffHint && <div className="mt-2 text-[13px] text-slate-500">{card.kickoffHint}</div>}
+                        </div>
+                        <div className={`self-start rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] ${review.tone}`}>
+                          {review.label}
+                        </div>
+                      </div>
+                      <div className="mt-5 text-[12px] font-bold uppercase tracking-[0.18em] text-slate-500">{card.title}</div>
+                      <div className="mt-4 grid gap-3">
+                        <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                          <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu palpite</div>
+                          <div className="mt-3 text-[22px] font-black text-slate-900 lg:text-[26px]">{card.choice || 'Sem palpite'}</div>
+                          <div className="mt-2 text-[13px] leading-snug text-slate-500">
+                            {card.choice ? 'Escolha enviada para esta posição.' : 'Nenhuma escolha foi registrada para esta posição.'}
+                          </div>
+                        </div>
+                        <div className={`rounded-[20px] border px-4 py-4 ${review.tone}`}>
+                          <div className="text-[11px] font-bold uppercase tracking-[0.16em]">{review.label}</div>
+                          <div className="mt-3 text-[20px] font-black lg:text-[24px]">{review.detail}</div>
+                          <div className="mt-2 text-[13px] leading-snug opacity-80">
+                            {card.official
+                              ? `Oficial: ${card.official}`
+                              : 'A comparação aparece quando a posição oficial for definida.'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div className={`${GLASS_CARD} bg-orange-50/70 p-3`}>
-                <div className="text-[10px] font-bold uppercase text-orange-700">3º lugar oficial</div>
-                <div className="mt-2 text-xs font-semibold text-slate-900">{bronzeSchedule.day}/{bronzeSchedule.month} • {bronzeSchedule.time} BR</div>
-                <div className={`mt-1 text-[10px] ${TEXT_MUTED}`}>{bronzeInfo.local}</div>
-                {bronzeKickoffHint && <div className="mt-1 text-[10px] text-slate-400">{bronzeKickoffHint}</div>}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="mb-3 block text-center text-[10px] font-bold uppercase text-amber-700">Grande Final {renderFeedback('campeao')}</label>
-              <div className={`${GLASS_CARD} bg-amber-50/60 p-4`}>
-                <select value={dataSource.campeao || ""} onChange={e => { atualizarMataMata('campeao', e.target.value, null); const vice = finalistas.find(f => f !== e.target.value); if (vice) atualizarMataMata('vice', vice, null); }} disabled={!isFinalReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base border-yellow-500/30 focus:border-yellow-500 text-slate-800`}>
-                  <option value="">Quem será Campeão?</option>
-                  {[dataSource.campeao, ...finalistas].filter((team, index, list) => team && list.indexOf(team) === index).map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-                {dataSource.vice && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>Vice: <span className="text-slate-800">{dataSource.vice}</span> {renderFeedback('vice')}</div>}
-              </div>
-            </div>
-            <div className="space-y-2 pt-2">
-              <label className="mb-3 block text-center text-[10px] font-bold uppercase text-orange-700">3º Lugar {renderFeedback('terceiro')}</label>
-              <div className={`${GLASS_CARD} bg-orange-50/60 p-4`}>
-                <select value={dataSource.terceiro || ""} onChange={e => { atualizarMataMata('terceiro', e.target.value, null); const quarto = disputantes3.find(t => t !== e.target.value); if (quarto) atualizarMataMata('quarto', quarto, null); }} disabled={!is3rdReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base border-orange-500/30 focus:border-orange-500 text-slate-800`}>
-                  <option value="">Quem fica em 3º?</option>
-                  {[dataSource.terceiro, ...disputantes3].filter((team, index, list) => team && list.indexOf(team) === index).map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-                {dataSource.quarto && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>4º Lugar: <span className="text-slate-800">{dataSource.quarto}</span> {renderFeedback('quarto')}</div>}
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className={`${GLASS_CARD} bg-amber-50/70 p-3`}>
+                    <div className="text-[10px] font-bold uppercase text-amber-700">Final oficial</div>
+                    <div className="mt-2 text-xs font-semibold text-slate-900">{finalSchedule.day}/{finalSchedule.month} • {finalSchedule.time} BR</div>
+                    <div className={`mt-1 text-[10px] ${TEXT_MUTED}`}>{finalInfo.local}</div>
+                    {finalKickoffHint && <div className="mt-1 text-[10px] text-slate-400">{finalKickoffHint}</div>}
+                  </div>
+                  <div className={`${GLASS_CARD} bg-orange-50/70 p-3`}>
+                    <div className="text-[10px] font-bold uppercase text-orange-700">3º lugar oficial</div>
+                    <div className="mt-2 text-xs font-semibold text-slate-900">{bronzeSchedule.day}/{bronzeSchedule.month} • {bronzeSchedule.time} BR</div>
+                    <div className={`mt-1 text-[10px] ${TEXT_MUTED}`}>{bronzeInfo.local}</div>
+                    {bronzeKickoffHint && <div className="mt-1 text-[10px] text-slate-400">{bronzeKickoffHint}</div>}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="mb-3 block text-center text-[10px] font-bold uppercase text-amber-700">Grande Final {renderFeedback('campeao')}</label>
+                  <div className={`${GLASS_CARD} bg-amber-50/60 p-4`}>
+                    <select value={dataSource.campeao || ""} onChange={e => { atualizarMataMata('campeao', e.target.value, null); const vice = finalistas.find(f => f !== e.target.value); if (vice) atualizarMataMata('vice', vice, null); }} disabled={!isFinalReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base border-yellow-500/30 focus:border-yellow-500 text-slate-800`}>
+                      <option value="">Quem será Campeão?</option>
+                      {[dataSource.campeao, ...finalistas].filter((team, index, list) => team && list.indexOf(team) === index).map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    {dataSource.vice && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>Vice: <span className="text-slate-800">{dataSource.vice}</span> {renderFeedback('vice')}</div>}
+                  </div>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <label className="mb-3 block text-center text-[10px] font-bold uppercase text-orange-700">3º Lugar {renderFeedback('terceiro')}</label>
+                  <div className={`${GLASS_CARD} bg-orange-50/60 p-4`}>
+                    <select value={dataSource.terceiro || ""} onChange={e => { atualizarMataMata('terceiro', e.target.value, null); const quarto = disputantes3.find(t => t !== e.target.value); if (quarto) atualizarMataMata('quarto', quarto, null); }} disabled={!is3rdReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base border-orange-500/30 focus:border-orange-500 text-slate-800`}>
+                      <option value="">Quem fica em 3º?</option>
+                      {[dataSource.terceiro, ...disputantes3].filter((team, index, list) => team && list.indexOf(team) === index).map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    {dataSource.quarto && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>4º Lugar: <span className="text-slate-800">{dataSource.quarto}</span> {renderFeedback('quarto')}</div>}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
