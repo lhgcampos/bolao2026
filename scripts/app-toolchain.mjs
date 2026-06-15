@@ -32,6 +32,11 @@ const MIME_TYPES = {
   '.webp': 'image/webp',
 };
 
+function createBuildAssetVersion() {
+  if (process.env.BUILD_ASSET_VERSION) return process.env.BUILD_ASSET_VERSION;
+  return new Date().toISOString().replace(/\D/g, '').slice(0, 14);
+}
+
 function normalizeBase(baseValue) {
   let base = baseValue || '/';
   if (!base.startsWith('/')) base = `/${base}`;
@@ -66,19 +71,19 @@ async function copyDirectory(sourceDir, targetDir) {
   }));
 }
 
-async function copyCssRuntime(outdir) {
+async function copyCssRuntime(outdir, cssFileName) {
   await fs.mkdir(path.join(outdir, 'assets'), { recursive: true });
-  await fs.copyFile(CSS_RUNTIME_PATH, path.join(outdir, 'assets', 'index.css'));
+  await fs.copyFile(CSS_RUNTIME_PATH, path.join(outdir, 'assets', cssFileName));
 }
 
-async function writeIndexHtml({ base, outdir }) {
+async function writeIndexHtml({ base, outdir, cssFileName, jsFileName }) {
   const template = await fs.readFile(HTML_TEMPLATE_PATH, 'utf8');
   const rootedTemplate = template
     .replace(/\s*<script type="module" src="\/src\/main\.jsx"><\/script>\s*/u, '\n')
     .replace(/(href|src)="\/(?!\/)/g, `$1="${base}`);
   const assetMarkup = [
-    `    <link rel="stylesheet" href="${base}assets/index.css" />`,
-    `    <script type="module" src="${base}assets/index.js"></script>`,
+    `    <link rel="stylesheet" href="${base}assets/${cssFileName}" />`,
+    `    <script type="module" src="${base}assets/${jsFileName}"></script>`,
   ].join('\n');
   const html = rootedTemplate.replace('</head>', `${assetMarkup}\n  </head>`);
   await fs.writeFile(path.join(outdir, 'index.html'), html);
@@ -103,6 +108,9 @@ export function resolveBase(mode = 'production') {
 
 export async function buildApp({ mode = 'production', outdir = DIST_DIR } = {}) {
   const base = resolveBase(mode);
+  const buildAssetVersion = createBuildAssetVersion();
+  const jsFileName = `index-${buildAssetVersion}.js`;
+  const cssFileName = `index-${buildAssetVersion}.css`;
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bolao2026-build-'));
   const entryPath = path.join(tempDir, 'entry.mjs');
   await fs.writeFile(entryPath, createVirtualEntry(), 'utf8');
@@ -117,7 +125,7 @@ export async function buildApp({ mode = 'production', outdir = DIST_DIR } = {}) 
       bundle: true,
       define: buildDefineMap(base),
       entryPoints: [entryPath],
-      entryNames: 'assets/index',
+      entryNames: `assets/index-${buildAssetVersion}`,
       format: 'esm',
       jsx: 'transform',
       loader: {
@@ -136,16 +144,16 @@ export async function buildApp({ mode = 'production', outdir = DIST_DIR } = {}) 
       target: ['es2020'],
     });
     console.log('copying css runtime');
-    await copyCssRuntime(outdir);
+    await copyCssRuntime(outdir, cssFileName);
     console.log('copying public assets');
     await copyDirectory(PUBLIC_DIR, outdir);
     console.log('writing html shell');
-    await writeIndexHtml({ base, outdir });
+    await writeIndexHtml({ base, outdir, cssFileName, jsFileName });
     return {
       base,
       outdir,
-      cssPath: path.join(outdir, 'assets', 'index.css'),
-      jsPath: path.join(outdir, 'assets', 'index.js'),
+      cssPath: path.join(outdir, 'assets', cssFileName),
+      jsPath: path.join(outdir, 'assets', jsFileName),
     };
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
