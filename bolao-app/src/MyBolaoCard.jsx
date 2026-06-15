@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lock, Sparkles, Swords, Target, Trophy } from 'lucide-react';
+import { Lock, Sparkles, Swords, Target, Trophy } from './lucideIcons';
 
 const TONE_STYLES = {
   positive: 'border-emerald-200 bg-emerald-50 text-emerald-950',

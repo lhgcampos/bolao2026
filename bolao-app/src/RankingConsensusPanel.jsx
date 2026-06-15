@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, Flame, Radar, ShieldAlert, Sparkles, Target, Trophy } from 'lucide-react';
+import { AlertCircle, Flame, Radar, ShieldAlert, Sparkles, Target, Trophy } from './lucideIcons';
 import { formatMatchName } from './rankingConsensus';
 
 const PANEL_CARD = 'rounded-[28px] border border-slate-200/80 bg-white/88 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle, Smartphone } from 'lucide-react';
+import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle, Smartphone } from './lucideIcons';
 import { THIRD_PLACE_ASSIGNMENTS } from './thirdPlaceAssignments';
 import { TEAM_FIFA_RANKINGS } from './fifaTeamRankings';
 import RankingConsensusPanel from './RankingConsensusPanel';
@@ -3404,46 +3404,58 @@ export default function App() {
                           palpiteB: palpite.placarB,
                           jogo
                         });
+                        const hasPrediction = placarPreenchido(palpite.placarA, palpite.placarB);
 
                         return (
                           <div key={jogo.id} className={`${GLASS_CARD} p-4 lg:p-5`}>
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                               <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-                                <span className="inline-flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
+                                <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                                  <span className="inline-flex items-center gap-1"><Calendar size={10} /> {schedule.day}/{schedule.month} • {schedule.time} BR</span>
                                   <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{timelineMatch.competitionLabel || getOfficialCompetitionLabel(jogo)}</span>
                                   {jogo.local && <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{jogo.local}</span>}
                                 </div>
-                                {officialKickoffHint && <div className="mt-2 text-[11px] text-slate-500">{officialKickoffHint}</div>}
+                                {officialKickoffHint && <div className="mt-2 text-[13px] text-slate-500">{officialKickoffHint}</div>}
                               </div>
-                              <div className={`self-start rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] ${timelineMatch.status.tone}`}>
+                              <div className={`self-start rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] ${timelineMatch.status.tone}`}>
                                 {timelineMatch.status.label}
                               </div>
                             </div>
-                            <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
-                              <div className="text-right text-[14px] font-bold text-slate-900">{jogo.timeA}</div>
-                              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-center text-base font-black text-slate-900">
+                            <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+                              <div className="text-right text-[15px] font-bold text-slate-900 lg:text-[18px]">{jogo.timeA}</div>
+                              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-center text-lg font-black text-slate-900 lg:min-w-[112px] lg:text-[28px]">
                                 {placarPreenchido(jogo.placarA, jogo.placarB) ? `${jogo.placarA} x ${jogo.placarB}` : '—'}
                               </div>
-                              <div className="text-left text-[14px] font-bold text-slate-900">{jogo.timeB}</div>
+                              <div className="text-left text-[15px] font-bold text-slate-900 lg:text-[18px]">{jogo.timeB}</div>
                             </div>
-                            <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
-                              <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
-                                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu palpite</div>
-                                <div className="mt-2 text-[13px] font-bold text-slate-900">
+                            <div className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.1fr)]">
+                              <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu palpite</div>
+                                <div className="mt-3 text-[22px] font-black text-slate-900">
                                   {formatScoreDisplay(palpite.placarA, palpite.placarB, 'Sem palpite')}
                                 </div>
-                              </div>
-                              <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
-                                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Resultado oficial</div>
-                                <div className="mt-2 text-[13px] font-bold text-slate-900">
-                                  {formatScoreDisplay(jogo.placarA, jogo.placarB, 'Aguardando')}
+                                <div className="mt-2 text-[13px] leading-snug text-slate-500">
+                                  {hasPrediction ? 'Comparado com o resultado oficial exibido acima.' : 'Preencha os dois placares na sua área de palpites para liberar a comparação.'}
                                 </div>
                               </div>
-                              <div className={`rounded-[18px] border px-3 py-3 ${betReview.tone}`}>
-                                <div className="text-[10px] font-bold uppercase tracking-[0.16em]">{betReview.label}</div>
-                                <div className="mt-2 text-[12px] font-semibold">{betReview.detail}</div>
+                              <div className={`rounded-[20px] border px-4 py-4 ${betReview.tone}`}>
+                                <div className="text-[11px] font-bold uppercase tracking-[0.16em]">{betReview.label}</div>
+                                <div className="mt-3 text-[18px] font-black">{betReview.detail}</div>
+                                <div className="mt-2 text-[13px] leading-snug opacity-80">
+                                  {placarPreenchido(jogo.placarA, jogo.placarB)
+                                    ? 'O placar oficial já foi sincronizado neste jogo.'
+                                    : 'A pontuação aparece assim que o placar oficial for publicado.'}
+                                </div>
                               </div>
+                              {timelineMatch.sourceMeta && (
+                                <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Atualização oficial</div>
+                                  <div className="mt-3 text-[16px] font-bold leading-snug text-slate-900">{timelineMatch.sourceMeta}</div>
+                                  <div className="mt-2 text-[13px] leading-snug text-slate-500">
+                                    Fonte e horário da última sincronização aplicada ao gabarito.
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
