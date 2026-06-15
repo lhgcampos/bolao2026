@@ -517,6 +517,62 @@ const calcularPontosJogo = (palpiteA, palpiteB, realA, realB) => {
   return { pts: 0, label: 'ERROU', color: 'text-red-400 bg-red-500/20 border-red-500/30' };
 };
 
+const formatScoreDisplay = (placarA, placarB, emptyLabel = '—') => (
+  placarPreenchido(placarA, placarB) ? `${placarA} x ${placarB}` : emptyLabel
+);
+
+const buildGroupBetReview = ({ palpiteA, palpiteB, jogo }) => {
+  const officialVariant = getMatchResultVariant(jogo);
+  const hasPrediction = placarPreenchido(palpiteA, palpiteB);
+
+  if (officialVariant === 'pending') {
+    return {
+      label: 'Aguardando oficial',
+      detail: 'O resultado ainda não saiu no gabarito.',
+      tone: 'border-slate-200 bg-slate-50 text-slate-600'
+    };
+  }
+
+  if (!hasPrediction) {
+    return {
+      label: 'Palpite incompleto',
+      detail: 'Preencha os dois placares para comparar.',
+      tone: 'border-slate-200 bg-slate-50 text-slate-600'
+    };
+  }
+
+  const score = calcularPontosJogo(palpiteA, palpiteB, jogo.placarA, jogo.placarB);
+  if (!score) {
+    return {
+      label: 'Comparação indisponível',
+      detail: 'Não foi possível comparar este jogo.',
+      tone: 'border-slate-200 bg-slate-50 text-slate-600'
+    };
+  }
+
+  if (score.pts === PONTOS.JOGO.CHEIO) {
+    return {
+      label: 'Cravou o placar',
+      detail: `${score.pts} pts${officialVariant === 'temporary' ? ' até agora' : ''}`,
+      tone: 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    };
+  }
+
+  if (score.pts === PONTOS.JOGO.VITORIA) {
+    return {
+      label: 'Acertou o resultado',
+      detail: `${score.pts} pts${officialVariant === 'temporary' ? ' até agora' : ''}`,
+      tone: 'border-amber-200 bg-amber-50 text-amber-700'
+    };
+  }
+
+  return {
+    label: 'Não acertou',
+    detail: officialVariant === 'temporary' ? 'Ainda sem pontuação neste parcial.' : 'Este jogo não pontuou.',
+    tone: 'border-rose-200 bg-rose-50 text-rose-700'
+  };
+};
+
 const getWinnerOfMatch = (matchId, source) => {
   if (!source) return null;
   if (matchId >= 73 && matchId <= 88) return source.dezeszeseisavos?.[matchId - 73];
@@ -3535,6 +3591,8 @@ export default function App() {
                           const valB = palpite.placarB;
                           const schedule = formatBrazilMatchSchedule(jogo);
                           const officialKickoffHint = formatOfficialKickoffHint(jogo);
+                          const officialVariant = getMatchResultVariant(jogo);
+                          const betReview = buildGroupBetReview({ palpiteA: valA, palpiteB: valB, jogo });
                           return (
                             <div key={jogo.id} className={`${GLASS_CARD} p-4`}>
                               <div className="mb-4 flex flex-col gap-2 text-[11px] font-bold uppercase text-slate-500 sm:flex-row sm:items-start sm:justify-between">
@@ -3546,12 +3604,38 @@ export default function App() {
                               </div>
                               <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
                                 <span className="text-right text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeA}</span>
-                                <div className="flex items-center gap-2">
-                                  <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos} value={valA} onChange={e => atualizarPalpite(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
-                                  <span className="text-sm text-slate-500 font-light">X</span>
-                                  <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos} value={valB} onChange={e => atualizarPalpite(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
-                                </div>
+                                {palpitesTravadosJogos ? (
+                                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-center text-base font-black text-slate-900">
+                                    {formatScoreDisplay(valA, valB)}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos} value={valA} onChange={e => atualizarPalpite(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
+                                    <span className="text-sm text-slate-500 font-light">X</span>
+                                    <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos} value={valB} onChange={e => atualizarPalpite(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
+                                  </div>
+                                )}
                                 <span className="text-left text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeB}</span>
+                              </div>
+                              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
+                                <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
+                                  <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu palpite</div>
+                                  <div className="mt-2 text-[13px] font-bold text-slate-900">
+                                    {formatScoreDisplay(valA, valB, palpitesTravadosJogos ? 'Sem palpite' : 'Preencha acima')}
+                                  </div>
+                                </div>
+                                <div className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
+                                  <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                                    {officialVariant === 'temporary' ? 'Placar oficial temporário' : 'Resultado oficial'}
+                                  </div>
+                                  <div className="mt-2 text-[13px] font-bold text-slate-900">
+                                    {formatScoreDisplay(jogo.placarA, jogo.placarB, 'Aguardando')}
+                                  </div>
+                                </div>
+                                <div className={`rounded-[18px] border px-3 py-3 ${betReview.tone}`}>
+                                  <div className="text-[10px] font-bold uppercase tracking-[0.16em]">{betReview.label}</div>
+                                  <div className="mt-2 text-[12px] font-semibold">{betReview.detail}</div>
+                                </div>
                               </div>
                             </div>
                           );
