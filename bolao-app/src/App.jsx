@@ -3349,11 +3349,11 @@ export default function App() {
   }
 
   const navItems = [
-    { id: 'jogos', icon: Calendar, label: 'Fase de Grupos' },
-    { id: 'matamata', icon: Crown, label: 'Mata-mata' },
-    { id: 'ranking', icon: Trophy, label: 'Ranking' },
-    { id: 'painel', icon: Medal, label: 'Painel' },
-    { id: 'regras', icon: List, label: 'Pontuação' }
+    { id: 'jogos', icon: Calendar, label: 'Fase de Grupos', mobileLabel: '1a Fase' },
+    { id: 'matamata', icon: Crown, label: 'Mata-mata', mobileLabel: 'Mata-mata' },
+    { id: 'ranking', icon: Trophy, label: 'Ranking', mobileLabel: 'Ranking' },
+    { id: 'painel', icon: Medal, label: 'Painel', mobileLabel: 'Painel' },
+    { id: 'regras', icon: List, label: 'Pontuação', mobileLabel: 'Pontuação' }
   ];
   const gabaritoTimeline = buildGabaritoTimeline(jogosReais, { isAdmin: modoAdmin });
   const syncDiagnosticsSummary = {
@@ -3975,7 +3975,7 @@ export default function App() {
           return (
             <button key={item.id} onClick={() => setAbaAtiva(item.id)} className={`flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-bold uppercase tracking-[0.12em] transition-all ${active ? 'bg-sky-50 text-sky-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
               <Icon size={20} strokeWidth={active ? 2.5 : 2} />
-              <span className="truncate">{item.label.split(' ')[0]}</span>
+              <span className="truncate">{item.mobileLabel || item.label}</span>
             </button>
           );
         })}
