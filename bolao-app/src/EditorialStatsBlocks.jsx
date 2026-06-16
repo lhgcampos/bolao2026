@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, Lock, MessageCircle, Sparkles } from './lucideIcons';
+import { Lock, MessageCircle, Sparkles } from './lucideIcons';
 import { formatEditorialStatLine } from './editorialStats.js';
 
 const PANEL = 'rounded-[28px] border border-slate-200/80 bg-white/88 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl';
