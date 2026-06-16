@@ -90,6 +90,7 @@ const AVATAR_MAX_DIMENSION = 160;
 const AVATAR_UPLOAD_URL = import.meta.env.VITE_AVATAR_UPLOAD_URL || 'https://bolao2026-avatar-upload.linoscheduling.workers.dev';
 const AVATAR_PUBLIC_BASE_URL = import.meta.env.VITE_AVATAR_PUBLIC_BASE_URL || 'https://pub-56fbf4716fdc4ab69e70b4c56f28fccf.r2.dev';
 const DEMO_AVATAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAABv7bNHAAABpUlEQVR4nO3QwQ3CMBQFQYz//8u2g0QdW0dManIeZDV4SSQdlqzTeWYIAAAAAAAAAAB4m7vN3Wf9eR9n3rV7h9t7n5f4q2w8b0v2m2vV8f9bKf9t8m9bM4QGg9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rej9F6P0Xo/Rer8BX3kD6XhSx8AAAAASUVORK5CYII=';
+const PWA_RESET_KEY = 'bolao26_pwa_reset_v5';
 const INSTALLATION_TIPS = {
   ios: [
     'Abra o link no Safari.',
@@ -1457,13 +1458,38 @@ export default function App() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return undefined;
 
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, {
-      scope: import.meta.env.BASE_URL
-    }).then((registration) => {
-      registration.update().catch(() => {});
-    }).catch((error) => {
-      console.error('Falha ao registrar service worker', error);
-    });
+    const setupServiceWorker = async () => {
+      try {
+        if (!localStorage.getItem(PWA_RESET_KEY)) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(
+            registrations
+              .filter((registration) => registration.scope.includes(window.location.origin))
+              .map((registration) => registration.unregister())
+          );
+
+          if ('caches' in window) {
+            const cacheKeys = await caches.keys();
+            await Promise.all(
+              cacheKeys
+                .filter((key) => key.startsWith('bolao2026-pwa-'))
+                .map((key) => caches.delete(key))
+            );
+          }
+
+          localStorage.setItem(PWA_RESET_KEY, 'done');
+        }
+
+        const registration = await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, {
+          scope: import.meta.env.BASE_URL
+        });
+        registration.update().catch(() => {});
+      } catch (error) {
+        console.error('Falha ao registrar service worker', error);
+      }
+    };
+
+    setupServiceWorker();
 
     return undefined;
   }, []);
