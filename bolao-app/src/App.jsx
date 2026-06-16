@@ -1,23 +1,22 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle, Smartphone } from './lucideIcons';
+import { Trophy, Calendar, Settings, Plus, User, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle, Smartphone } from './lucideIcons';
 import { THIRD_PLACE_ASSIGNMENTS } from './thirdPlaceAssignments';
 import { TEAM_FIFA_RANKINGS } from './fifaTeamRankings';
-import RankingConsensusPanel from './RankingConsensusPanel';
 import { buildConsensusDashboard } from './rankingConsensus';
 import { buildDenseRanking } from './ranking';
 import { buildUserHomeInsights } from './userHomeInsights';
-import { buildEditorialStatsDashboard, buildHomeEditorialInsights, buildRankingFooterComments } from './editorialStats';
-import MyBolaoCard from './MyBolaoCard';
-import { EditorialCommentsSection, EditorialInsightsBlock } from './EditorialStatsBlocks';
+import { buildEditorialStatsDashboard, buildHomeEditorialInsights } from './editorialStats';
+import { AvatarBadge, InsightsHubPanel, PodiumSection, RankingTable, RestrictedMatchDropdown, ReviewSheet, TabelaClassificacao } from './components/index.js';
+import { MATA_MATA_CONFIG, PONTOS, PONTOS_CONDUTA, SUBMISSION_FIELDS } from './constants.js';
+import { GLASS_CARD, GLASS_BTN_PRIMARY, GLASS_BTN_SECONDARY, GLASS_INPUT, TEXT_HIGHLIGHT, TEXT_MUTED } from './styles.js';
+import { buildGroupBetReview, calcularPontosJogo, formatScoreDisplay, formatSubmissionDate } from './utils.js';
 import {
   GRUPOS_2026,
-  buildChronologicalMatchGroups,
   formatBrazilMatchSchedule,
   formatOfficialKickoffHint,
   gerarJogosIniciais,
   isManualResultLocked,
   normalizePersistedGameData,
-  parseMatchDateTime,
   placarPreenchido
 } from './matchData';
 import {
@@ -44,23 +43,7 @@ import {
 
 const TODOS_TIMES = Object.values(GRUPOS_2026).flat().sort();
 
-const PONTOS = {
-  JOGO: { CHEIO: 20, VITORIA: 5 },
-  MATA: { CAMPEAO: 100, VICE: 70, TOP3: 50, TOP4: 40, SF: 30, QF: 20, R16: 10, R32: 5 }
-};
-
-const PONTOS_CONDUTA = {
-  AMARELO: -1,
-  VERMELHO_INDIRETO: -3,
-  VERMELHO_DIRETO: -4,
-  AMARELO_E_VERMELHO_DIRETO: -5
-};
-
 const ADMIN_USER_ID = 999;
-const SUBMISSION_FIELDS = {
-  JOGOS: 'jogosAt',
-  MATA: 'mataAt'
-};
 const REMOTE_STORE_BASE = 'https://mantledb.sh/v2';
 const REMOTE_NAMESPACE = 'lhgcampos-bolao2026-live-20260609';
 const REMOTE_SCHEMA_VERSION = 4;
@@ -121,56 +104,6 @@ const INSTALLATION_TIPS = {
 };
 // --- CONFIGURAÇÃO INICIAL ---
 const getShortCountryName = (name) => COUNTRY_SHORT_NAMES[name] || name;
-
-
-// Agenda oficial do mata-mata baseada nos horarios locais publicados pela FIFA; a exibicao em tela usa o horario do Brasil.
-// `kickoffEt` guarda o instante real do jogo com o offset do estadio; `horaEt` preserva a hora local oficial publicada pela FIFA.
-const MATA_MATA_CONFIG = {
-  r32: [
-    { id: 73, label: "2A x 2B", kickoffEt: "2026-06-28T12:00:00-07:00", horaEt: "12:00", local: "Los Angeles", refA: "2A", refB: "2B" },
-    { id: 74, label: "1E x 3A/B/C/D/F", kickoffEt: "2026-06-29T16:30:00-04:00", horaEt: "16:30", local: "Boston", refA: "1E", refThirdGroups: ['A', 'B', 'C', 'D', 'F'] },
-    { id: 75, label: "1F x 2C", kickoffEt: "2026-06-29T19:00:00-06:00", horaEt: "19:00", local: "Monterrey", refA: "1F", refB: "2C" },
-    { id: 76, label: "1C x 2F", kickoffEt: "2026-06-29T12:00:00-05:00", horaEt: "12:00", local: "Houston", refA: "1C", refB: "2F" },
-    { id: 77, label: "1I x 3C/D/F/G/H", kickoffEt: "2026-06-30T17:00:00-04:00", horaEt: "17:00", local: "Nova York/Nova Jersey", refA: "1I", refThirdGroups: ['C', 'D', 'F', 'G', 'H'] },
-    { id: 78, label: "2E x 2I", kickoffEt: "2026-06-30T12:00:00-05:00", horaEt: "12:00", local: "Dallas", refA: "2E", refB: "2I" },
-    { id: 79, label: "1A x 3C/E/F/H/I", kickoffEt: "2026-06-30T19:00:00-06:00", horaEt: "19:00", local: "Cid. México", refA: "1A", refThirdGroups: ['C', 'E', 'F', 'H', 'I'] },
-    { id: 80, label: "1L x 3E/H/I/J/K", kickoffEt: "2026-07-01T12:00:00-04:00", horaEt: "12:00", local: "Atlanta", refA: "1L", refThirdGroups: ['E', 'H', 'I', 'J', 'K'] },
-    { id: 81, label: "1D x 3B/E/F/I/J", kickoffEt: "2026-07-01T17:00:00-07:00", horaEt: "17:00", local: "San Francisco Bay Area", refA: "1D", refThirdGroups: ['B', 'E', 'F', 'I', 'J'] },
-    { id: 82, label: "1G x 3A/E/H/I/J", kickoffEt: "2026-07-01T13:00:00-07:00", horaEt: "13:00", local: "Seattle", refA: "1G", refThirdGroups: ['A', 'E', 'H', 'I', 'J'] },
-    { id: 83, label: "2K x 2L", kickoffEt: "2026-07-02T19:00:00-04:00", horaEt: "19:00", local: "Toronto", refA: "2K", refB: "2L" },
-    { id: 84, label: "1H x 2J", kickoffEt: "2026-07-02T12:00:00-07:00", horaEt: "12:00", local: "Los Angeles", refA: "1H", refB: "2J" },
-    { id: 85, label: "1B x 3E/F/G/I/J", kickoffEt: "2026-07-02T20:00:00-07:00", horaEt: "20:00", local: "Vancouver", refA: "1B", refThirdGroups: ['E', 'F', 'G', 'I', 'J'] },
-    { id: 86, label: "1J x 2H", kickoffEt: "2026-07-03T18:00:00-04:00", horaEt: "18:00", local: "Miami", refA: "1J", refB: "2H" },
-    { id: 87, label: "1K x 3D/E/I/J/L", kickoffEt: "2026-07-03T20:30:00-05:00", horaEt: "20:30", local: "Kansas City", refA: "1K", refThirdGroups: ['D', 'E', 'I', 'J', 'L'] },
-    { id: 88, label: "2D x 2G", kickoffEt: "2026-07-03T13:00:00-05:00", horaEt: "13:00", local: "Dallas", refA: "2D", refB: "2G" },
-  ],
-  r16: [
-    { id: 89, feedA: 74, feedB: 77, kickoffEt: "2026-07-04T17:00:00-04:00", horaEt: "17:00", local: "Filadélfia" },
-    { id: 90, feedA: 73, feedB: 75, kickoffEt: "2026-07-04T12:00:00-05:00", horaEt: "12:00", local: "Houston" },
-    { id: 91, feedA: 76, feedB: 78, kickoffEt: "2026-07-05T16:00:00-04:00", horaEt: "16:00", local: "Nova York/Nova Jersey" },
-    { id: 92, feedA: 79, feedB: 80, kickoffEt: "2026-07-05T18:00:00-06:00", horaEt: "18:00", local: "Cid. México" },
-    { id: 93, feedA: 83, feedB: 84, kickoffEt: "2026-07-06T14:00:00-05:00", horaEt: "14:00", local: "Dallas" },
-    { id: 94, feedA: 81, feedB: 82, kickoffEt: "2026-07-06T17:00:00-07:00", horaEt: "17:00", local: "Seattle" },
-    { id: 95, feedA: 86, feedB: 88, kickoffEt: "2026-07-07T12:00:00-04:00", horaEt: "12:00", local: "Atlanta" },
-    { id: 96, feedA: 85, feedB: 87, kickoffEt: "2026-07-07T13:00:00-07:00", horaEt: "13:00", local: "Vancouver" }
-  ],
-  qf: [
-    { id: 97, feedA: 89, feedB: 90, kickoffEt: "2026-07-09T16:00:00-04:00", horaEt: "16:00", local: "Boston" },
-    { id: 98, feedA: 93, feedB: 94, kickoffEt: "2026-07-10T12:00:00-07:00", horaEt: "12:00", local: "Los Angeles" },
-    { id: 99, feedA: 91, feedB: 92, kickoffEt: "2026-07-11T17:00:00-04:00", horaEt: "17:00", local: "Miami" },
-    { id: 100, feedA: 95, feedB: 96, kickoffEt: "2026-07-11T20:00:00-05:00", horaEt: "20:00", local: "Kansas City" }
-  ],
-  sf: [
-    { id: 101, feedA: 97, feedB: 98, kickoffEt: "2026-07-14T14:00:00-05:00", horaEt: "14:00", local: "Dallas" },
-    { id: 102, feedA: 99, feedB: 100, kickoffEt: "2026-07-15T15:00:00-04:00", horaEt: "15:00", local: "Atlanta" }
-  ],
-  bronzeFinal: [
-    { id: 103, kickoffEt: "2026-07-18T17:00:00-04:00", horaEt: "17:00", local: "Miami", titulo: "Disputa do 3º lugar" }
-  ],
-  final: [
-    { id: 104, kickoffEt: "2026-07-19T15:00:00-04:00", horaEt: "15:00", local: "Nova York/Nova Jersey", titulo: "Final" }
-  ]
-};
 
 // --- LÓGICA DE NEGÓCIO ---
 const getTeamConductScore = (grupo, time, condutaGrupos) => {
@@ -455,130 +388,6 @@ const buildThirdPlaceAllocation = (jogos, palpitesUsuario, condutaGrupos, grupos
     terceiros.slice(0, 8),
     MATA_MATA_CONFIG.r32.filter((match) => match.refThirdGroups)
   );
-};
-
-const getRunnerUp = (winner, teamA, teamB) => {
-  if (!winner || !teamA || !teamB) return '';
-  if (winner === teamA) return teamB;
-  if (winner === teamB) return teamA;
-  return '';
-};
-
-const sanitizeKnockoutBracket = ({ bracket = {}, jogos, palpitesUsuario }) => {
-  const sanitized = normalizeKnockoutBracketShape(bracket);
-  const gruposCompletos = faseDeGruposCompleta(jogos, palpitesUsuario);
-  if (!gruposCompletos) return sanitized;
-
-  return sanitized;
-};
-
-const calcularPontosJogo = (palpiteA, palpiteB, realA, realB) => {
-  if (palpiteA === '' || palpiteB === '' || realA === '' || realB === '') return null;
-  const pA = parseInt(palpiteA); const pB = parseInt(palpiteB);
-  const rA = parseInt(realA); const rB = parseInt(realB);
-  if (pA === rA && pB === rB) return { pts: PONTOS.JOGO.CHEIO, label: 'NA MOSCA!', color: 'text-green-400 bg-green-500/20 border-green-500/30' };
-  const diffP = pA - pB; const diffR = rA - rB;
-  if (Math.sign(diffP) === Math.sign(diffR)) {
-    return { pts: PONTOS.JOGO.VITORIA, label: 'VENCEDOR', color: 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30' };
-  }
-  return { pts: 0, label: 'ERROU', color: 'text-red-400 bg-red-500/20 border-red-500/30' };
-};
-
-const formatScoreDisplay = (placarA, placarB, emptyLabel = '—') => (
-  placarPreenchido(placarA, placarB) ? `${placarA} x ${placarB}` : emptyLabel
-);
-
-const buildGroupBetReview = ({ palpiteA, palpiteB, jogo }) => {
-  const officialVariant = getMatchResultVariant(jogo);
-  const hasPrediction = placarPreenchido(palpiteA, palpiteB);
-
-  if (officialVariant === 'pending') {
-    return {
-      label: 'Aguardando oficial',
-      detail: 'O resultado ainda não saiu no gabarito.',
-      tone: 'border-slate-200 bg-slate-50 text-slate-600'
-    };
-  }
-
-  if (!hasPrediction) {
-    return {
-      label: 'Palpite incompleto',
-      detail: 'Preencha os dois placares para comparar.',
-      tone: 'border-slate-200 bg-slate-50 text-slate-600'
-    };
-  }
-
-  const score = calcularPontosJogo(palpiteA, palpiteB, jogo.placarA, jogo.placarB);
-  if (!score) {
-    return {
-      label: 'Comparação indisponível',
-      detail: 'Não foi possível comparar este jogo.',
-      tone: 'border-slate-200 bg-slate-50 text-slate-600'
-    };
-  }
-
-  if (score.pts === PONTOS.JOGO.CHEIO) {
-    return {
-      label: 'Cravou o placar',
-      detail: `${score.pts} pts${officialVariant === 'temporary' ? ' até agora' : ''}`,
-      tone: 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    };
-  }
-
-  if (score.pts === PONTOS.JOGO.VITORIA) {
-    return {
-      label: 'Acertou o resultado',
-      detail: `${score.pts} pts${officialVariant === 'temporary' ? ' até agora' : ''}`,
-      tone: 'border-amber-200 bg-amber-50 text-amber-700'
-    };
-  }
-
-  return {
-    label: 'Não acertou',
-    detail: officialVariant === 'temporary' ? 'Ainda sem pontuação neste parcial.' : 'Este jogo não pontuou.',
-    tone: 'border-rose-200 bg-rose-50 text-rose-700'
-  };
-};
-
-const buildChoiceReview = ({ choice, official, points, successLabel = 'Acertou a escolha' }) => {
-  if (!official) {
-    return {
-      label: 'Aguardando oficial',
-      detail: 'A pontuação aparece quando a definição oficial sair.',
-      tone: 'border-slate-200 bg-slate-50 text-slate-600'
-    };
-  }
-
-  if (!choice) {
-    return {
-      label: 'Sem palpite',
-      detail: 'Nenhuma escolha foi registrada para comparar.',
-      tone: 'border-slate-200 bg-slate-50 text-slate-600'
-    };
-  }
-
-  if (choice === official) {
-    return {
-      label: successLabel,
-      detail: `${points} pts`,
-      tone: 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    };
-  }
-
-  return {
-    label: 'Não acertou',
-    detail: '0 pts',
-    tone: 'border-rose-200 bg-rose-50 text-rose-700'
-  };
-};
-
-const getWinnerOfMatch = (matchId, source) => {
-  if (!source) return null;
-  if (matchId >= 73 && matchId <= 88) return source.dezeszeseisavos?.[matchId - 73];
-  if (matchId >= 89 && matchId <= 96) return source.oitavas?.[matchId - 89];
-  if (matchId >= 97 && matchId <= 100) return source.quartas?.[matchId - 97];
-  if (matchId >= 101 && matchId <= 102) return source.semis?.[matchId - 101];
-  return null;
 };
 
 const buildPlanilhaDemoData = () => {
@@ -879,6 +688,28 @@ const mergeRemoteRecordMap = (baseMap = {}, overrideMap = {}) => ({
   ...(overrideMap && typeof overrideMap === 'object' ? overrideMap : {})
 });
 
+const mergeRemoteScopedRecordsByCompleteness = (legacyMap = {}, shardedMap = {}, countFilled = () => 0) => {
+  const allUserIds = new Set([
+    ...Object.keys(legacyMap || {}),
+    ...Object.keys(shardedMap || {})
+  ]);
+
+  return Object.fromEntries(
+    [...allUserIds].map((userId) => {
+      const legacyRecord = legacyMap?.[userId];
+      const shardedRecord = shardedMap?.[userId];
+
+      if (!legacyRecord || typeof legacyRecord !== 'object') return [userId, shardedRecord || {}];
+      if (!shardedRecord || typeof shardedRecord !== 'object') return [userId, legacyRecord || {}];
+
+      const legacyCount = countFilled(legacyRecord || {});
+      const shardedCount = countFilled(shardedRecord || {});
+
+      return [userId, legacyCount > shardedCount ? legacyRecord : shardedRecord];
+    })
+  );
+};
+
 const mergeRemotePayloads = (legacyPayload, shardedPayload) => {
   if (!legacyPayload) return shardedPayload;
   if (!shardedPayload) return legacyPayload;
@@ -894,8 +725,16 @@ const mergeRemotePayloads = (legacyPayload, shardedPayload) => {
     matches: authoritative.matches
       ? (Array.isArray(shardedPayload.matches) ? shardedPayload.matches : [])
       : (Array.isArray(shardedPayload.matches) && shardedPayload.matches.length ? shardedPayload.matches : legacyPayload.matches),
-    betsGames: mergeRemoteRecordMap(legacyPayload.betsGames, shardedPayload.betsGames),
-    betsKnockout: mergeRemoteRecordMap(legacyPayload.betsKnockout, shardedPayload.betsKnockout),
+    betsGames: mergeRemoteScopedRecordsByCompleteness(
+      legacyPayload.betsGames,
+      shardedPayload.betsGames,
+      countFilledGameSelections
+    ),
+    betsKnockout: mergeRemoteScopedRecordsByCompleteness(
+      legacyPayload.betsKnockout,
+      shardedPayload.betsKnockout,
+      (record) => countFilledKnockoutSelections(record, KNOCKOUT_PHASE_LENGTHS)
+    ),
     officialKnockout: authoritative.officialKnockout
       ? (shardedPayload.officialKnockout || {})
       : (shardedPayload.officialKnockout || legacyPayload.officialKnockout || {}),
@@ -1330,85 +1169,41 @@ const normalizeUser = (user) => {
 const isAdminUser = (user) => user?.role === 'admin' || user?.id === ADMIN_USER_ID;
 const findUserByName = (users, inputName) => users.find((user) => user.nomeKey === normalizeUserNameKey(inputName));
 
-const formatSubmissionDate = (timestamp) => {
-  if (!timestamp) return 'Rascunho';
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  }).format(new Date(timestamp));
-};
-
-const AvatarBadge = ({ user, size = 'md', className = '' }) => {
-  const sizes = {
-    sm: 'w-7 h-7 text-[11px] lg:w-8 lg:h-8 lg:text-xs',
-    md: 'w-9 h-9 text-sm lg:w-11 lg:h-11 lg:text-base',
-    lg: 'w-14 h-14 text-lg lg:w-[68px] lg:h-[68px] lg:text-[22px]'
-  };
-
-  const sizeClass = sizes[size] || sizes.md;
-  const initials = (user?.nome || '?').trim().charAt(0).toUpperCase();
-
-  if (user?.avatar) {
-    return (
-      <img
-        src={user.avatar}
-        alt={user.nome}
-        className={`${sizeClass} rounded-full border border-white/70 object-cover shadow-lg ${className}`}
-      />
-    );
-  }
-
-  return (
-    <div className={`${sizeClass} rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center font-bold text-white shadow-lg border border-white/60 ${className}`}>
-      {initials}
-    </div>
-  );
-};
-
-// --- ESTILOS LIGHT ---
-const GLASS_CARD = "rounded-[28px] border border-slate-200/80 bg-white shadow-[0_18px_60px_-28px_rgba(15,23,42,0.25)]";
-const GLASS_INPUT = "rounded-xl border border-slate-200 bg-slate-50 text-slate-800 placeholder:text-slate-400 focus:border-sky-400 focus:bg-white focus:outline-none transition-all disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400";
-const GLASS_BTN_PRIMARY = "bg-gradient-to-r from-sky-600 to-cyan-500 hover:from-sky-500 hover:to-cyan-400 text-white font-semibold shadow-[0_16px_40px_-18px_rgba(14,116,144,0.55)] rounded-xl transition-all active:scale-95";
-const GLASS_BTN_SECONDARY = "bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl transition-all active:scale-95";
-const TEXT_MUTED = "text-slate-600";
-const TEXT_HIGHLIGHT = "text-slate-800";
-
-// --- SUB-COMPONENTES UI ---
 const InstallGuideCard = () => (
-  <div className={`${GLASS_CARD} w-full p-5`}>
-    <div className="flex items-start gap-3">
-      <div className="rounded-2xl bg-sky-100 p-2.5 text-sky-700">
-        <Smartphone size={18} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-black uppercase tracking-[0.12em] text-slate-900">Instalar como app</h3>
-          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">
-            Sem loja
-          </span>
+  <div className={`${GLASS_CARD} overflow-hidden`}>
+    <div className="border-b border-slate-200 bg-gradient-to-r from-sky-50 to-cyan-50 px-5 py-4">
+      <div className="flex items-center gap-3">
+        <div className="rounded-2xl border border-sky-100 bg-white p-2.5 text-sky-600 shadow-sm">
+          <Smartphone size={18} />
         </div>
-        <p className={`mt-1 text-xs leading-relaxed ${TEXT_MUTED}`}>
-          Se quiser, adicione o bolão à tela inicial do celular para abrir como app.
-        </p>
+        <div>
+          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700">Instalar no celular</div>
+          <div className="mt-1 text-sm font-semibold text-slate-900">Abra como app na tela inicial</div>
+        </div>
       </div>
     </div>
-
-    <div className="mt-4 grid gap-3 md:grid-cols-2">
-      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
-        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">iPhone</div>
-        <div className="mt-2 space-y-1.5 text-[13px] leading-relaxed text-slate-700">
-          {INSTALLATION_TIPS.ios.map((step) => (
-            <div key={step}>{step}</div>
+    <div className="grid gap-4 p-5 sm:grid-cols-2">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">iPhone / iPad</div>
+        <ol className="mt-3 space-y-2 text-sm text-slate-700">
+          {INSTALLATION_TIPS.ios.map((tip, index) => (
+            <li key={tip} className="flex gap-2">
+              <span className="mt-0.5 text-sky-600">{index + 1}.</span>
+              <span>{tip}</span>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
-      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
         <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Android</div>
-        <div className="mt-2 space-y-1.5 text-[13px] leading-relaxed text-slate-700">
-          {INSTALLATION_TIPS.android.map((step) => (
-            <div key={step}>{step}</div>
+        <ol className="mt-3 space-y-2 text-sm text-slate-700">
+          {INSTALLATION_TIPS.android.map((tip, index) => (
+            <li key={tip} className="flex gap-2">
+              <span className="mt-0.5 text-sky-600">{index + 1}.</span>
+              <span>{tip}</span>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
     </div>
   </div>
@@ -1577,7 +1372,6 @@ export default function App() {
   const [abaAtiva, setAbaAtiva] = useState('jogos');
   const [secaoExpandida, setSecaoExpandida] = useState('r32');
   const [alocacaoTerceiros, setAlocacaoTerceiros] = useState({});
-  const [resetConfirm, setResetConfirm] = useState(false);
   const [userDeleteConfirmId, setUserDeleteConfirmId] = useState(null);
   const [reviewMode, setReviewMode] = useState('jogos');
   const [reviewSearch, setReviewSearch] = useState('');
@@ -2035,14 +1829,31 @@ export default function App() {
       isAdminViewer: modoAdmin
     });
   }, [editorialStatsDashboard, currentUser, currentUserCanSeeConsensusPanel, modoAdmin]);
-  const rankingFooterComments = useMemo(() => {
-    if (!currentUser) return null;
-    return buildRankingFooterComments({
-      dashboard: editorialStatsDashboard,
-      canRevealComparisons: currentUserCanSeeConsensusPanel,
-      isAdminViewer: modoAdmin
+  const consensusDashboard = useMemo(() => {
+    if (!currentUserCanSeeConsensusPanel) return null;
+
+    return buildConsensusDashboard({
+      users: usuarios,
+      submissions: submissoes,
+      betsGames: palpitesJogos,
+      betsKnockout: palpitesMataMata,
+      games: jogosReais,
+      ranking,
+      teamRankings: TEAM_FIFA_RANKINGS,
+      submissionFields: SUBMISSION_FIELDS,
+      isAdminUser,
+      usuarioPreencheuTodosOsJogos,
+      usuarioPreencheuMataCompleta
     });
-  }, [editorialStatsDashboard, currentUser, currentUserCanSeeConsensusPanel, modoAdmin]);
+  }, [
+    currentUserCanSeeConsensusPanel,
+    usuarios,
+    submissoes,
+    palpitesJogos,
+    palpitesMataMata,
+    jogosReais,
+    ranking
+  ]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -2269,28 +2080,6 @@ export default function App() {
     }
   };
 
-  const handleReset = async () => {
-    if (!resetConfirm) {
-      setResetConfirm(true);
-      setTimeout(() => setResetConfirm(false), 3000);
-      return;
-    }
-
-    const initialState = createInitialAppState();
-    if (!isDemoMode) {
-      try {
-        await writeRemoteState(initialState);
-      } catch (error) {
-        setSyncStatus('offline');
-        setSyncError(error.message || 'Falha ao resetar a base online.');
-        return;
-      }
-    }
-
-    localStorage.clear();
-    window.location.reload();
-  };
-
   const handleDeleteUser = (userId) => {
     const targetUser = usuarios.find((user) => user.id === userId);
     if (!modoAdmin || isAdminUser(targetUser)) return;
@@ -2320,1051 +2109,6 @@ export default function App() {
     setUserDeleteConfirmId(null);
   };
 
-  const RankingTable = () => {
-    const consensusDashboard = useMemo(() => {
-      if (!currentUserCanSeeConsensusPanel) return null;
-      return buildConsensusDashboard({
-        users: usuarios,
-        submissions: submissoes,
-        betsGames: palpitesJogos,
-        betsKnockout: palpitesMataMata,
-        games: jogosReais,
-        ranking,
-        teamRankings: TEAM_FIFA_RANKINGS,
-        submissionFields: SUBMISSION_FIELDS,
-        isAdminUser,
-        usuarioPreencheuTodosOsJogos,
-        usuarioPreencheuMataCompleta
-      });
-    }, [currentUserCanSeeConsensusPanel, usuarios, submissoes, palpitesJogos, palpitesMataMata, jogosReais, ranking]);
-
-    return (
-      <div className="space-y-4 animate-fade-in">
-        <div className={`${GLASS_CARD} p-4 text-center`}>
-          {matchResultSummary.temporary > 0 ? (
-            <p className={`text-xs ${TEXT_MUTED}`}>
-              Ranking provisório ao vivo: <strong className="text-amber-700">{matchResultSummary.temporary} placar{matchResultSummary.temporary === 1 ? '' : 'es'} temporário{matchResultSummary.temporary === 1 ? '' : 's'}</strong> ainda podem mudar até o Admin marcar o resultado como definitivo.
-            </p>
-          ) : matchResultSummary.final > 0 ? (
-            <p className={`text-xs ${TEXT_MUTED}`}>
-              Ranking fechado com <strong className="text-slate-900">{matchResultSummary.final} resultado{matchResultSummary.final === 1 ? '' : 's'} definitivo{matchResultSummary.final === 1 ? '' : 's'}</strong> já lançado{matchResultSummary.final === 1 ? '' : 's'} pelo Admin.
-            </p>
-          ) : (
-            <p className={`text-xs ${TEXT_MUTED}`}>A pontuação só aparece quando o <strong className="text-slate-900">Admin</strong> preenche os resultados.</p>
-          )}
-        </div>
-        <div className="space-y-3 lg:hidden">
-          {ranking.map((user) => (
-            <div key={user.id} className={`${GLASS_CARD} p-4 ${user.id === currentUser.id ? 'ring-2 ring-sky-200' : ''}`}>
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-black text-slate-700">
-                  {user.rank}
-                </div>
-                <AvatarBadge user={user} size="sm" className="h-10 w-10 text-sm" />
-                <div className="min-w-0 flex-1">
-                  <div className={`truncate text-sm font-bold ${user.id === currentUser.id ? 'text-sky-700' : 'text-slate-900'}`}>
-                    {user.nome} {user.id === currentUser.id && '(Você)'}
-                  </div>
-                  <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-2xl bg-slate-50 px-2 py-2">
-                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogos</div>
-                      <div className="mt-1 text-sm font-black text-slate-900">{user.ptsJogos}</div>
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 px-2 py-2">
-                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Mata</div>
-                      <div className="mt-1 text-sm font-black text-slate-900">{user.ptsMataMata}</div>
-                    </div>
-                    <div className="rounded-2xl bg-emerald-50 px-2 py-2">
-                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">Total</div>
-                      <div className="mt-1 text-sm font-black text-emerald-700">{user.total}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className={`${GLASS_CARD} hidden overflow-hidden lg:block`}>
-          <table className="w-full text-xs">
-            <thead className="border-b border-slate-200 bg-slate-50 text-[10px] font-bold uppercase text-slate-500"><tr><th className="p-4 text-center">#</th><th className="p-4 text-left">Nome</th><th className="p-4 text-center">Jogos</th><th className="p-4 text-center">Mata</th><th className="p-4 text-center text-slate-900">Total</th></tr></thead>
-            <tbody>{ranking.map((user) => (
-              <tr key={user.id} className={`border-b border-slate-100 last:border-0 ${user.id === currentUser.id ? 'bg-sky-50' : ''}`}>
-                <td className={`p-4 text-center font-bold ${TEXT_MUTED}`}>{user.rank}</td>
-                <td className={`p-4 ${user.id === currentUser.id ? 'text-sky-700' : TEXT_HIGHLIGHT}`}>
-                  <div className="flex items-center gap-3">
-                    <AvatarBadge user={user} size="md" className="shrink-0 lg:w-14 lg:h-14 lg:text-lg" />
-                    <span className="font-bold">{user.nome} {user.id === currentUser.id && '(Você)'}</span>
-                  </div>
-                </td>
-                <td className={`p-4 text-center ${TEXT_MUTED}`}>{user.ptsJogos}</td>
-                <td className={`p-4 text-center ${TEXT_MUTED}`}>{user.ptsMataMata}</td>
-                <td className="p-4 text-center text-sm font-bold text-emerald-700">{user.total}</td>
-              </tr>
-            ))}</tbody>
-          </table>
-        </div>
-        <RankingConsensusPanel
-          canSee={currentUserCanSeeConsensusPanel}
-          dashboard={consensusDashboard}
-          jogosSubmitted={Boolean(jogosEnviadosAt)}
-          mataSubmitted={Boolean(mataEnviadosAt)}
-        />
-        <EditorialCommentsSection comments={rankingFooterComments} />
-      </div>
-    );
-  };
-
-  const ReviewSheet = () => {
-    const searchTerm = reviewSearch.trim().toLowerCase();
-    const isGameMode = reviewMode === 'jogos';
-    const usersFiltrados = [...participanteUsuarios]
-      .filter((user) => !searchTerm || user.nome.toLowerCase().includes(searchTerm))
-      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-
-    const participantColumnCount = Math.max(usersFiltrados.length, 1);
-    const reviewSummaryWidth = isGameMode ? 268 : 282;
-    const participantColumnMinWidth = isGameMode ? 142 : 148;
-    const reviewGridTemplate = `${reviewSummaryWidth}px repeat(${participantColumnCount}, minmax(${participantColumnMinWidth}px, 1fr))`;
-    const reviewDescription = isGameMode
-      ? 'Cada confronto fica resumido na primeira coluna, deixando mais espaço para comparar os placares dos participantes. Placares temporários aparecem sinalizados.'
-      : 'Cada vaga do mata-mata e do pódio fica condensada numa coluna-resumo, com foco total na leitura dos apostadores.';
-    const reviewSubmissionField = isGameMode ? SUBMISSION_FIELDS.JOGOS : SUBMISSION_FIELDS.MATA;
-
-    const buildStatus = (variant) => {
-      if (variant === 'cravou') return { label: 'Cravou', tone: 'border-emerald-200 bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' };
-      if (variant === 'winner') return { label: 'Acertou vencedor', tone: 'border-sky-200 bg-sky-50 text-sky-700', dot: 'bg-sky-500' };
-      if (variant === 'correct') return { label: 'Acertou', tone: 'border-emerald-200 bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' };
-      if (variant === 'error') return { label: 'Errou', tone: 'border-rose-200 bg-rose-50 text-rose-700', dot: 'bg-rose-500' };
-      if (variant === 'waiting-real') return { label: 'Aguardando real', tone: 'border-amber-200 bg-amber-50 text-amber-700', dot: 'bg-amber-500' };
-      if (variant === 'waiting-official') return { label: 'Aguardando oficial', tone: 'border-amber-200 bg-amber-50 text-amber-700', dot: 'bg-amber-500' };
-      if (variant === 'temporary') return { label: 'Temporário', tone: 'border-orange-200 bg-orange-50 text-orange-700', dot: 'bg-orange-500' };
-      return { label: 'Sem palpite', tone: 'border-slate-200 bg-slate-50 text-slate-500', dot: 'bg-slate-400' };
-    };
-
-    const renderParticipantCard = (palpite) => (
-      <div className={`rounded-[18px] border px-2 py-2.5 text-center shadow-[0_14px_24px_-24px_rgba(15,23,42,0.95)] ${palpite.status.tone}`}>
-        <div className="text-base font-black tracking-[-0.04em] text-slate-900 leading-none">{palpite.palpite}</div>
-        <div className="mt-1.5 inline-flex items-center justify-center gap-1.5 rounded-full border border-black/5 bg-white/80 px-2 py-0.5">
-          <span className={`h-2.5 w-2.5 rounded-full ${palpite.status.dot}`}></span>
-          <span className="text-[9px] font-bold uppercase tracking-[0.16em]">{palpite.status.label}</span>
-        </div>
-        <div className="mt-1.5 text-[10px] font-bold text-slate-700">{palpite.pontos} pts</div>
-        <div className="mt-1 text-[9px] leading-tight text-slate-400">{palpite.envio}</div>
-      </div>
-    );
-
-    const compareByDate = (a, b) => (
-      parseMatchDateTime(a) - parseMatchDateTime(b) ||
-      a.grupo.localeCompare(b.grupo, 'pt-BR') ||
-      a.id - b.id
-    );
-
-    const compareByGroup = (a, b) => (
-      a.grupo.localeCompare(b.grupo, 'pt-BR') ||
-      parseMatchDateTime(a) - parseMatchDateTime(b) ||
-      a.id - b.id
-    );
-
-    const jogosFiltrados = jogosReais
-      .filter((jogo) => reviewGroupFilter === 'todos' || jogo.grupo === reviewGroupFilter)
-      .sort(reviewGameSort === 'group' ? compareByGroup : compareByDate);
-
-    const gameRows = jogosFiltrados.map((jogo) => {
-      const realPreenchido = placarPreenchido(jogo.placarA, jogo.placarB);
-      const schedule = formatBrazilMatchSchedule(jogo);
-      const resultVariant = getMatchResultVariant(jogo);
-
-      return {
-        id: jogo.id,
-        grupo: jogo.grupo,
-        dataHora: `${schedule.day}/${schedule.month} • ${schedule.time} BR`,
-        local: jogo.local,
-        timeA: jogo.timeA,
-        timeB: jogo.timeB,
-        real: realPreenchido ? `${jogo.placarA} x ${jogo.placarB}` : '—',
-        realStatus: resultVariant === 'final'
-          ? buildStatus('correct')
-          : resultVariant === 'temporary'
-            ? buildStatus('temporary')
-            : null,
-        realStatusLabel: resultVariant === 'final'
-          ? 'Placar oficial'
-          : resultVariant === 'temporary'
-            ? 'Placar temporário'
-            : 'Aguardando definição',
-        palpites: usersFiltrados.map((user) => {
-          const palpite = palpitesJogos[user.id]?.[jogo.id];
-          const palpitePreenchido = placarPreenchido(palpite?.placarA, palpite?.placarB);
-          const resultado = palpitePreenchido && realPreenchido
-            ? calcularPontosJogo(palpite.placarA, palpite.placarB, jogo.placarA, jogo.placarB)
-            : null;
-
-          let status = buildStatus();
-          if (palpitePreenchido && !realPreenchido) status = buildStatus('waiting-real');
-          if (resultado?.pts === PONTOS.JOGO.CHEIO) status = buildStatus('cravou');
-          if (resultado?.pts === PONTOS.JOGO.VITORIA) status = buildStatus('winner');
-          if (resultado && resultado.pts === 0) status = buildStatus('error');
-
-          return {
-            userId: user.id,
-            palpite: palpitePreenchido ? `${palpite.placarA} x ${palpite.placarB}` : '—',
-            status,
-            pontos: resultado?.pts ?? 0,
-            envio: formatSubmissionDate(submissoes[user.id]?.[SUBMISSION_FIELDS.JOGOS])
-          };
-        })
-      };
-    });
-
-    const gameRowsById = new Map(gameRows.map((row) => [row.id, row]));
-    const groupedGameRows = reviewGameSort === 'group'
-      ? Object.entries(
-        gameRows.reduce((acc, row) => {
-          if (!acc[row.grupo]) acc[row.grupo] = [];
-          acc[row.grupo].push(row);
-          return acc;
-        }, {})
-      ).sort(([grupoA], [grupoB]) => grupoA.localeCompare(grupoB, 'pt-BR'))
-        .map(([grupo, rows]) => ({
-          id: grupo,
-          title: `Grupo ${grupo}`,
-          rows
-        }))
-      : buildChronologicalMatchGroups(jogosFiltrados).map((dayGroup) => ({
-        id: dayGroup.dayKey,
-        title: dayGroup.dayLabel,
-        rows: dayGroup.matches
-          .map((match) => gameRowsById.get(match.id))
-          .filter(Boolean)
-      }));
-
-    const knockoutPhaseOptions = [
-      { id: 'r32', label: '32-avos' },
-      { id: 'r16', label: 'Oitavas' },
-      { id: 'qf', label: 'Quartas' },
-      { id: 'sf', label: 'Semifinais' },
-      { id: 'podio', label: 'Pódio final' }
-    ];
-
-    const resolveKnockoutSides = (phaseKey, match) => {
-      if (phaseKey === 'dezeszeseisavos' && match?.label?.includes(' x ')) {
-        const [sideA, sideB] = match.label.split(' x ');
-        return { sideA, sideB };
-      }
-
-      return {
-        sideA: getWinnerOfMatch(match.feedA, gabaritoMataMata) || `Venc. ${match.feedA}`,
-        sideB: getWinnerOfMatch(match.feedB, gabaritoMataMata) || `Venc. ${match.feedB}`
-      };
-    };
-
-    const buildKnockoutPalpites = ({ official, points, getter }) => usersFiltrados.map((user) => {
-      const palpite = getter(palpitesMataMata[user.id] || {});
-      const preenchido = Boolean(palpite);
-      const pontos = preenchido && official !== '—' && palpite === official ? points : 0;
-      let status = buildStatus();
-      if (preenchido && official === '—') status = buildStatus('waiting-official');
-      if (pontos > 0) status = buildStatus('correct');
-      if (preenchido && official !== '—' && pontos === 0) status = buildStatus('error');
-
-      return {
-        userId: user.id,
-        palpite: palpite || '—',
-        status,
-        pontos,
-        envio: formatSubmissionDate(submissoes[user.id]?.[SUBMISSION_FIELDS.MATA])
-      };
-    });
-
-    const knockoutSections = [
-      { id: 'r32', title: '32-avos de final', phaseKey: 'dezeszeseisavos', points: PONTOS.MATA.R32, list: MATA_MATA_CONFIG.r32 },
-      { id: 'r16', title: 'Oitavas de final', phaseKey: 'oitavas', points: PONTOS.MATA.R16, list: MATA_MATA_CONFIG.r16 },
-      { id: 'qf', title: 'Quartas de final', phaseKey: 'quartas', points: PONTOS.MATA.QF, list: MATA_MATA_CONFIG.qf },
-      { id: 'sf', title: 'Semifinais', phaseKey: 'semis', points: PONTOS.MATA.SF, list: MATA_MATA_CONFIG.sf }
-    ].map((section) => ({
-      ...section,
-      rows: section.list.map((match, idx) => {
-        const schedule = formatBrazilMatchSchedule(match);
-        const { sideA, sideB } = resolveKnockoutSides(section.phaseKey, match);
-        const official = gabaritoMataMata[section.phaseKey]?.[idx] || '—';
-
-        return {
-          id: `${section.id}-${match.id}`,
-          kind: 'match',
-          metaTop: section.title,
-          metaBottom: `${schedule.day}/${schedule.month} • ${schedule.time} BR`,
-          metaNote: match.local,
-          matchupTitle: `Jogo ${match.id}`,
-          matchupSubtitle: `${section.points} pts em jogo`,
-          sideA,
-          sideB,
-          official,
-          officialMeta: official === '—' ? 'Aguardando definição' : `${section.points} pts`,
-          palpites: buildKnockoutPalpites({
-            official,
-            points: section.points,
-            getter: (userMata) => userMata[section.phaseKey]?.[idx]
-          })
-        };
-      })
-    }));
-
-    const finalInfo = MATA_MATA_CONFIG.final[0];
-    const bronzeInfo = MATA_MATA_CONFIG.bronzeFinal[0];
-    const finalSchedule = formatBrazilMatchSchedule(finalInfo);
-    const bronzeSchedule = formatBrazilMatchSchedule(bronzeInfo);
-
-    const podiumSection = {
-      id: 'podio',
-      title: 'Pódio final',
-      rows: [
-        {
-          id: 'campeao',
-          metaTop: 'Pódio final',
-          metaBottom: `${finalSchedule.day}/${finalSchedule.month} • ${finalSchedule.time} BR`,
-          metaNote: finalInfo.local,
-          matchupTitle: 'Campeão',
-          matchupSubtitle: 'Escolha o vencedor da final',
-          official: gabaritoMataMata.campeao || '—',
-          officialMeta: `${PONTOS.MATA.CAMPEAO} pts`,
-          points: PONTOS.MATA.CAMPEAO,
-          field: 'campeao'
-        },
-        {
-          id: 'vice',
-          metaTop: 'Pódio final',
-          metaBottom: `${finalSchedule.day}/${finalSchedule.month} • ${finalSchedule.time} BR`,
-          metaNote: finalInfo.local,
-          matchupTitle: 'Vice',
-          matchupSubtitle: 'Derrotado da final',
-          official: gabaritoMataMata.vice || '—',
-          officialMeta: `${PONTOS.MATA.VICE} pts`,
-          points: PONTOS.MATA.VICE,
-          field: 'vice'
-        },
-        {
-          id: 'terceiro',
-          metaTop: 'Pódio final',
-          metaBottom: `${bronzeSchedule.day}/${bronzeSchedule.month} • ${bronzeSchedule.time} BR`,
-          metaNote: bronzeInfo.local,
-          matchupTitle: '3º lugar',
-          matchupSubtitle: 'Vencedor da disputa do bronze',
-          official: gabaritoMataMata.terceiro || '—',
-          officialMeta: `${PONTOS.MATA.TOP3} pts`,
-          points: PONTOS.MATA.TOP3,
-          field: 'terceiro'
-        },
-        {
-          id: 'quarto',
-          metaTop: 'Pódio final',
-          metaBottom: `${bronzeSchedule.day}/${bronzeSchedule.month} • ${bronzeSchedule.time} BR`,
-          metaNote: bronzeInfo.local,
-          matchupTitle: '4º lugar',
-          matchupSubtitle: 'Derrotado da disputa do bronze',
-          official: gabaritoMataMata.quarto || '—',
-          officialMeta: `${PONTOS.MATA.TOP4} pts`,
-          points: PONTOS.MATA.TOP4,
-          field: 'quarto'
-        }
-      ].map((row) => ({
-        ...row,
-        kind: 'podium',
-        palpites: buildKnockoutPalpites({
-          official: row.official,
-          points: row.points,
-          getter: (userMata) => userMata[row.field]
-        })
-      }))
-    };
-
-    const groupedKnockoutRows = [...knockoutSections, podiumSection]
-      .filter((section) => reviewPhaseFilter === 'todos' || section.id === reviewPhaseFilter);
-
-    const linhas = isGameMode ? gameRows : groupedKnockoutRows.flatMap((section) => section.rows);
-    const reviewCountLabel = isGameMode
-      ? `${linhas.length} jogo${linhas.length === 1 ? '' : 's'} visíveis`
-      : `${linhas.length} linha${linhas.length === 1 ? '' : 's'} da chave`;
-    const usersFiltradosById = Object.fromEntries(usersFiltrados.map((user) => [user.id, user]));
-
-    const renderSummaryCell = (row) => {
-      if (isGameMode) {
-        return (
-          <div className="rounded-[14px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-2.5 py-2 shadow-[0_10px_20px_-22px_rgba(15,23,42,0.4)]">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-sky-700">Grupo {row.grupo} • {row.dataHora}</div>
-              </div>
-              <div className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-black text-slate-900 shadow-sm">
-                <span className="mr-1 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                  {row.realStatusLabel === 'Placar temporário' ? 'Ao vivo' : 'Oficial'}
-                </span>
-                {row.real}
-              </div>
-            </div>
-
-            <div className="mt-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-              <span>Jogo {row.id}</span>
-              <span className="text-slate-300">•</span>
-              <span>Até {PONTOS.JOGO.CHEIO} pts</span>
-            </div>
-
-            <div className="mt-1.5 flex items-center gap-2 text-[13px] font-bold text-slate-900">
-              <span className="truncate">{row.timeA}</span>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">x</span>
-              <span className="truncate">{row.timeB}</span>
-            </div>
-
-            <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-slate-500">
-              <span className="truncate">{row.local}</span>
-              <span className={`inline-flex items-center gap-1 truncate rounded-full px-2 py-1 text-right font-semibold ${
-                row.realStatus?.tone || 'bg-slate-100 text-slate-500'
-              }`}>
-                {row.realStatus && <span className={`h-2 w-2 rounded-full ${row.realStatus.dot}`}></span>}
-                {row.realStatusLabel}
-              </span>
-            </div>
-          </div>
-        );
-      }
-
-      return (
-        <div className="rounded-[14px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfbff_100%)] px-2.5 py-2 shadow-[0_10px_20px_-22px_rgba(15,23,42,0.4)]">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">{row.metaTop} • {row.metaBottom}</div>
-            </div>
-            <div className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-black text-slate-900 shadow-sm">
-              <span className="mr-1 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-400">Oficial</span>
-              {row.official}
-            </div>
-          </div>
-
-          <div className="mt-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-            <span>{row.matchupTitle}</span>
-            <span className="text-slate-300">•</span>
-            <span>{row.kind === 'match' ? row.officialMeta : row.matchupSubtitle}</span>
-          </div>
-
-          {row.kind === 'match' ? (
-            <div className="mt-1.5 flex items-center gap-2 text-[13px] font-bold text-slate-900">
-              <span className="truncate">{row.sideA}</span>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">x</span>
-              <span className="truncate">{row.sideB}</span>
-            </div>
-          ) : (
-            <div className="mt-1.5 text-[13px] font-bold text-slate-900">{row.matchupSubtitle}</div>
-          )}
-
-          <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-slate-500">
-            <span className="truncate">{row.metaNote}</span>
-            {row.kind === 'match' && <span className="shrink-0 font-semibold text-slate-500">{row.official === '—' ? 'Aguardando definição' : row.officialMeta}</span>}
-          </div>
-        </div>
-      );
-    };
-
-    const renderMobileParticipantRow = (palpite) => {
-      const user = usersFiltradosById[palpite.userId];
-      return (
-        <div key={palpite.userId} className="flex items-center gap-3 px-3 py-2.5">
-          <AvatarBadge user={user} size="sm" className="shrink-0" />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[12px] font-bold text-slate-800">{user?.nome || 'Participante'}</div>
-            <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">
-              <span className={`h-2 w-2 rounded-full ${palpite.status.dot}`}></span>
-              <span className="truncate">{palpite.status.label}</span>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-[15px] font-black tracking-[-0.03em] text-slate-900">{palpite.palpite}</div>
-            <div className="mt-0.5 text-[10px] font-semibold text-slate-600">{palpite.pontos} pts</div>
-            <div className="mt-0.5 text-[9px] text-slate-400">{palpite.envio}</div>
-          </div>
-        </div>
-      );
-    };
-
-    const renderMobileRowCard = (row) => (
-      <div key={row.id} className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_16px_32px_-28px_rgba(15,23,42,0.38)]">
-        <div className="p-3">
-          {renderSummaryCell(row)}
-        </div>
-        <div className="border-t border-slate-100 bg-slate-50/55">
-          {row.palpites.map((palpite, index) => (
-            <div key={`${row.id}-${palpite.userId}`} className={index > 0 ? 'border-t border-slate-100' : ''}>
-              {renderMobileParticipantRow(palpite)}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-
-    return (
-      <div className="space-y-4 animate-fade-in">
-        <div className={`${GLASS_CARD} p-4 space-y-3 lg:p-4`}>
-          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h3 className="text-[15px] font-black uppercase tracking-[0.12em] text-slate-900">Planilha de Palpites</h3>
-              <p className={`mt-1 max-w-4xl text-[12px] leading-snug ${TEXT_MUTED}`}>{reviewDescription}</p>
-            </div>
-            <div className="flex gap-2 rounded-full bg-slate-100 p-1 self-start">
-              <button onClick={() => setReviewMode('jogos')} className={`px-3 py-1.5 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'jogos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Fase de Grupos</button>
-              <button onClick={() => setReviewMode('mata')} className={`px-3 py-1.5 text-[11px] font-bold rounded-full transition-colors ${reviewMode === 'mata' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Mata-mata</button>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap gap-2 text-[10px] font-semibold text-slate-500">
-              <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
-                <span className="font-black text-slate-900">{usersFiltrados.length}</span>
-                {usersFiltrados.length === 1 ? 'apostador' : 'apostadores'}
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
-                <span className="font-black text-slate-900">{linhas.length}</span>
-                {reviewCountLabel}
-              </span>
-            </div>
-            <div className="grid gap-2 lg:min-w-[720px] lg:grid-cols-[minmax(0,1fr)_210px_170px]">
-              <input value={reviewSearch} onChange={(e) => setReviewSearch(e.target.value)} placeholder="Filtrar participantes por nome" className={`${GLASS_INPUT} min-h-12 px-3 py-2.5 text-base`} />
-              <select
-                value={isGameMode ? reviewGroupFilter : reviewPhaseFilter}
-                onChange={(e) => isGameMode ? setReviewGroupFilter(e.target.value) : setReviewPhaseFilter(e.target.value)}
-                className={`${GLASS_INPUT} min-h-12 px-3 py-2.5 text-base`}
-              >
-                <option value="todos">{isGameMode ? 'Todos os grupos' : 'Todas as fases'}</option>
-                {(isGameMode
-                  ? Object.keys(GRUPOS_2026).map((grupo) => ({ id: grupo, label: `Grupo ${grupo}` }))
-                  : knockoutPhaseOptions
-                ).map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-              </select>
-              {isGameMode && (
-                <select
-                  value={reviewGameSort}
-                  onChange={(e) => setReviewGameSort(e.target.value)}
-                  className={`${GLASS_INPUT} min-h-12 px-3 py-2.5 text-base`}
-                >
-                  <option value="date">Ordenar por data e hora</option>
-                  <option value="group">Ordenar por grupo</option>
-                </select>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold text-slate-500">
-            <span className="text-[11px] text-slate-500">Legenda:</span>
-            {reviewMode === 'jogos' && (
-              <>
-                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span> Cravou</span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-2.5 py-1 text-sky-700"><span className="h-2.5 w-2.5 rounded-full bg-sky-500"></span> Acertou vencedor</span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-2.5 py-1 text-rose-700"><span className="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Errou</span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-2.5 py-1 text-amber-700"><span className="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Aguardando real</span>
-              </>
-            )}
-            {reviewMode === 'mata' && (
-              <>
-                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span> Acertou</span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-2.5 py-1 text-rose-700"><span className="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Errou</span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-2.5 py-1 text-amber-700"><span className="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Aguardando oficial</span>
-              </>
-            )}
-            <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-slate-400"></span> Sem palpite</span>
-          </div>
-          <div className={`text-[11px] ${TEXT_MUTED}`}>
-            Arraste na horizontal para comparar os apostadores.
-          </div>
-        </div>
-
-        <div className="space-y-4 lg:hidden">
-          {linhas.length === 0 && (
-            <div className={`${GLASS_CARD} px-4 py-10 text-center text-slate-400`}>Nenhum registro encontrado com os filtros atuais.</div>
-          )}
-
-          {reviewMode === 'jogos' ? (
-            <>
-              {groupedGameRows.map((group) => (
-                <div key={group.id} className="space-y-3">
-                  <div className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-sky-700">
-                    {group.title}
-                  </div>
-                  <div className="space-y-3">
-                    {group.rows.map((row) => renderMobileRowCard(row))}
-                  </div>
-                </div>
-              ))}
-            </>
-          ) : (
-            <>
-              {groupedKnockoutRows.map((section) => (
-                <div key={section.id} className="space-y-3">
-                  <div className="inline-flex items-center rounded-full bg-violet-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-violet-700">
-                    {section.title}
-                  </div>
-                  <div className="space-y-3">
-                    {section.rows.map((row) => renderMobileRowCard(row))}
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-        </div>
-
-        <div className={`${GLASS_CARD} hidden overflow-hidden lg:block`}>
-          <div className="max-h-[calc(100vh-220px)] overflow-auto overscroll-contain">
-            <div className="min-w-max text-xs bg-white">
-              <div
-                className="sticky top-0 z-40 grid border-b border-slate-200 bg-slate-50/95 text-[10px] uppercase text-slate-500 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.55)] backdrop-blur"
-                style={{ gridTemplateColumns: reviewGridTemplate }}
-              >
-                <div className="sticky left-0 z-50 border-r border-slate-200 bg-slate-50/95 px-4 py-3 font-bold backdrop-blur">Resumo do confronto</div>
-                {usersFiltrados.map((user) => (
-                  <div key={user.id} className="border-r border-slate-100 px-2 py-2.5 text-center last:border-r-0">
-                    <div className="flex items-center justify-center gap-2">
-                      <AvatarBadge user={user} size="sm" className="lg:w-12 lg:h-12 lg:text-base" />
-                      <div className="max-w-[96px] truncate font-bold normal-case text-[11px] text-slate-700">{user.nome}</div>
-                    </div>
-                    <div className="mt-0.5 text-[9px] font-semibold text-slate-400">
-                      {submissoes[user.id]?.[reviewSubmissionField] ? 'Enviado' : 'Rascunho'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {linhas.length === 0 && (
-                <div className="px-4 py-10 text-center text-slate-400">Nenhum registro encontrado com os filtros atuais.</div>
-              )}
-
-              {reviewMode === 'jogos' ? (
-                <>
-                  {groupedGameRows.map((group) => (
-                    <div key={group.id} className="border-b border-slate-100 last:border-0">
-                      <div className="border-b border-slate-200 bg-white px-4 py-3">
-                        <div className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-sky-700">
-                          {group.title}
-                        </div>
-                      </div>
-
-                      {group.rows.map((row) => (
-                        <div
-                          key={row.id}
-                          className="grid border-b border-slate-100 bg-white last:border-0"
-                          style={{ gridTemplateColumns: reviewGridTemplate }}
-                        >
-                          <div className="sticky left-0 z-20 border-r border-slate-200 bg-white px-2.5 py-2.5">
-                            {renderSummaryCell(row)}
-                          </div>
-
-                          {row.palpites.map((palpite) => (
-                            <div key={`${row.id}-${palpite.userId}`} className="border-r border-slate-100 px-2 py-3 last:border-r-0">
-                              {renderParticipantCard(palpite)}
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <>
-                  {groupedKnockoutRows.map((section) => (
-                    <div key={section.id} className="border-b border-slate-100 last:border-0">
-                      <div className="border-b border-slate-200 bg-white px-4 py-3">
-                        <div className="inline-flex items-center rounded-full bg-violet-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-violet-700">
-                          {section.title}
-                        </div>
-                      </div>
-
-                      {section.rows.map((row) => (
-                        <div
-                          key={row.id}
-                          className="grid border-b border-slate-100 bg-white last:border-0"
-                          style={{ gridTemplateColumns: reviewGridTemplate }}
-                        >
-                          <div className="sticky left-0 z-20 border-r border-slate-200 bg-white px-2.5 py-2.5">
-                            {renderSummaryCell(row)}
-                          </div>
-
-                          {row.palpites.map((palpite) => (
-                            <div key={`${row.id}-${palpite.userId}`} className="border-r border-slate-100 px-2 py-3 last:border-r-0">
-                              {renderParticipantCard(palpite)}
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const TabelaClassificacao = ({ grupo }) => {
-    const tabela = calcularTabelaGrupo(grupo, jogosReais, palpitesJogos[currentUser.id], condutaGrupos);
-    const jogosDoGrupo = jogosReais.filter((jogo) => jogo.grupo === grupo);
-    const grupoTemporario = jogosDoGrupo.some((jogo) => getMatchResultVariant(jogo) === 'temporary');
-    const statColumns = [
-      { key: 'p', label: 'P' },
-      { key: 'j', label: 'J' },
-      { key: 'v', label: 'V' },
-      { key: 'e', label: 'E' },
-      { key: 'd', label: 'D' },
-      { key: 'gp', label: 'GP' },
-      { key: 'gc', label: 'GC' },
-      { key: 'sg', label: 'SG' }
-    ];
-
-    return (
-      <div className={`${GLASS_CARD} overflow-hidden mb-4`}>
-        <div className="bg-white/5 px-2.5 py-2.5 flex justify-between items-center border-b border-white/5 gap-2">
-          <span className="font-bold text-[12px] uppercase tracking-[0.16em] text-slate-700">Classificação - Grupo {grupo}</span>
-          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-            !modoAdmin
-              ? 'bg-blue-400/10 text-blue-500'
-              : grupoTemporario
-                ? 'bg-orange-100 text-orange-700'
-                : 'bg-emerald-100 text-emerald-700'
-          }`}>
-            {!modoAdmin ? 'Simulada' : grupoTemporario ? 'Ao vivo' : 'Oficial'}
-          </span>
-        </div>
-        <div className="overflow-x-auto overscroll-x-contain">
-        <table className="min-w-[420px] w-full table-fixed text-[10px] text-slate-700 sm:text-[11px]">
-          <thead>
-            <tr className="border-b border-white/5 text-slate-500">
-              <th className="w-6 px-0.5 py-2 text-center">#</th>
-              <th className="px-1 py-2 text-left">Seleção</th>
-              {statColumns.map((column) => (
-                <th key={column.key} className="w-6 px-0.5 py-2 text-center font-semibold">
-                  {column.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {tabela.map((time, idx) => {
-              let posColor = "";
-              if (idx < 2) posColor = "border-l-2 border-l-green-500 bg-green-500/5";
-              else if (idx === 2) posColor = "border-l-2 border-l-yellow-500 bg-yellow-500/5";
-              else posColor = "border-l-2 border-l-transparent opacity-50";
-              return (
-                <tr key={time.time} className={`border-b border-white/5 last:border-0 ${posColor}`}>
-                  <td className="px-0.5 py-2 text-center font-bold text-slate-600">{idx + 1}</td>
-                  <td className={`px-1 py-2 font-semibold leading-tight ${TEXT_HIGHLIGHT}`}>
-                    <span className="block truncate">{getShortCountryName(time.time)}</span>
-                  </td>
-                  {statColumns.map((column) => (
-                    <td
-                      key={column.key}
-                      className={`px-0.5 py-2 text-center ${column.key === 'p' ? 'font-bold text-slate-800' : 'text-slate-600'}`}
-                    >
-                      {time[column.key]}
-                    </td>
-                  ))}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        </div>
-        {modoAdmin && (
-          <div className="border-t border-slate-200 p-3 space-y-2 bg-slate-50/90">
-            <div className="text-[11px] uppercase font-bold text-slate-700">Fair play / conduta FIFA</div>
-            {GRUPOS_2026[grupo].map((time) => {
-              const registro = condutaGrupos?.[grupo]?.[time] || {};
-              return (
-                <div key={time} className="grid grid-cols-[minmax(0,1fr)_44px_44px_44px_44px] gap-2 items-center">
-                  <span className="truncate text-[12px] font-medium text-slate-700">{time}</span>
-                  <input type="number" min="0" inputMode="numeric" value={registro.amarelos ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'amarelos', e.target.value)} className={`${GLASS_INPUT} h-11 text-center text-base text-slate-700`} placeholder="A" title="Amarelos" />
-                  <input type="number" min="0" inputMode="numeric" value={registro.vermelhoIndireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'vermelhoIndireto', e.target.value)} className={`${GLASS_INPUT} h-11 text-center text-base text-slate-700`} placeholder="2A" title="Vermelho indireto" />
-                  <input type="number" min="0" inputMode="numeric" value={registro.vermelhoDireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'vermelhoDireto', e.target.value)} className={`${GLASS_INPUT} h-11 text-center text-base text-slate-700`} placeholder="VD" title="Vermelho direto" />
-                  <input type="number" min="0" inputMode="numeric" value={registro.amareloEVermelhoDireto ?? ''} onChange={e => atualizarCondutaGrupo(grupo, time, 'amareloEVermelhoDireto', e.target.value)} className={`${GLASS_INPUT} h-11 text-center text-base text-slate-700`} placeholder="A+V" title="Amarelo + vermelho direto" />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const RestrictedMatchDropdown = ({ match, idx, phaseKey }) => {
-    let timeA, timeB;
-    if (phaseKey === 'dezeszeseisavos') {
-      timeA = getR32Team(match.refA, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos);
-      timeB = match.refThirdGroups
-        ? getThirdPlaceCandidate(match, alocacaoTerceiros, gruposCompletos)
-        : getR32Team(match.refB, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos);
-    } else {
-      const source = modoAdmin ? gabaritoMataMata : (palpitesMataMata[currentUser.id] || {});
-      timeA = getWinnerOfMatch(match.feedA, source) || `Venc. ${match.feedA}`;
-      timeB = getWinnerOfMatch(match.feedB, source) || `Venc. ${match.feedB}`;
-    }
-    const currentValue = modoAdmin ? gabaritoMataMata[phaseKey]?.[idx] : palpitesMataMata[currentUser.id]?.[phaseKey]?.[idx];
-    const options = [timeA, timeB].filter(t => t && t !== 'A definir' && !t.includes("Aguardando") && !t.includes("Venc.") && !t.startsWith('3º de '));
-    const normalizedOptions = currentValue && !options.includes(currentValue)
-      ? [currentValue, ...options]
-      : options;
-    const isReady = options.length === 2;
-    const isLocked = !modoAdmin && palpitesTravadosMata;
-    const officialWinner = gabaritoMataMata[phaseKey]?.[idx] || '';
-    const review = buildChoiceReview({
-      choice: currentValue,
-      official: officialWinner,
-      points: phaseKey === 'dezeszeseisavos'
-        ? PONTOS.MATA.R32
-        : phaseKey === 'oitavas'
-          ? PONTOS.MATA.R16
-          : phaseKey === 'quartas'
-            ? PONTOS.MATA.QF
-            : PONTOS.MATA.SF,
-      successLabel: 'Acertou o classificado'
-    });
-    const schedule = formatBrazilMatchSchedule(match);
-    const officialKickoffHint = formatOfficialKickoffHint(match);
-    const showReviewMode = !modoAdmin && isLocked;
-
-    if (showReviewMode) {
-      return (
-        <div className={`${GLASS_CARD} mb-3 p-4 lg:p-5 ${!isReady ? 'opacity-60' : ''}`}>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
-                <span>{schedule.day}/{schedule.month} • {schedule.time} BR</span>
-                {match.local && <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{match.local}</span>}
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">Jogo {match.id}</span>
-              </div>
-              {officialKickoffHint && <div className="mt-2 text-[13px] text-slate-500">{officialKickoffHint}</div>}
-            </div>
-            <div className={`self-start rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] ${review.tone}`}>
-              {review.label}
-            </div>
-          </div>
-          <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
-            <div className={`text-right text-[15px] font-bold lg:text-[18px] ${isReady ? 'text-slate-900' : 'text-slate-400'}`}>{timeA}</div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-center text-sm font-black uppercase tracking-[0.18em] text-slate-500 lg:min-w-[112px]">
-              x
-            </div>
-            <div className={`text-left text-[15px] font-bold lg:text-[18px] ${isReady ? 'text-slate-900' : 'text-slate-400'}`}>{timeB}</div>
-          </div>
-          <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
-            <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
-              <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu palpite</div>
-              <div className="mt-3 text-[22px] font-black text-slate-900 lg:text-[26px]">
-                {currentValue || 'Sem palpite'}
-              </div>
-              <div className="mt-2 text-[13px] leading-snug text-slate-500">
-                {currentValue ? 'Escolha enviada para este confronto.' : 'Nenhum classificado foi escolhido neste confronto.'}
-              </div>
-            </div>
-            <div className={`rounded-[20px] border px-4 py-4 ${review.tone}`}>
-              <div className="text-[11px] font-bold uppercase tracking-[0.16em]">{review.label}</div>
-              <div className="mt-3 text-[20px] font-black lg:text-[24px]">{review.detail}</div>
-              <div className="mt-2 text-[13px] leading-snug opacity-80">
-                {officialWinner
-                  ? `Classificado oficial: ${officialWinner}`
-                  : 'A comparação aparece quando o classificado oficial for definido.'}
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className={`${GLASS_CARD} p-4 mb-3 ${(!isReady || isLocked) && 'opacity-60'}`}>
-        <div className={`flex justify-between items-start text-[10px] font-bold uppercase mb-3 ${TEXT_MUTED} gap-3`}>
-          <div className="flex flex-col gap-1">
-            <span>{schedule.day}/{schedule.month} • {schedule.time} BR</span>
-            {officialKickoffHint && <span className="text-[9px] font-semibold normal-case text-slate-400">{officialKickoffHint}</span>}
-          </div>
-          <div className="text-right">
-            <div>{match.local}</div>
-            <div className="mt-1 text-[9px] font-semibold text-slate-400">Jogo {match.id}</div>
-          </div>
-        </div>
-        <div className="flex items-center justify-between mb-3">
-          <span className={`text-xs font-bold truncate max-w-[45%] text-right ${isReady ? 'text-slate-800' : TEXT_MUTED}`}>{timeA}</span>
-          <span className={`text-[10px] px-2 ${TEXT_MUTED}`}>vs</span>
-          <span className={`text-xs font-bold truncate max-w-[45%] text-left ${isReady ? 'text-slate-800' : TEXT_MUTED}`}>{timeB}</span>
-        </div>
-        <div className="relative">
-          {(!isReady || isLocked) && <Lock size={12} className={`absolute left-3 top-4 ${TEXT_MUTED}`} />}
-          <select value={currentValue || ""} onChange={(e) => atualizarMataMata(phaseKey, e.target.value, idx)} disabled={!isReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base font-medium appearance-none ${(!isReady || isLocked) && 'pl-8 text-slate-400'}`}>
-            <option value="">{isLocked ? "Palpite enviado" : isReady ? "Quem vence?" : "Defina os anteriores"}</option>
-            {normalizedOptions.map((team) => <option key={team} value={team}>{team}</option>)}
-          </select>
-          {!isLocked && isReady && <ChevronDown size={14} className={`absolute right-3 top-4 pointer-events-none ${TEXT_MUTED}`} />}
-        </div>
-      </div>
-    );
-  };
-
-  const PodiumSection = () => {
-    const dataSource = modoAdmin ? gabaritoMataMata : (palpitesMataMata[currentUser.id] || {});
-    const finalista1 = getWinnerOfMatch(101, dataSource);
-    const finalista2 = getWinnerOfMatch(102, dataSource);
-    const semi1A = getWinnerOfMatch(97, dataSource);
-    const semi1B = getWinnerOfMatch(98, dataSource);
-    const perdedor1 = getRunnerUp(finalista1, semi1A, semi1B);
-    const semi2A = getWinnerOfMatch(99, dataSource);
-    const semi2B = getWinnerOfMatch(100, dataSource);
-    const perdedor2 = getRunnerUp(finalista2, semi2A, semi2B);
-    const finalistas = [finalista1, finalista2].filter(Boolean);
-    const disputantes3 = [perdedor1, perdedor2].filter(Boolean);
-    const isFinalReady = finalistas.length === 2;
-    const is3rdReady = disputantes3.length === 2;
-    const isLocked = !modoAdmin && palpitesTravadosMata;
-    const finalInfo = MATA_MATA_CONFIG.final[0];
-    const bronzeInfo = MATA_MATA_CONFIG.bronzeFinal[0];
-    const finalSchedule = formatBrazilMatchSchedule(finalInfo);
-    const bronzeSchedule = formatBrazilMatchSchedule(bronzeInfo);
-    const finalKickoffHint = formatOfficialKickoffHint(finalInfo);
-    const bronzeKickoffHint = formatOfficialKickoffHint(bronzeInfo);
-    const renderFeedback = (field) => {
-      if (modoAdmin || !gabaritoMataMata[field]) return null;
-      if (dataSource[field] === gabaritoMataMata[field]) return <span className="ml-2 text-[10px] text-green-400 font-bold">(Acertou!)</span>;
-      return <span className="ml-2 text-[10px] text-red-400 font-bold">(X)</span>;
-    };
-    const showReviewMode = !modoAdmin && isLocked;
-    const podiumReviewCards = [
-      {
-        id: 'campeao',
-        title: 'Campeão',
-        schedule: finalSchedule,
-        location: finalInfo.local,
-        kickoffHint: finalKickoffHint,
-        choice: dataSource.campeao,
-        official: gabaritoMataMata.campeao || '',
-        points: PONTOS.MATA.CAMPEAO
-      },
-      {
-        id: 'vice',
-        title: 'Vice',
-        schedule: finalSchedule,
-        location: finalInfo.local,
-        kickoffHint: finalKickoffHint,
-        choice: dataSource.vice,
-        official: gabaritoMataMata.vice || '',
-        points: PONTOS.MATA.VICE
-      },
-      {
-        id: 'terceiro',
-        title: '3º lugar',
-        schedule: bronzeSchedule,
-        location: bronzeInfo.local,
-        kickoffHint: bronzeKickoffHint,
-        choice: dataSource.terceiro,
-        official: gabaritoMataMata.terceiro || '',
-        points: PONTOS.MATA.TOP3
-      },
-      {
-        id: 'quarto',
-        title: '4º lugar',
-        schedule: bronzeSchedule,
-        location: bronzeInfo.local,
-        kickoffHint: bronzeKickoffHint,
-        choice: dataSource.quarto,
-        official: gabaritoMataMata.quarto || '',
-        points: PONTOS.MATA.TOP4
-      }
-    ];
-
-    return (
-      <div className={`${GLASS_CARD} mb-3 transition-all ${secaoExpandida === 'podium' ? 'ring-1 ring-yellow-500/50' : ''}`}>
-        <button onClick={() => setSecaoExpandida(secaoExpandida === 'podium' ? null : 'podium')} className="flex min-h-13 w-full items-center justify-between bg-gradient-to-r from-yellow-500/10 to-transparent p-4"><div className="flex items-center gap-3"><Crown className="text-yellow-500" size={18} /><span className="font-bold text-sm text-slate-900 uppercase tracking-wide">Pódio Final</span></div>{secaoExpandida === 'podium' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
-        {secaoExpandida === 'podium' && (
-          <div className="space-y-4 border-t border-slate-200 p-4">
-            {showReviewMode ? (
-              <div className="grid gap-3 lg:grid-cols-2">
-                {podiumReviewCards.map((card) => {
-                  const review = buildChoiceReview({
-                    choice: card.choice,
-                    official: card.official,
-                    points: card.points,
-                    successLabel: 'Acertou a posição'
-                  });
-
-                  return (
-                    <div key={card.id} className={`${GLASS_CARD} p-4 lg:p-5`}>
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
-                            <span>{card.schedule.day}/{card.schedule.month} • {card.schedule.time} BR</span>
-                            {card.location && <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{card.location}</span>}
-                          </div>
-                          {card.kickoffHint && <div className="mt-2 text-[13px] text-slate-500">{card.kickoffHint}</div>}
-                        </div>
-                        <div className={`self-start rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] ${review.tone}`}>
-                          {review.label}
-                        </div>
-                      </div>
-                      <div className="mt-5 text-[12px] font-bold uppercase tracking-[0.18em] text-slate-500">{card.title}</div>
-                      <div className="mt-4 grid gap-3">
-                        <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
-                          <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu palpite</div>
-                          <div className="mt-3 text-[22px] font-black text-slate-900 lg:text-[26px]">{card.choice || 'Sem palpite'}</div>
-                          <div className="mt-2 text-[13px] leading-snug text-slate-500">
-                            {card.choice ? 'Escolha enviada para esta posição.' : 'Nenhuma escolha foi registrada para esta posição.'}
-                          </div>
-                        </div>
-                        <div className={`rounded-[20px] border px-4 py-4 ${review.tone}`}>
-                          <div className="text-[11px] font-bold uppercase tracking-[0.16em]">{review.label}</div>
-                          <div className="mt-3 text-[20px] font-black lg:text-[24px]">{review.detail}</div>
-                          <div className="mt-2 text-[13px] leading-snug opacity-80">
-                            {card.official
-                              ? `Oficial: ${card.official}`
-                              : 'A comparação aparece quando a posição oficial for definida.'}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className={`${GLASS_CARD} bg-amber-50/70 p-3`}>
-                    <div className="text-[10px] font-bold uppercase text-amber-700">Final oficial</div>
-                    <div className="mt-2 text-xs font-semibold text-slate-900">{finalSchedule.day}/{finalSchedule.month} • {finalSchedule.time} BR</div>
-                    <div className={`mt-1 text-[10px] ${TEXT_MUTED}`}>{finalInfo.local}</div>
-                    {finalKickoffHint && <div className="mt-1 text-[10px] text-slate-400">{finalKickoffHint}</div>}
-                  </div>
-                  <div className={`${GLASS_CARD} bg-orange-50/70 p-3`}>
-                    <div className="text-[10px] font-bold uppercase text-orange-700">3º lugar oficial</div>
-                    <div className="mt-2 text-xs font-semibold text-slate-900">{bronzeSchedule.day}/{bronzeSchedule.month} • {bronzeSchedule.time} BR</div>
-                    <div className={`mt-1 text-[10px] ${TEXT_MUTED}`}>{bronzeInfo.local}</div>
-                    {bronzeKickoffHint && <div className="mt-1 text-[10px] text-slate-400">{bronzeKickoffHint}</div>}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="mb-3 block text-center text-[10px] font-bold uppercase text-amber-700">Grande Final {renderFeedback('campeao')}</label>
-                  <div className={`${GLASS_CARD} bg-amber-50/60 p-4`}>
-                    <select value={dataSource.campeao || ""} onChange={e => { atualizarMataMata('campeao', e.target.value, null); const vice = finalistas.find(f => f !== e.target.value); if (vice) atualizarMataMata('vice', vice, null); }} disabled={!isFinalReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base border-yellow-500/30 focus:border-yellow-500 text-slate-800`}>
-                      <option value="">Quem será Campeão?</option>
-                      {[dataSource.campeao, ...finalistas].filter((team, index, list) => team && list.indexOf(team) === index).map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                    {dataSource.vice && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>Vice: <span className="text-slate-800">{dataSource.vice}</span> {renderFeedback('vice')}</div>}
-                  </div>
-                </div>
-                <div className="space-y-2 pt-2">
-                  <label className="mb-3 block text-center text-[10px] font-bold uppercase text-orange-700">3º Lugar {renderFeedback('terceiro')}</label>
-                  <div className={`${GLASS_CARD} bg-orange-50/60 p-4`}>
-                    <select value={dataSource.terceiro || ""} onChange={e => { atualizarMataMata('terceiro', e.target.value, null); const quarto = disputantes3.find(t => t !== e.target.value); if (quarto) atualizarMataMata('quarto', quarto, null); }} disabled={!is3rdReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base border-orange-500/30 focus:border-orange-500 text-slate-800`}>
-                      <option value="">Quem fica em 3º?</option>
-                      {[dataSource.terceiro, ...disputantes3].filter((team, index, list) => team && list.indexOf(team) === index).map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                    {dataSource.quarto && <div className={`mt-3 text-center text-[10px] ${TEXT_MUTED}`}>4º Lugar: <span className="text-slate-800">{dataSource.quarto}</span> {renderFeedback('quarto')}</div>}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   if (!currentUser) {
     return (
@@ -3507,8 +2251,17 @@ export default function App() {
         )}
         {abaAtiva === 'jogos' && (
           <div className="space-y-8 animate-fade-in">
-            {!modoAdmin && homeInsightCard && <MyBolaoCard insight={homeInsightCard} />}
-            {homeEditorialInsights && <EditorialInsightsBlock insight={homeEditorialInsights} />}
+            {(homeInsightCard || homeEditorialInsights || modoAdmin) && (
+              <InsightsHubPanel
+                personalInsight={homeInsightCard}
+                editorialInsight={homeEditorialInsights}
+                consensusDashboard={consensusDashboard}
+                canSeeConsensus={currentUserCanSeeConsensusPanel}
+                jogosSubmitted={Boolean(jogosEnviadosAt)}
+                mataSubmitted={Boolean(mataEnviadosAt)}
+                isAdminViewer={modoAdmin}
+              />
+            )}
             <>
               <div className={`${GLASS_CARD} p-5`}>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -3816,7 +2569,17 @@ export default function App() {
                   {Object.keys(GRUPOS_2026).map(grupo => (
                     <div key={grupo} className="relative">
                       <h3 className="mb-4 pl-3 border-l-2 border-yellow-500 text-[15px] font-bold tracking-wide text-slate-700">GRUPO {grupo}</h3>
-                      <TabelaClassificacao grupo={grupo} />
+                      <TabelaClassificacao
+                        grupo={grupo}
+                        currentUser={currentUser}
+                        calcularTabelaGrupo={calcularTabelaGrupo}
+                        jogosReais={jogosReais}
+                        palpitesJogos={palpitesJogos}
+                        condutaGrupos={condutaGrupos}
+                        modoAdmin={modoAdmin}
+                        atualizarCondutaGrupo={atualizarCondutaGrupo}
+                        getShortCountryName={getShortCountryName}
+                      />
                       <div className="space-y-3">
                         {jogosReais.filter(j => j.grupo === grupo).map(jogo => {
                           const palpite = palpitesJogos[currentUser.id]?.[jogo.id] || { placarA: '', placarB: '' };
@@ -3912,7 +2675,7 @@ export default function App() {
               <p className="text-[11px] text-sky-900 leading-snug">Seus palpites da fase de grupos preenchem automaticamente os confrontos abaixo.</p>
             </div>
             {[
-              { id: 'r32', title: '32-avos (Top 32)', list: MATA_MATA_CONFIG.r32, key: 'dezeszeseisavos', pts: PONTOS.MATA.R32 },
+              { id: 'r32', title: '32 avos de final', list: MATA_MATA_CONFIG.r32, key: 'dezeszeseisavos', pts: PONTOS.MATA.R32 },
               { id: 'r16', title: 'Oitavas de Final', list: MATA_MATA_CONFIG.r16, key: 'oitavas', pts: PONTOS.MATA.R16 },
               { id: 'qf', title: 'Quartas de Final', list: MATA_MATA_CONFIG.qf, key: 'quartas', pts: PONTOS.MATA.QF },
               { id: 'sf', title: 'Semifinais', list: MATA_MATA_CONFIG.sf, key: 'semis', pts: PONTOS.MATA.SF }
@@ -3923,16 +2686,71 @@ export default function App() {
                   {secaoExpandida === section.id ? <ChevronUp size={16} className={TEXT_MUTED} /> : <ChevronDown size={16} className={TEXT_MUTED} />}
                 </button>
                 {secaoExpandida === section.id && (
-                  <div className="mt-2 mb-6">{section.list.map((match, idx) => <RestrictedMatchDropdown key={match.id} match={match} idx={idx} phaseKey={section.key} points={section.pts} />)}</div>
+                  <div className="mt-2 mb-6">{section.list.map((match, idx) => (
+                    <RestrictedMatchDropdown
+                      key={match.id}
+                      match={match}
+                      idx={idx}
+                      phaseKey={section.key}
+                      points={section.pts}
+                      modoAdmin={modoAdmin}
+                      palpitesTravadosMata={palpitesTravadosMata}
+                      gabaritoMataMata={gabaritoMataMata}
+                      palpitesMataMata={palpitesMataMata}
+                      currentUser={currentUser}
+                      jogosReais={jogosReais}
+                      palpitesUsuarioAtual={palpitesUsuarioAtual}
+                      condutaGrupos={condutaGrupos}
+                      gruposCompletos={gruposCompletos}
+                      alocacaoTerceiros={alocacaoTerceiros}
+                      atualizarMataMata={atualizarMataMata}
+                      getR32Team={getR32Team}
+                      getThirdPlaceCandidate={getThirdPlaceCandidate}
+                    />
+                  ))}</div>
                 )}
               </div>
             ))}
-            <PodiumSection />
+            <PodiumSection
+              modoAdmin={modoAdmin}
+              gabaritoMataMata={gabaritoMataMata}
+              palpitesMataMata={palpitesMataMata}
+              currentUser={currentUser}
+              atualizarMataMata={atualizarMataMata}
+              palpitesTravadosMata={palpitesTravadosMata}
+              secaoExpandida={secaoExpandida}
+              setSecaoExpandida={setSecaoExpandida}
+            />
           </div>
         )}
 
-        {abaAtiva === 'ranking' && <RankingTable />}
-        {abaAtiva === 'painel' && <ReviewSheet />}
+        {abaAtiva === 'ranking' && (
+          <RankingTable
+            currentUser={currentUser}
+            ranking={ranking}
+            matchResultSummary={matchResultSummary}
+          />
+        )}
+        {abaAtiva === 'painel' && (
+          <ReviewSheet
+            reviewMode={reviewMode}
+            setReviewMode={setReviewMode}
+            reviewSearch={reviewSearch}
+            setReviewSearch={setReviewSearch}
+            reviewGroupFilter={reviewGroupFilter}
+            setReviewGroupFilter={setReviewGroupFilter}
+            reviewGameSort={reviewGameSort}
+            setReviewGameSort={setReviewGameSort}
+            reviewPhaseFilter={reviewPhaseFilter}
+            setReviewPhaseFilter={setReviewPhaseFilter}
+            participanteUsuarios={participanteUsuarios}
+            jogosReais={jogosReais}
+            palpitesJogos={palpitesJogos}
+            submissoes={submissoes}
+            palpitesMataMata={palpitesMataMata}
+            gabaritoMataMata={gabaritoMataMata}
+          />
+        )}
         
         {abaAtiva === 'regras' && (
           <div className="space-y-6 animate-fade-in">
@@ -3947,7 +2765,7 @@ export default function App() {
                  </div>
                  <div className="space-y-2 pt-2">
                     <div className="text-[10px] font-bold text-slate-500 border-b border-slate-200 pb-1 mb-2">MATA-MATA (POR ACERTO)</div>
-                    <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time 16-avos</span><span className="font-bold text-slate-900">{PONTOS.MATA.R32} pts</span></div>
+                    <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar time nos 32 avos</span><span className="font-bold text-slate-900">{PONTOS.MATA.R32} pts</span></div>
                     <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time Oitavas</span><span className="font-bold text-slate-900">{PONTOS.MATA.R16} pts</span></div>
                     <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time Quartas</span><span className="font-bold text-slate-900">{PONTOS.MATA.QF} pts</span></div>
                     <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time Semis</span><span className="font-bold text-indigo-700">{PONTOS.MATA.SF} pts</span></div>
@@ -3960,7 +2778,6 @@ export default function App() {
                     <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>4º Lugar</span><span className="font-bold text-slate-600">{PONTOS.MATA.TOP4} pts</span></div>
                  </div>
                </div>
-               <button onClick={handleReset} className={`w-full mt-6 min-h-12 py-4 rounded-xl border flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-widest transition-all ${resetConfirm ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-900/40' : 'border-red-500/30 text-red-400 bg-red-500/5 hover:bg-red-500/10'}`}><Trash2 size={14} /> {resetConfirm ? 'CLIQUE PARA CONFIRMAR' : 'RESETAR TUDO'}</button>
              </div>
              {modoAdmin && (
                <div className={`${GLASS_CARD} p-6`}>

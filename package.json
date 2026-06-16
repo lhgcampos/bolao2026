@@ -12,6 +12,7 @@
     "backup:remote-state": "node scripts/backup-remote-state.mjs",
     "seal:locked-bets": "node scripts/seal-locked-bets.mjs",
     "test:official-results": "node scripts/test-official-results-sync.mjs",
+    "test:app-smoke": "node scripts/test-app-smoke.mjs",
     "test:ranking-positions": "node scripts/test-ranking-positions.mjs",
     "test:ranking-consensus": "node scripts/test-ranking-consensus.mjs",
     "test:user-home-insights": "node scripts/test-user-home-insights.mjs",

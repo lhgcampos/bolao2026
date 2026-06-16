@@ -86,7 +86,7 @@ const getPendingSummary = ({ pendingGroupPicksCount = 0, knockoutComplete = fals
     ? `Faltam ${pendingGroupPicksCount} jogo${pendingGroupPicksCount === 1 ? '' : 's'} da fase de grupos`
     : 'fase de grupos enviada';
 
-  if (pendingGroupPicksCount > 0 && !knockoutComplete) return `${groupText} e o mata-mata ainda nao foi concluido.`;
+  if (pendingGroupPicksCount > 0 && !knockoutComplete) return `${groupText} e o mata-mata ainda não foi concluído.`;
   if (pendingGroupPicksCount > 0) return `${groupText}.`;
   if (!knockoutComplete) return 'Falta concluir o mata-mata para liberar o painel.';
   return 'Complete seus envios para liberar o painel.';
@@ -121,7 +121,7 @@ const buildChampionEliminatedInsight = ({ championPick, officialKnockout }) => {
     return {
       type: 'champion-eliminated',
       tone: 'warning',
-      text: `Voce colocou ${championPick} campeao, mas ${championPick} ja foi eliminado.`
+      text: `Você colocou ${championPick} campeão, mas ${championPick} já foi eliminado.`
     };
   }
 
@@ -157,7 +157,7 @@ const buildNoMathematicalChanceInsight = ({ currentEntry, leaderEntry, matches, 
     return {
       type: 'no-mathematical-chance',
       tone: 'warning',
-      text: 'Mesmo acertando tudo que falta, voce nao alcanca mais a lideranca.'
+      text: 'Mesmo acertando tudo que falta, você não alcança mais a liderança.'
     };
   }
 
@@ -193,8 +193,8 @@ const buildAwaitingResultsInsight = ({ matches = [], nowMs = Date.now() }) => {
     type: 'awaiting-results',
     tone: 'neutral',
     text: count === 1
-      ? `${getMatchName(latestPastDueMatch)} ja comecou e ainda aguarda resultado oficial no bolao.`
-      : `${count} jogos ja comecaram e ainda aguardam resultado oficial no bolao.`
+      ? `${getMatchName(latestPastDueMatch)} já começou e ainda aguarda resultado oficial no bolão.`
+      : `${count} jogos já começaram e ainda aguardam resultado oficial no bolão.`
   };
 };
 
@@ -211,14 +211,14 @@ const buildRankingPressureInsight = ({ currentEntry, ranking = [] }) => {
     if (!entryBelow) return {
       type: 'ranking-pressure',
       tone: 'positive',
-      text: 'Voce esta sozinho na lideranca neste momento.'
+      text: 'Você está sozinho na liderança neste momento.'
     };
 
     const lead = getCurrentPoints(currentEntry) - getCurrentPoints(entryBelow);
     return {
       type: 'ranking-pressure',
       tone: 'positive',
-      text: `A vantagem para ${entryBelow.nome} e de ${formatPointsGap(lead)}.`
+      text: `A vantagem para ${entryBelow.nome} é de ${formatPointsGap(lead)}.`
     };
   }
 
@@ -229,7 +229,7 @@ const buildRankingPressureInsight = ({ currentEntry, ranking = [] }) => {
     return {
       type: 'ranking-pressure',
       tone: 'neutral',
-      text: `Voce esta a ${formatPointsGap(gapAbove)} de ${entryAbove.nome} e ${formatPointsGap(cushionBelow)} a frente de ${entryBelow.nome}.`
+      text: `Você está a ${formatPointsGap(gapAbove)} de ${entryAbove.nome} e ${formatPointsGap(cushionBelow)} à frente de ${entryBelow.nome}.`
     };
   }
 
@@ -238,7 +238,7 @@ const buildRankingPressureInsight = ({ currentEntry, ranking = [] }) => {
     return {
       type: 'ranking-pressure',
       tone: 'neutral',
-      text: `Voce esta a ${formatPointsGap(gapAbove)} de ${entryAbove.nome}.`
+      text: `Você está a ${formatPointsGap(gapAbove)} de ${entryAbove.nome}.`
     };
   }
 
@@ -247,7 +247,7 @@ const buildRankingPressureInsight = ({ currentEntry, ranking = [] }) => {
     return {
       type: 'ranking-pressure',
       tone: 'positive',
-      text: `Voce tem ${formatPointsGap(cushionBelow)} de vantagem para ${entryBelow.nome}.`
+      text: `Você tem ${formatPointsGap(cushionBelow)} de vantagem para ${entryBelow.nome}.`
     };
   }
 
@@ -283,7 +283,7 @@ const buildNextMatchOvertakeInsight = ({ currentEntry, ranking, predictionsByUse
     return {
       type: 'next-match-overtake',
       tone: 'positive',
-      text: 'Uma cravada no proximo jogo pode te colocar no top 3.'
+      text: 'Uma cravada no próximo jogo pode te colocar no top 3.'
     };
   }
 
@@ -296,7 +296,7 @@ const buildNextMatchOvertakeInsight = ({ currentEntry, ranking, predictionsByUse
   return {
     type: 'next-match-overtake',
     tone: 'positive',
-    text: `Se cravar seu proximo jogo, voce pode passar ${passedUser.nome}.`
+    text: `Se cravar seu próximo jogo, você pode passar ${passedUser.nome}.`
   };
 };
 
@@ -343,13 +343,13 @@ const buildNextMatchPickInsights = ({ currentUserId, users, predictionsByUser, n
     insights.push({
       type: 'unique-prediction',
       tone: 'neutral',
-      text: 'So voce apostou nesse placar.'
+      text: 'Só você apostou nesse placar.'
     });
   } else if (currentOutcomeKey && (outcomeMap.get(currentOutcomeKey) || []).length === 1) {
     insights.push({
       type: 'unique-prediction',
       tone: 'neutral',
-      text: 'So voce apostou nesse resultado.'
+      text: 'Só você apostou nesse resultado.'
     });
   }
 
@@ -357,13 +357,13 @@ const buildNextMatchPickInsights = ({ currentUserId, users, predictionsByUser, n
     insights.push({
       type: 'same-prediction-next-match',
       tone: 'neutral',
-      text: `Voce e ${sameScoreUsers[0].nome} apostaram no mesmo placar.`
+      text: `Você e ${sameScoreUsers[0].nome} apostaram no mesmo placar.`
     });
   } else if (sameScoreUsers.length > 1) {
     insights.push({
       type: 'same-prediction-next-match',
       tone: 'neutral',
-      text: `Mais ${sameScoreUsers.length} pessoas apostaram no mesmo placar que voce.`
+      text: `Mais ${sameScoreUsers.length} pessoas apostaram no mesmo placar que você.`
     });
   }
 
@@ -372,13 +372,13 @@ const buildNextMatchPickInsights = ({ currentUserId, users, predictionsByUser, n
       insights.push({
         type: 'most-common-prediction',
         tone: 'neutral',
-        text: 'Voce esta no palpite mais comum do proximo jogo.'
+        text: 'Você está no palpite mais comum do próximo jogo.'
       });
     } else {
       insights.push({
         type: 'most-common-prediction',
         tone: 'neutral',
-        text: `O palpite mais comum do proximo jogo e ${mostCommon.scoreKey.replace('x', ' x ')}.`
+        text: `O palpite mais comum do próximo jogo é ${mostCommon.scoreKey.replace('x', ' x ')}.`
       });
     }
   }
@@ -386,7 +386,7 @@ const buildNextMatchPickInsights = ({ currentUserId, users, predictionsByUser, n
   insights.push({
     type: 'next-match-focus',
     tone: 'positive',
-    text: `Proximo jogo: ${getMatchName(nextMatch)} em ${formatScheduleLabel(nextMatch)}. Seu palpite e ${currentPick.placarA} x ${currentPick.placarB}.`
+    text: `Próximo jogo: ${getMatchName(nextMatch)} em ${formatScheduleLabel(nextMatch)}. Seu palpite é ${currentPick.placarA} x ${currentPick.placarB}.`
   });
 
   return insights;
@@ -406,14 +406,14 @@ export function buildUserHomeInsights({
   knockoutPredictions = {},
   nowMs = Date.now()
 }) {
-  const title = 'Seu Bolao';
+  const title = 'Seu Bolão';
   const currentEntry = ranking.find((entry) => entry.id === currentUserId) || null;
 
   if (!unlocked) {
     return {
       locked: true,
       title,
-      primaryLine: 'Complete seus palpites para liberar seu painel do Bolao.',
+      primaryLine: 'Complete seus palpites para liberar seu painel do Bolão.',
       secondaryLine: getPendingSummary({ pendingGroupPicksCount, knockoutComplete }),
       insights: []
     };
@@ -423,8 +423,8 @@ export function buildUserHomeInsights({
     return {
       locked: false,
       title,
-      primaryLine: 'Seu painel ainda nao tem dados suficientes.',
-      secondaryLine: 'Assim que houver ranking e palpites validos, este card sera preenchido.',
+      primaryLine: 'Seu painel ainda não tem dados suficientes.',
+      secondaryLine: 'Assim que houver ranking e palpites válidos, este card será preenchido.',
       insights: []
     };
   }
@@ -499,15 +499,15 @@ export function buildUserHomeInsights({
     points: currentPoints,
     tiedWithCount,
     leaderGap,
-    primaryLine: `Voce esta em ${formatOrdinal(currentEntry.rank)} lugar`,
+    primaryLine: `Você está em ${formatOrdinal(currentEntry.rank)} lugar`,
     secondaryLine: tiedWithCount > 0
       ? `${currentPoints} pontos · empatado com ${tiedWithCount} ${tiedWithCount === 1 ? 'pessoa' : 'pessoas'}`
       : `${currentPoints} pontos`,
     leaderLine: leaderGap === 0
-      ? (tiedWithCount > 0 ? 'Voce esta empatado na lideranca.' : (
-        ranking[1] ? `Voce esta liderando por ${getCurrentPoints(currentEntry) - getCurrentPoints(ranking[1])} ponto${getCurrentPoints(currentEntry) - getCurrentPoints(ranking[1]) === 1 ? '' : 's'}.` : 'Voce esta liderando o bolao.'
+      ? (tiedWithCount > 0 ? 'Você está empatado na liderança.' : (
+        ranking[1] ? `Você está liderando por ${getCurrentPoints(currentEntry) - getCurrentPoints(ranking[1])} ponto${getCurrentPoints(currentEntry) - getCurrentPoints(ranking[1]) === 1 ? '' : 's'}.` : 'Você está liderando o bolão.'
       ))
-      : `Voce esta a ${leaderGap} ponto${leaderGap === 1 ? '' : 's'} da lideranca.`,
+      : `Você está a ${leaderGap} ponto${leaderGap === 1 ? '' : 's'} da liderança.`,
     insights: uniqueInsights.slice(0, 3)
   };
 }
