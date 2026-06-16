@@ -1141,6 +1141,46 @@ const normalizeUser = (user) => {
 const isAdminUser = (user) => user?.role === 'admin' || user?.id === ADMIN_USER_ID;
 const findUserByName = (users, inputName) => users.find((user) => user.nomeKey === normalizeUserNameKey(inputName));
 
+const InstallGuideCard = () => (
+  <div className={`${GLASS_CARD} overflow-hidden`}>
+    <div className="border-b border-slate-200 bg-gradient-to-r from-sky-50 to-cyan-50 px-5 py-4">
+      <div className="flex items-center gap-3">
+        <div className="rounded-2xl border border-sky-100 bg-white p-2.5 text-sky-600 shadow-sm">
+          <Smartphone size={18} />
+        </div>
+        <div>
+          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700">Instalar no celular</div>
+          <div className="mt-1 text-sm font-semibold text-slate-900">Abra como app na tela inicial</div>
+        </div>
+      </div>
+    </div>
+    <div className="grid gap-4 p-5 sm:grid-cols-2">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">iPhone / iPad</div>
+        <ol className="mt-3 space-y-2 text-sm text-slate-700">
+          {INSTALLATION_TIPS.ios.map((tip, index) => (
+            <li key={tip} className="flex gap-2">
+              <span className="mt-0.5 text-sky-600">{index + 1}.</span>
+              <span>{tip}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Android</div>
+        <ol className="mt-3 space-y-2 text-sm text-slate-700">
+          {INSTALLATION_TIPS.android.map((tip, index) => (
+            <li key={tip} className="flex gap-2">
+              <span className="mt-0.5 text-sky-600">{index + 1}.</span>
+              <span>{tip}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  </div>
+);
+
 const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', syncError = '', isDemoMode = false }) => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
