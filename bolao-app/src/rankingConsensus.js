@@ -413,9 +413,9 @@ export function buildNarrativeLines({ dashboard, ranking = [] }) {
   if (dashboard.finalizedMatches?.length) {
     const exactHitNames = Array.from(new Set(dashboard.finalizedMatches.flatMap((match) => match.exactHitUsers)));
     if (exactHitNames.length > 0) {
-      pushLine(`Depois de ${dashboard.finalizedMatches.length} jogo${dashboard.finalizedMatches.length === 1 ? '' : 's'} oficial${dashboard.finalizedMatches.length === 1 ? '' : 'is'}, ${formatApostadorLabel(exactHitNames.length)} já cravaram pelo menos um placar.`);
+      pushLine(`Depois de ${dashboard.finalizedMatches.length} jogo${dashboard.finalizedMatches.length === 1 ? '' : 's'} oficia${dashboard.finalizedMatches.length === 1 ? 'l' : 'is'}, ${formatApostadorLabel(exactHitNames.length)} já cravaram pelo menos um placar.`);
     } else {
-      pushLine(`Depois de ${dashboard.finalizedMatches.length} jogo${dashboard.finalizedMatches.length === 1 ? '' : 's'} oficial${dashboard.finalizedMatches.length === 1 ? '' : 'is'}, ninguém acertou placar exato ainda.`);
+      pushLine(`Depois de ${dashboard.finalizedMatches.length} jogo${dashboard.finalizedMatches.length === 1 ? '' : 's'} oficia${dashboard.finalizedMatches.length === 1 ? 'l' : 'is'}, ninguém acertou placar exato ainda.`);
     }
   }
 

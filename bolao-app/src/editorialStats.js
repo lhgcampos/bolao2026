@@ -2,9 +2,9 @@ import { getConsensusEligibleUsers } from './rankingConsensus.js';
 
 const COLLATOR = new Intl.Collator('pt-BR', { sensitivity: 'base' });
 
-const EMPTY_COMPARATIVE_TEXT = 'Assim que mais gente enviar tudo, o bolao comeca a revelar os estilos de palpite.';
-const LOCKED_HOME_TEXT = 'Envie seus palpites para liberar o Raio-X do bolao.';
-const LOCKED_RANKING_TEXT = 'Envie seus palpites para liberar os comentarios da mesa.';
+const EMPTY_COMPARATIVE_TEXT = 'Assim que mais gente enviar tudo, o bolão começa a revelar os estilos de palpite.';
+const LOCKED_HOME_TEXT = 'Envie seus palpites para liberar o raio-X do bolão.';
+const LOCKED_RANKING_TEXT = 'Envie seus palpites para liberar os comentários da mesa.';
 
 const isFilled = (value) => value !== '' && value !== null && value !== undefined;
 const isFilledScore = (pick) => isFilled(pick?.placarA) && isFilled(pick?.placarB);
@@ -717,7 +717,7 @@ const buildStatCandidates = ({ profiles = [], pairings = [] }) => {
       type: 'elasticScoreIndex',
       family: 'goals',
       title: 'Jogo aberto',
-      text: `${elastic.userName} nao veio para 1 x 0: media de ${formatDecimal(elastic.avgGoalsPredicted)} gols por jogo.`,
+      text: `${elastic.userName} não veio para 1 x 0: média de ${formatDecimal(elastic.avgGoalsPredicted)} gols por jogo.`,
       userId: elastic.userId,
       userName: elastic.userName,
       score: elastic.elasticScoreIndex,
@@ -737,7 +737,7 @@ const buildStatCandidates = ({ profiles = [], pairings = [] }) => {
       type: 'lowScoreIndex',
       family: 'goals',
       title: 'Retranca declarada',
-      text: `${lowScore.userName} esta dirigindo um onibus: media de ${formatDecimal(lowScore.avgGoalsPredicted)} gols por jogo.`,
+      text: `${lowScore.userName} está dirigindo um ônibus: média de ${formatDecimal(lowScore.avgGoalsPredicted)} gols por jogo.`,
       userId: lowScore.userId,
       userName: lowScore.userName,
       score: lowScore.lowScoreIndex,
@@ -756,8 +756,8 @@ const buildStatCandidates = ({ profiles = [], pairings = [] }) => {
       id: `upset-hunter-${upsetHunter.userId}`,
       type: 'upsetHunterIndex',
       family: 'zebra',
-      title: 'Cacador de zebra',
-      text: `${upsetHunter.userName} esta cacando zebra: bancou ${upsetHunter.upsetCount} vitoria${upsetHunter.upsetCount === 1 ? '' : 's'} contra o ranking FIFA.`,
+      title: 'Caçador de zebra',
+      text: `${upsetHunter.userName} está caçando zebra: bancou ${upsetHunter.upsetCount} vitória${upsetHunter.upsetCount === 1 ? '' : 's'} contra o ranking FIFA.`,
       userId: upsetHunter.userId,
       userName: upsetHunter.userName,
       score: upsetHunter.upsetHunterIndex,
@@ -814,7 +814,7 @@ const buildStatCandidates = ({ profiles = [], pairings = [] }) => {
       type: 'drawHaterIndex',
       family: 'draws',
       title: 'Inimigo do empate',
-      text: `${drawHater.userName} nao acredita em paz: so foi de empate em ${drawHater.drawCount} de ${drawHater.gamesFilled} jogos.`,
+      text: `${drawHater.userName} não acredita em paz: só foi de empate em ${drawHater.drawCount} de ${drawHater.gamesFilled} jogos.`,
       userId: drawHater.userId,
       userName: drawHater.userName,
       score: 1 - drawHater.drawPct,
@@ -834,7 +834,7 @@ const buildStatCandidates = ({ profiles = [], pairings = [] }) => {
       type: 'teamBiasIndex',
       family: 'bias',
       title: 'Fechado com uma selecao',
-      text: `${biasedUser.userName} esta fechado com ${biasedUser.biasTeam}: colocou a selecao vencendo ${biasedUser.biasWins} vez${biasedUser.biasWins === 1 ? '' : 'es'}${biasTail}`,
+      text: `${biasedUser.userName} está fechado com ${biasedUser.biasTeam}: colocou a seleção vencendo ${biasedUser.biasWins} vez${biasedUser.biasWins === 1 ? '' : 'es'}${biasTail}`,
       userId: biasedUser.userId,
       userName: biasedUser.userName,
       score: biasedUser.biasScore,
@@ -853,8 +853,8 @@ const buildStatCandidates = ({ profiles = [], pairings = [] }) => {
       id: `team-pessimist-${pessimistUser.userId}-${pessimistUser.pessimistTeam}`,
       type: 'teamPessimistIndex',
       family: 'bias',
-      title: 'Nao comprou o hype',
-      text: `${pessimistUser.userName} nao comprou o hype da ${pessimistUser.pessimistTeam}: apostou ${pessimistUser.pessimistScore} vez${pessimistUser.pessimistScore === 1 ? '' : 'es'} contra ela.`,
+      title: 'Não comprou o hype',
+      text: `${pessimistUser.userName} não comprou o hype da ${pessimistUser.pessimistTeam}: apostou ${pessimistUser.pessimistScore} vez${pessimistUser.pessimistScore === 1 ? '' : 'es'} contra ela.`,
       userId: pessimistUser.userId,
       userName: pessimistUser.userName,
       score: pessimistUser.pessimistScore,
@@ -873,7 +873,7 @@ const buildStatCandidates = ({ profiles = [], pairings = [] }) => {
       type: 'consensusTwin',
       family: 'consensus',
       title: 'Clone do consenso',
-      text: `${consensusTwin.userName} e o clone do bolao: cartao bateu com o consenso em ${consensusTwin.consensusTwinExactHits} jogos.`,
+      text: `${consensusTwin.userName} é o clone do bolão: o cartão bateu com o consenso em ${consensusTwin.consensusTwinExactHits} jogos.`,
       userId: consensusTwin.userId,
       userName: consensusTwin.userName,
       score: consensusTwin.consensusTwinPct,
@@ -950,7 +950,7 @@ const buildStatCandidates = ({ profiles = [], pairings = [] }) => {
       type: 'goalPartyIndex',
       family: 'goals',
       title: 'Festival de gols',
-      text: `${goalParty.userName} comprou ingresso para espetaculo: lidera com ${goalParty.goalPartyCount} placares de 4+ gols.`,
+      text: `${goalParty.userName} comprou ingresso para espetáculo: lidera com ${goalParty.goalPartyCount} placares de 4+ gols.`,
       userId: goalParty.userId,
       userName: goalParty.userName,
       score: goalParty.goalPartyCount,
@@ -968,7 +968,7 @@ const buildStatCandidates = ({ profiles = [], pairings = [] }) => {
       type: 'knockoutBoldnessIndex',
       family: 'knockout',
       title: 'Ousadia no mata-mata',
-      text: `${knockoutBold.userName} apostou num campeao pouco popular: ${knockoutBold.championPick} recebeu ${formatCount(knockoutBold.championPopularity, 'voto')}.`,
+      text: `${knockoutBold.userName} apostou num campeão pouco popular: ${knockoutBold.championPick} recebeu ${formatCount(knockoutBold.championPopularity, 'voto')}.`,
       userId: knockoutBold.userId,
       userName: knockoutBold.userName,
       score: knockoutBold.knockoutBoldnessIndex,
@@ -988,7 +988,7 @@ const buildStatCandidates = ({ profiles = [], pairings = [] }) => {
       type: 'knockoutConsensusIndex',
       family: 'knockout',
       title: 'Mata-mata mainstream',
-      text: `${knockoutConsensus.userName} montou o mata-mata mais popular do bolao.`,
+      text: `${knockoutConsensus.userName} montou o mata-mata mais popular do bolão.`,
       userId: knockoutConsensus.userId,
       userName: knockoutConsensus.userName,
       score: knockoutConsensus.knockoutConsensusIndex,
@@ -1034,7 +1034,7 @@ const buildStatCandidates = ({ profiles = [], pairings = [] }) => {
       id: `unlikely-pair-champion-${rareChampionPair.leftUserId}-${rareChampionPair.rightUserId}`,
       type: 'unlikelyPairings',
       family: 'pairings',
-      title: 'Campeao em comum',
+      title: 'Campeão em comum',
       text: `${rareChampionPair.leftUserName} e ${rareChampionPair.rightUserName} discordaram em quase tudo, mas fecharam com ${rareChampionPair.sameChampion}.`,
       score: rareChampionPair.oppositeOutcomes,
       strength: (rareChampionPair.oppositeOutcomes * 2) + 6,
@@ -1133,7 +1133,7 @@ export function buildEditorialStatsDashboard(input = {}) {
 export function buildHomeEditorialInsights(input = {}) {
   if (!getVisibilityAccess(input)) {
     return buildLockedState({
-      title: 'Raio-X do bolao',
+      title: 'Raio-X do bolão',
       text: LOCKED_HOME_TEXT
     });
   }
@@ -1142,14 +1142,14 @@ export function buildHomeEditorialInsights(input = {}) {
 
   if (dashboard.insufficientSample) {
     return buildEmptyState({
-      title: 'Raio-X do bolao',
+      title: 'Raio-X do bolão',
       text: dashboard.emptyText,
       eligibleCount: dashboard.eligibleCount
     });
   }
 
   return {
-    title: 'Raio-X do bolao',
+    title: 'Raio-X do bolão',
     locked: false,
     empty: false,
     eligibleCount: dashboard.eligibleCount,
@@ -1161,7 +1161,7 @@ export function buildHomeEditorialInsights(input = {}) {
 export function buildRankingFooterComments(input = {}) {
   if (!getVisibilityAccess(input)) {
     return buildLockedState({
-      title: 'Comentarios da mesa',
+      title: 'Comentários da mesa',
       text: LOCKED_RANKING_TEXT
     });
   }
@@ -1170,14 +1170,14 @@ export function buildRankingFooterComments(input = {}) {
 
   if (dashboard.insufficientSample) {
     return buildEmptyState({
-      title: 'Comentarios da mesa',
+      title: 'Comentários da mesa',
       text: dashboard.emptyText,
       eligibleCount: dashboard.eligibleCount
     });
   }
 
   return {
-    title: 'Comentarios da mesa',
+    title: 'Comentários da mesa',
     locked: false,
     empty: false,
     eligibleCount: dashboard.eligibleCount,

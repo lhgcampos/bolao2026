@@ -1,60 +1,12 @@
-import React, { memo, useMemo } from 'react';
-import RankingConsensusPanel from '../RankingConsensusPanel';
-import { EditorialCommentsSection } from '../EditorialStatsBlocks';
+import React, { memo } from 'react';
 import AvatarBadge from './AvatarBadge.jsx';
 import { GLASS_CARD, TEXT_HIGHLIGHT, TEXT_MUTED } from '../styles.js';
 
 function RankingTable({
   currentUser,
-  currentUserCanSeeConsensusPanel,
   ranking,
-  matchResultSummary,
-  usuarios,
-  submissoes,
-  palpitesJogos,
-  palpitesMataMata,
-  jogosReais,
-  jogosEnviadosAt,
-  mataEnviadosAt,
-  buildConsensusDashboard,
-  rankingFooterComments,
-  teamRankings,
-  submissionFields,
-  isAdminUser,
-  usuarioPreencheuTodosOsJogos,
-  usuarioPreencheuMataCompleta
+  matchResultSummary
 }) {
-  const consensusDashboard = useMemo(() => {
-    if (!currentUserCanSeeConsensusPanel) return null;
-    return buildConsensusDashboard({
-      users: usuarios,
-      submissions: submissoes,
-      betsGames: palpitesJogos,
-      betsKnockout: palpitesMataMata,
-      games: jogosReais,
-      ranking,
-      teamRankings,
-      submissionFields,
-      isAdminUser,
-      usuarioPreencheuTodosOsJogos,
-      usuarioPreencheuMataCompleta
-    });
-  }, [
-    currentUserCanSeeConsensusPanel,
-    usuarios,
-    submissoes,
-    palpitesJogos,
-    palpitesMataMata,
-    jogosReais,
-    ranking,
-    buildConsensusDashboard,
-    teamRankings,
-    submissionFields,
-    isAdminUser,
-    usuarioPreencheuTodosOsJogos,
-    usuarioPreencheuMataCompleta
-  ]);
-
   return (
     <div className="space-y-4 animate-fade-in">
       <div className={`${GLASS_CARD} p-4 text-center`}>
@@ -120,13 +72,6 @@ function RankingTable({
           ))}</tbody>
         </table>
       </div>
-      <RankingConsensusPanel
-        canSee={currentUserCanSeeConsensusPanel}
-        dashboard={consensusDashboard}
-        jogosSubmitted={Boolean(jogosEnviadosAt)}
-        mataSubmitted={Boolean(mataEnviadosAt)}
-      />
-      <EditorialCommentsSection comments={rankingFooterComments} />
     </div>
   );
 }

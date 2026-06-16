@@ -248,7 +248,7 @@ export const formatBrazilMatchSchedule = (match) => {
 
 export const formatOfficialKickoffHint = (match) => {
   if (!match?.kickoffEt || !match?.horaEt) return null;
-  return `Oficial FIFA: ${match.horaEt} no horario local do estadio`;
+  return `Oficial FIFA: ${match.horaEt} no horário local do estádio`;
 };
 
 export const parseMatchDateTime = (match) => {

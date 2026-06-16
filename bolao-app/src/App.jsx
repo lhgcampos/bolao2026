@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Trophy, Calendar, Settings, Plus, User, Trash2, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle, Smartphone } from './lucideIcons';
+import { Trophy, Calendar, Settings, Plus, User, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle, Smartphone } from './lucideIcons';
 import { THIRD_PLACE_ASSIGNMENTS } from './thirdPlaceAssignments';
 import { TEAM_FIFA_RANKINGS } from './fifaTeamRankings';
 import { buildConsensusDashboard } from './rankingConsensus';
 import { buildDenseRanking } from './ranking';
 import { buildUserHomeInsights } from './userHomeInsights';
-import { buildEditorialStatsDashboard, buildHomeEditorialInsights, buildRankingFooterComments } from './editorialStats';
-import MyBolaoCard from './MyBolaoCard';
-import { EditorialInsightsBlock } from './EditorialStatsBlocks';
-import { AvatarBadge, PodiumSection, RankingTable, RestrictedMatchDropdown, ReviewSheet, TabelaClassificacao } from './components/index.js';
+import { buildEditorialStatsDashboard, buildHomeEditorialInsights } from './editorialStats';
+import { AvatarBadge, InsightsHubPanel, PodiumSection, RankingTable, RestrictedMatchDropdown, ReviewSheet, TabelaClassificacao } from './components/index.js';
 import { MATA_MATA_CONFIG, PONTOS, PONTOS_CONDUTA, SUBMISSION_FIELDS } from './constants.js';
 import { GLASS_CARD, GLASS_BTN_PRIMARY, GLASS_BTN_SECONDARY, GLASS_INPUT, TEXT_HIGHLIGHT, TEXT_MUTED } from './styles.js';
 import { buildGroupBetReview, calcularPontosJogo, formatScoreDisplay, formatSubmissionDate } from './utils.js';
@@ -1344,7 +1342,6 @@ export default function App() {
   const [abaAtiva, setAbaAtiva] = useState('jogos');
   const [secaoExpandida, setSecaoExpandida] = useState('r32');
   const [alocacaoTerceiros, setAlocacaoTerceiros] = useState({});
-  const [resetConfirm, setResetConfirm] = useState(false);
   const [userDeleteConfirmId, setUserDeleteConfirmId] = useState(null);
   const [reviewMode, setReviewMode] = useState('jogos');
   const [reviewSearch, setReviewSearch] = useState('');
@@ -1802,14 +1799,31 @@ export default function App() {
       isAdminViewer: modoAdmin
     });
   }, [editorialStatsDashboard, currentUser, currentUserCanSeeConsensusPanel, modoAdmin]);
-  const rankingFooterComments = useMemo(() => {
-    if (!currentUser) return null;
-    return buildRankingFooterComments({
-      dashboard: editorialStatsDashboard,
-      canRevealComparisons: currentUserCanSeeConsensusPanel,
-      isAdminViewer: modoAdmin
+  const consensusDashboard = useMemo(() => {
+    if (!currentUserCanSeeConsensusPanel) return null;
+
+    return buildConsensusDashboard({
+      users: usuarios,
+      submissions: submissoes,
+      betsGames: palpitesJogos,
+      betsKnockout: palpitesMataMata,
+      games: jogosReais,
+      ranking,
+      teamRankings: TEAM_FIFA_RANKINGS,
+      submissionFields: SUBMISSION_FIELDS,
+      isAdminUser,
+      usuarioPreencheuTodosOsJogos,
+      usuarioPreencheuMataCompleta
     });
-  }, [editorialStatsDashboard, currentUser, currentUserCanSeeConsensusPanel, modoAdmin]);
+  }, [
+    currentUserCanSeeConsensusPanel,
+    usuarios,
+    submissoes,
+    palpitesJogos,
+    palpitesMataMata,
+    jogosReais,
+    ranking
+  ]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -2036,28 +2050,6 @@ export default function App() {
     }
   };
 
-  const handleReset = async () => {
-    if (!resetConfirm) {
-      setResetConfirm(true);
-      setTimeout(() => setResetConfirm(false), 3000);
-      return;
-    }
-
-    const initialState = createInitialAppState();
-    if (!isDemoMode) {
-      try {
-        await writeRemoteState(initialState);
-      } catch (error) {
-        setSyncStatus('offline');
-        setSyncError(error.message || 'Falha ao resetar a base online.');
-        return;
-      }
-    }
-
-    localStorage.clear();
-    window.location.reload();
-  };
-
   const handleDeleteUser = (userId) => {
     const targetUser = usuarios.find((user) => user.id === userId);
     if (!modoAdmin || isAdminUser(targetUser)) return;
@@ -2229,8 +2221,17 @@ export default function App() {
         )}
         {abaAtiva === 'jogos' && (
           <div className="space-y-8 animate-fade-in">
-            {!modoAdmin && homeInsightCard && <MyBolaoCard insight={homeInsightCard} />}
-            {homeEditorialInsights && <EditorialInsightsBlock insight={homeEditorialInsights} />}
+            {(homeInsightCard || homeEditorialInsights || modoAdmin) && (
+              <InsightsHubPanel
+                personalInsight={homeInsightCard}
+                editorialInsight={homeEditorialInsights}
+                consensusDashboard={consensusDashboard}
+                canSeeConsensus={currentUserCanSeeConsensusPanel}
+                jogosSubmitted={Boolean(jogosEnviadosAt)}
+                mataSubmitted={Boolean(mataEnviadosAt)}
+                isAdminViewer={modoAdmin}
+              />
+            )}
             <>
               <div className={`${GLASS_CARD} p-5`}>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -2644,7 +2645,7 @@ export default function App() {
               <p className="text-[11px] text-sky-900 leading-snug">Seus palpites da fase de grupos preenchem automaticamente os confrontos abaixo.</p>
             </div>
             {[
-              { id: 'r32', title: '32-avos (Top 32)', list: MATA_MATA_CONFIG.r32, key: 'dezeszeseisavos', pts: PONTOS.MATA.R32 },
+              { id: 'r32', title: '32 avos de final', list: MATA_MATA_CONFIG.r32, key: 'dezeszeseisavos', pts: PONTOS.MATA.R32 },
               { id: 'r16', title: 'Oitavas de Final', list: MATA_MATA_CONFIG.r16, key: 'oitavas', pts: PONTOS.MATA.R16 },
               { id: 'qf', title: 'Quartas de Final', list: MATA_MATA_CONFIG.qf, key: 'quartas', pts: PONTOS.MATA.QF },
               { id: 'sf', title: 'Semifinais', list: MATA_MATA_CONFIG.sf, key: 'semis', pts: PONTOS.MATA.SF }
@@ -2696,23 +2697,8 @@ export default function App() {
         {abaAtiva === 'ranking' && (
           <RankingTable
             currentUser={currentUser}
-            currentUserCanSeeConsensusPanel={currentUserCanSeeConsensusPanel}
             ranking={ranking}
             matchResultSummary={matchResultSummary}
-            usuarios={usuarios}
-            submissoes={submissoes}
-            palpitesJogos={palpitesJogos}
-            palpitesMataMata={palpitesMataMata}
-            jogosReais={jogosReais}
-            jogosEnviadosAt={jogosEnviadosAt}
-            mataEnviadosAt={mataEnviadosAt}
-            buildConsensusDashboard={buildConsensusDashboard}
-            rankingFooterComments={rankingFooterComments}
-            teamRankings={TEAM_FIFA_RANKINGS}
-            submissionFields={SUBMISSION_FIELDS}
-            isAdminUser={isAdminUser}
-            usuarioPreencheuTodosOsJogos={usuarioPreencheuTodosOsJogos}
-            usuarioPreencheuMataCompleta={usuarioPreencheuMataCompleta}
           />
         )}
         {abaAtiva === 'painel' && (
@@ -2749,7 +2735,7 @@ export default function App() {
                  </div>
                  <div className="space-y-2 pt-2">
                     <div className="text-[10px] font-bold text-slate-500 border-b border-slate-200 pb-1 mb-2">MATA-MATA (POR ACERTO)</div>
-                    <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time 16-avos</span><span className="font-bold text-slate-900">{PONTOS.MATA.R32} pts</span></div>
+                    <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar time nos 32 avos</span><span className="font-bold text-slate-900">{PONTOS.MATA.R32} pts</span></div>
                     <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time Oitavas</span><span className="font-bold text-slate-900">{PONTOS.MATA.R16} pts</span></div>
                     <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time Quartas</span><span className="font-bold text-slate-900">{PONTOS.MATA.QF} pts</span></div>
                     <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time Semis</span><span className="font-bold text-indigo-700">{PONTOS.MATA.SF} pts</span></div>
@@ -2762,7 +2748,6 @@ export default function App() {
                     <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>4º Lugar</span><span className="font-bold text-slate-600">{PONTOS.MATA.TOP4} pts</span></div>
                  </div>
                </div>
-               <button onClick={handleReset} className={`w-full mt-6 min-h-12 py-4 rounded-xl border flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-widest transition-all ${resetConfirm ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-900/40' : 'border-red-500/30 text-red-400 bg-red-500/5 hover:bg-red-500/10'}`}><Trash2 size={14} /> {resetConfirm ? 'CLIQUE PARA CONFIRMAR' : 'RESETAR TUDO'}</button>
              </div>
              {modoAdmin && (
                <div className={`${GLASS_CARD} p-6`}>
