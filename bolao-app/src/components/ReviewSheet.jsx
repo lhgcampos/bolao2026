@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import AvatarBadge from './AvatarBadge.jsx';
 import { GRUPOS_2026, buildChronologicalMatchGroups, formatBrazilMatchSchedule, parseMatchDateTime } from '../matchData';
 import { GLASS_CARD, GLASS_INPUT, TEXT_MUTED } from '../styles.js';
-import { PONTOS, SUBMISSION_FIELDS } from '../constants.js';
+import { MATA_MATA_CONFIG, PONTOS, SUBMISSION_FIELDS } from '../constants.js';
 import { formatScoreDisplay, formatSubmissionDate, calcularPontosJogo, getWinnerOfMatch } from '../utils.js';
 import { getMatchResultVariant } from '../officialResults/officialResultsView';
 
