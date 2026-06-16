@@ -6,7 +6,9 @@ import RankingConsensusPanel from './RankingConsensusPanel';
 import { buildConsensusDashboard } from './rankingConsensus';
 import { buildDenseRanking } from './ranking';
 import { buildUserHomeInsights } from './userHomeInsights';
+import { buildEditorialStatsDashboard, buildHomeEditorialInsights, buildRankingFooterComments } from './editorialStats';
 import MyBolaoCard from './MyBolaoCard';
+import { EditorialCommentsSection, EditorialInsightsBlock } from './EditorialStatsBlocks';
 import {
   GRUPOS_2026,
   buildChronologicalMatchGroups,
@@ -18,6 +20,16 @@ import {
   parseMatchDateTime,
   placarPreenchido
 } from './matchData';
+import {
+  countFilledGameSelections,
+  countFilledKnockoutSelections,
+  countPendingGames,
+  mergeSubmissionEntry,
+  normalizeKnockoutBracketShape,
+  reconcileSubmissionMap,
+  userCompletedAllGames,
+  userCompletedKnockout
+} from './submissionState';
 import {
   applyManualResultCorrection,
   clearManualResultLock
@@ -73,6 +85,12 @@ const SYNC_DEBOUNCE_MS = 900;
 const SYNC_IMMEDIATE_RETRY_MS = 80;
 const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/K3WYefFWkzY09iK1csJtZA?mode=gi_t';
 const REMOTE_POLL_MS = 5000;
+const KNOCKOUT_PHASE_LENGTHS = {
+  dezeszeseisavos: 16,
+  oitavas: 8,
+  quartas: 4,
+  semis: 2
+};
 const COUNTRY_SHORT_NAMES = {
   'África do Sul': 'Afr. Sul',
   'Coreia do Sul': 'Cor. Sul',
@@ -368,79 +386,28 @@ const faseDeGruposCompleta = (jogos, palpitesUsuario) => jogos.every((jogo) => {
   return placarPreenchido(palpite?.placarA, palpite?.placarB);
 });
 
-const usuarioPreencheuTodosOsJogos = (jogos, palpitesUsuario) => jogos.every((jogo) => {
-  const palpite = palpitesUsuario?.[jogo.id];
-  return placarPreenchido(palpite?.placarA, palpite?.placarB);
-});
+const usuarioPreencheuTodosOsJogos = (jogos, palpitesUsuario) => userCompletedAllGames(jogos, palpitesUsuario);
 
-const contarJogosPendentes = (jogos, palpitesUsuario) => jogos.reduce((total, jogo) => {
-  const palpite = palpitesUsuario?.[jogo.id];
-  return placarPreenchido(palpite?.placarA, palpite?.placarB) ? total : total + 1;
-}, 0);
+const contarJogosPendentes = (jogos, palpitesUsuario) => countPendingGames(jogos, palpitesUsuario);
 
 const usuarioPreencheuMataCompleta = (palpitesUsuario = {}) => (
-  Array.isArray(palpitesUsuario.dezeszeseisavos) &&
-  palpitesUsuario.dezeszeseisavos.length === MATA_MATA_CONFIG.r32.length &&
-  palpitesUsuario.dezeszeseisavos.every(Boolean) &&
-  Array.isArray(palpitesUsuario.oitavas) &&
-  palpitesUsuario.oitavas.length === MATA_MATA_CONFIG.r16.length &&
-  palpitesUsuario.oitavas.every(Boolean) &&
-  Array.isArray(palpitesUsuario.quartas) &&
-  palpitesUsuario.quartas.length === MATA_MATA_CONFIG.qf.length &&
-  palpitesUsuario.quartas.every(Boolean) &&
-  Array.isArray(palpitesUsuario.semis) &&
-  palpitesUsuario.semis.length === MATA_MATA_CONFIG.sf.length &&
-  palpitesUsuario.semis.every(Boolean) &&
-  [palpitesUsuario.campeao, palpitesUsuario.vice, palpitesUsuario.terceiro, palpitesUsuario.quarto].every(Boolean)
+  userCompletedKnockout(palpitesUsuario, KNOCKOUT_PHASE_LENGTHS)
 );
-
-const normalizeKnockoutRound = (values = [], size = 0) => Array.from(
-  { length: size },
-  (_, index) => (typeof values?.[index] === 'string' ? values[index] : '')
-);
-
-const normalizeKnockoutBracketShape = (bracket = {}) => ({
-  dezeszeseisavos: normalizeKnockoutRound(bracket.dezeszeseisavos, MATA_MATA_CONFIG.r32.length),
-  oitavas: normalizeKnockoutRound(bracket.oitavas, MATA_MATA_CONFIG.r16.length),
-  quartas: normalizeKnockoutRound(bracket.quartas, MATA_MATA_CONFIG.qf.length),
-  semis: normalizeKnockoutRound(bracket.semis, MATA_MATA_CONFIG.sf.length),
-  campeao: typeof bracket.campeao === 'string' ? bracket.campeao : '',
-  vice: typeof bracket.vice === 'string' ? bracket.vice : '',
-  terceiro: typeof bracket.terceiro === 'string' ? bracket.terceiro : '',
-  quarto: typeof bracket.quarto === 'string' ? bracket.quarto : ''
-});
-
-const countFilledKnockoutSelections = (bracket = {}) => (
-  ['dezeszeseisavos', 'oitavas', 'quartas', 'semis'].reduce(
-    (total, field) => total + (Array.isArray(bracket?.[field]) ? bracket[field].filter(Boolean).length : 0),
-    0
-  ) +
-  ['campeao', 'vice', 'terceiro', 'quarto'].filter((field) => Boolean(bracket?.[field])).length
-);
-
-const countFilledGameSelections = (bets = {}) => Object.values(bets || {}).reduce((total, bet) => (
-  placarPreenchido(bet?.placarA, bet?.placarB) ? total + 1 : total
-), 0);
-
-const mergeSubmissionEntry = (baseEntry = {}, localEntry = {}) => {
-  const next = {
-    ...(baseEntry && typeof baseEntry === 'object' ? baseEntry : {}),
-    ...(localEntry && typeof localEntry === 'object' ? localEntry : {})
-  };
-
-  const jogosAt = Math.max(baseEntry?.jogosAt || 0, localEntry?.jogosAt || 0);
-  const mataAt = Math.max(baseEntry?.mataAt || 0, localEntry?.mataAt || 0);
-
-  if (jogosAt) next.jogosAt = jogosAt;
-  if (mataAt) next.mataAt = mataAt;
-
-  return next;
-};
 
 const sanitizeSubmissionMap = (submissions = {}) => Object.fromEntries(
   Object.entries(submissions || {}).map(([userId, entry]) => {
     const normalizedEntry = mergeSubmissionEntry({}, entry);
     return [userId, normalizedEntry];
+  })
+);
+
+const reconcileSubmissionState = ({ submissions = {}, matches = [], betsGames = {}, betsKnockout = {} }) => (
+  reconcileSubmissionMap({
+    submissions,
+    matches,
+    betsGames,
+    betsKnockout,
+    phaseLengths: KNOCKOUT_PHASE_LENGTHS
   })
 );
 
@@ -732,7 +699,12 @@ const buildStateDocument = ({
   betsKnockout,
   officialKnockout,
   conduct,
-  submissions: sanitizeSubmissionMap(submissions)
+  submissions: reconcileSubmissionState({
+    submissions,
+    matches,
+    betsGames,
+    betsKnockout
+  })
 });
 
 const buildStateSnapshot = (state) => JSON.stringify(buildStateDocument(state, { includeUpdatedAt: false }));
@@ -776,7 +748,12 @@ const parseRemotePayload = (payload) => {
     officialResultsSyncStatus: payload.officialResultsSyncStatus || {},
     officialResultsSyncHistory: Array.isArray(payload.officialResultsSyncHistory) ? payload.officialResultsSyncHistory : [],
     conduct: payload.conduct || {},
-    submissions: sanitizeSubmissionMap(payload.submissions || {})
+    submissions: reconcileSubmissionState({
+      submissions: payload.submissions || {},
+      matches: Array.isArray(payload.matches) && payload.matches.length ? normalizedGameData.matches : fallback.matches,
+      betsGames: normalizedGameData.betsGames,
+      betsKnockout
+    })
   };
 };
 
@@ -870,7 +847,7 @@ const fetchShardedRemoteState = async () => {
       liveRecord: liveBetsKnockout,
       sealedRecord: sealedBetsKnockout,
       hasSubmission: Boolean(submissionEntry.mataAt),
-      countFilled: countFilledKnockoutSelections
+      countFilled: (record) => countFilledKnockoutSelections(record, KNOCKOUT_PHASE_LENGTHS)
     });
   });
 
@@ -1001,15 +978,15 @@ const mergeRemoteState = (baseState, localState, { currentUserId = null, isAdmin
   const mergedBetsKnockout = (() => {
     const next = mergeOwnedRecordMap(baseState.betsKnockout, localState.betsKnockout);
     if (!isAdmin && currentUserId) {
-      const remoteBracket = normalizeKnockoutBracketShape(baseState.betsKnockout?.[currentUserId] || {});
+      const remoteBracket = normalizeKnockoutBracketShape(baseState.betsKnockout?.[currentUserId] || {}, KNOCKOUT_PHASE_LENGTHS);
       const localHasOwnBracket = Object.prototype.hasOwnProperty.call(localState.betsKnockout || {}, currentUserId);
       const localBracket = localHasOwnBracket
-        ? normalizeKnockoutBracketShape(localState.betsKnockout?.[currentUserId] || {})
+        ? normalizeKnockoutBracketShape(localState.betsKnockout?.[currentUserId] || {}, KNOCKOUT_PHASE_LENGTHS)
         : remoteBracket;
       const remoteSubmitted = Boolean(baseState.submissions?.[currentUserId]?.mataAt);
       const localSubmitted = Boolean(localState.submissions?.[currentUserId]?.mataAt);
-      const remoteCount = countFilledKnockoutSelections(remoteBracket);
-      const localCount = countFilledKnockoutSelections(localBracket);
+      const remoteCount = countFilledKnockoutSelections(remoteBracket, KNOCKOUT_PHASE_LENGTHS);
+      const localCount = countFilledKnockoutSelections(localBracket, KNOCKOUT_PHASE_LENGTHS);
       const sameBracket = JSON.stringify(remoteBracket) === JSON.stringify(localBracket);
 
       if (
@@ -1057,7 +1034,12 @@ const mergeRemoteState = (baseState, localState, { currentUserId = null, isAdmin
     betsKnockout: mergedBetsKnockout,
     officialKnockout: isAdmin ? (localState.officialKnockout || baseState.officialKnockout || {}) : (baseState.officialKnockout || {}),
     conduct: isAdmin ? (localState.conduct || baseState.conduct || {}) : (baseState.conduct || {}),
-    submissions: sanitizeSubmissionMap(mergedSubmissions)
+    submissions: reconcileSubmissionState({
+      submissions: mergedSubmissions,
+      matches: isAdmin ? (localState.matches || baseState.matches || gerarJogosIniciais()) : (baseState.matches || gerarJogosIniciais()),
+      betsGames: mergedBetsGames,
+      betsKnockout: mergedBetsKnockout
+    })
   };
 };
 
@@ -1117,6 +1099,12 @@ const writeRemoteAdminSharedState = async (state) => {
 
 const writeRemoteState = async (state, { currentUserId = null, isAdmin = false } = {}) => {
   const normalizedUsers = (state.users || []).map(normalizeUser);
+  const reconciledSubmissions = reconcileSubmissionState({
+    submissions: state.submissions || {},
+    matches: state.matches || [],
+    betsGames: state.betsGames || {},
+    betsKnockout: state.betsKnockout || {}
+  });
   const updatedAt = Date.now();
   const metaEntry = [
     REMOTE_PATHS.meta,
@@ -1145,14 +1133,14 @@ const writeRemoteState = async (state, { currentUserId = null, isAdmin = false }
       const user = normalizedUsers.find((candidate) => String(candidate.id) === normalizedId);
       if (!user) return;
 
-      const jogosEnviadosAt = state.submissions?.[userId]?.[SUBMISSION_FIELDS.JOGOS] || 0;
-      const mataEnviadosAt = state.submissions?.[userId]?.[SUBMISSION_FIELDS.MATA] || 0;
+      const jogosEnviadosAt = reconciledSubmissions?.[userId]?.[SUBMISSION_FIELDS.JOGOS] || 0;
+      const mataEnviadosAt = reconciledSubmissions?.[userId]?.[SUBMISSION_FIELDS.MATA] || 0;
 
       entries.push(
         [getRemoteUserShardPath(REMOTE_PATHS.userProfiles, normalizedId), buildRemoteUserProfileRecord(user)],
         [getRemoteUserShardPath(REMOTE_PATHS.betsGames, normalizedId), state.betsGames?.[userId] || {}],
         [getRemoteUserShardPath(REMOTE_PATHS.betsKnockout, normalizedId), state.betsKnockout?.[userId] || {}],
-        [getRemoteUserShardPath(REMOTE_PATHS.submissions, normalizedId), state.submissions?.[userId] || {}]
+        [getRemoteUserShardPath(REMOTE_PATHS.submissions, normalizedId), reconciledSubmissions?.[userId] || {}]
       );
 
       if (jogosEnviadosAt) {
@@ -2013,6 +2001,48 @@ export default function App() {
     mataCompletaUsuarioAtual,
     gabaritoMataMata
   ]);
+  const editorialStatsDashboard = useMemo(() => {
+    if (!currentUser || !currentUserCanSeeConsensusPanel) return null;
+
+    return buildEditorialStatsDashboard({
+      users: usuarios,
+      submissions: submissoes,
+      betsGames: palpitesJogos,
+      betsKnockout: palpitesMataMata,
+      games: jogosReais,
+      ranking,
+      teamRankings: TEAM_FIFA_RANKINGS,
+      submissionFields: SUBMISSION_FIELDS,
+      isAdminUser,
+      usuarioPreencheuTodosOsJogos,
+      usuarioPreencheuMataCompleta
+    });
+  }, [
+    currentUser,
+    currentUserCanSeeConsensusPanel,
+    usuarios,
+    submissoes,
+    palpitesJogos,
+    palpitesMataMata,
+    jogosReais,
+    ranking
+  ]);
+  const homeEditorialInsights = useMemo(() => {
+    if (!currentUser) return null;
+    return buildHomeEditorialInsights({
+      dashboard: editorialStatsDashboard,
+      canRevealComparisons: currentUserCanSeeConsensusPanel,
+      isAdminViewer: modoAdmin
+    });
+  }, [editorialStatsDashboard, currentUser, currentUserCanSeeConsensusPanel, modoAdmin]);
+  const rankingFooterComments = useMemo(() => {
+    if (!currentUser) return null;
+    return buildRankingFooterComments({
+      dashboard: editorialStatsDashboard,
+      canRevealComparisons: currentUserCanSeeConsensusPanel,
+      isAdminViewer: modoAdmin
+    });
+  }, [editorialStatsDashboard, currentUser, currentUserCanSeeConsensusPanel, modoAdmin]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -2379,6 +2409,7 @@ export default function App() {
           jogosSubmitted={Boolean(jogosEnviadosAt)}
           mataSubmitted={Boolean(mataEnviadosAt)}
         />
+        <EditorialCommentsSection comments={rankingFooterComments} />
       </div>
     );
   };
@@ -3477,6 +3508,7 @@ export default function App() {
         {abaAtiva === 'jogos' && (
           <div className="space-y-8 animate-fade-in">
             {!modoAdmin && homeInsightCard && <MyBolaoCard insight={homeInsightCard} />}
+            {homeEditorialInsights && <EditorialInsightsBlock insight={homeEditorialInsights} />}
             <>
               <div className={`${GLASS_CARD} p-5`}>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
