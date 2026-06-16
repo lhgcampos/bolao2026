@@ -128,6 +128,15 @@ const getBrazilDayKey = (timestamp) => {
   return BRAZIL_DATE_FORMATTER.format(new Date(timestamp));
 };
 
+const parseReferenceTimestamp = (value) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value) {
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
+};
+
 const getNearestTimelineMatchId = (matches = [], nowMs = Date.now()) => {
   const candidates = (matches || [])
     .map((match) => ({
@@ -140,7 +149,15 @@ const getNearestTimelineMatchId = (matches = [], nowMs = Date.now()) => {
 
   const todayKey = getBrazilDayKey(nowMs);
   const todaysMatches = candidates.filter((entry) => getBrazilDayKey(entry.timestamp) === todayKey);
-  const pool = todaysMatches.length ? todaysMatches : candidates;
+  const futureTodayMatches = todaysMatches
+    .filter((entry) => entry.timestamp >= nowMs)
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  const pool = futureTodayMatches.length
+    ? futureTodayMatches
+    : todaysMatches.length
+      ? todaysMatches
+      : candidates;
 
   return pool.sort((a, b) => (
     Math.abs(a.timestamp - nowMs) - Math.abs(b.timestamp - nowMs) ||
@@ -2176,10 +2193,6 @@ export default function App() {
     { id: 'regras', icon: List, label: 'Pontuação', mobileLabel: 'Pontuação' }
   ];
   const gabaritoTimeline = buildGabaritoTimeline(jogosReais, { isAdmin: modoAdmin });
-  const nearestTimelineMatchId = useMemo(
-    () => getNearestTimelineMatchId(jogosReais),
-    [jogosReais]
-  );
   const syncDiagnosticsSummary = {
     lastRunAt: formatResultSourceTimestamp(officialResultsSyncStatus?.lastRunAt),
     lastSuccessAt: formatResultSourceTimestamp(officialResultsSyncStatus?.lastSuccessAt),
@@ -2191,6 +2204,23 @@ export default function App() {
     providers: Array.isArray(officialResultsSyncStatus?.providers) ? officialResultsSyncStatus.providers : [],
     providerErrors: Array.isArray(officialResultsSyncStatus?.providerErrors) ? officialResultsSyncStatus.providerErrors : []
   };
+  const timelineReferenceNowMs = useMemo(
+    () => (
+      parseReferenceTimestamp(officialResultsSyncStatus?.lastRunAt)
+      || parseReferenceTimestamp(officialResultsSyncStatus?.lastAppliedAt)
+      || parseReferenceTimestamp(officialResultsSyncStatus?.lastSuccessAt)
+      || Date.now()
+    ),
+    [
+      officialResultsSyncStatus?.lastAppliedAt,
+      officialResultsSyncStatus?.lastRunAt,
+      officialResultsSyncStatus?.lastSuccessAt
+    ]
+  );
+  const nearestTimelineMatchId = useMemo(
+    () => getNearestTimelineMatchId(jogosReais, timelineReferenceNowMs),
+    [jogosReais, timelineReferenceNowMs]
+  );
 
   return (
     <div className="app-shell min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#f4f7fb_100%)] text-slate-900 font-sans pb-28 lg:pb-10">
