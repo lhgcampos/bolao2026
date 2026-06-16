@@ -47,7 +47,8 @@ export default function InsightsHubPanel({
   canSeeConsensus,
   jogosSubmitted,
   mataSubmitted,
-  isAdminViewer
+  isAdminViewer,
+  onNavigateToClosestMatch
 }) {
   const championTop = consensusDashboard?.knockoutConsensus?.champion?.[0] || null;
   const mostCommonPick = consensusDashboard?.mostCommonPick || null;
@@ -62,7 +63,17 @@ export default function InsightsHubPanel({
     : 'Assim que você concluir os envios, o painel mostra seu cenário e o comportamento do grupo.');
 
   return (
-    <section className={`${GLASS_CARD} overflow-hidden`}>
+    <section
+      className={`${GLASS_CARD} cursor-pointer overflow-hidden transition-transform hover:-translate-y-0.5`}
+      role="button"
+      tabIndex={0}
+      onClick={() => onNavigateToClosestMatch?.()}
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        onNavigateToClosestMatch?.();
+      }}
+    >
       <div className="border-b border-slate-200/80 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_38%,#ecfeff_100%)] px-5 py-5 sm:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">

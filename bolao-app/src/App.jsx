@@ -104,6 +104,50 @@ const INSTALLATION_TIPS = {
 };
 // --- CONFIGURAÇÃO INICIAL ---
 const getShortCountryName = (name) => COUNTRY_SHORT_NAMES[name] || name;
+const BRAZIL_DATE_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: 'America/Sao_Paulo',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+});
+
+const getMatchReferenceTime = (match) => {
+  if (match?.kickoffEt) {
+    const timestamp = Date.parse(match.kickoffEt);
+    return Number.isNaN(timestamp) ? null : timestamp;
+  }
+
+  const [day, month] = String(match?.data || '01/01').split('/').map(Number);
+  const [hour, minute] = String(match?.hora || '00:00').split(':').map(Number);
+  const timestamp = new Date(2026, (month || 1) - 1, day || 1, hour || 0, minute || 0).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
+
+const getBrazilDayKey = (timestamp) => {
+  if (!Number.isFinite(timestamp)) return '';
+  return BRAZIL_DATE_FORMATTER.format(new Date(timestamp));
+};
+
+const getNearestTimelineMatchId = (matches = [], nowMs = Date.now()) => {
+  const candidates = (matches || [])
+    .map((match) => ({
+      id: match.id,
+      timestamp: getMatchReferenceTime(match)
+    }))
+    .filter((entry) => Number.isFinite(entry.timestamp));
+
+  if (!candidates.length) return null;
+
+  const todayKey = getBrazilDayKey(nowMs);
+  const todaysMatches = candidates.filter((entry) => getBrazilDayKey(entry.timestamp) === todayKey);
+  const pool = todaysMatches.length ? todaysMatches : candidates;
+
+  return pool.sort((a, b) => (
+    Math.abs(a.timestamp - nowMs) - Math.abs(b.timestamp - nowMs) ||
+    a.timestamp - b.timestamp ||
+    a.id - b.id
+  ))[0]?.id || null;
+};
 
 // --- LÓGICA DE NEGÓCIO ---
 const getTeamConductScore = (grupo, time, condutaGrupos) => {
@@ -1383,6 +1427,7 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState(isDemoMode ? 'demo' : 'connecting');
   const [syncError, setSyncError] = useState('');
   const avatarInputRef = useRef(null);
+  const timelineMatchRefs = useRef({});
   const remoteReadyRef = useRef(false);
   const remoteUpdatedAtRef = useRef(0);
   const skipNextRemoteSyncRef = useRef(false);
@@ -2131,6 +2176,10 @@ export default function App() {
     { id: 'regras', icon: List, label: 'Pontuação', mobileLabel: 'Pontuação' }
   ];
   const gabaritoTimeline = buildGabaritoTimeline(jogosReais, { isAdmin: modoAdmin });
+  const nearestTimelineMatchId = useMemo(
+    () => getNearestTimelineMatchId(jogosReais),
+    [jogosReais]
+  );
   const syncDiagnosticsSummary = {
     lastRunAt: formatResultSourceTimestamp(officialResultsSyncStatus?.lastRunAt),
     lastSuccessAt: formatResultSourceTimestamp(officialResultsSyncStatus?.lastSuccessAt),
@@ -2260,6 +2309,13 @@ export default function App() {
                 jogosSubmitted={Boolean(jogosEnviadosAt)}
                 mataSubmitted={Boolean(mataEnviadosAt)}
                 isAdminViewer={modoAdmin}
+                onNavigateToClosestMatch={() => {
+                  const targetId = nearestTimelineMatchId;
+                  if (!targetId) return;
+                  const targetNode = timelineMatchRefs.current[targetId];
+                  if (!targetNode) return;
+                  targetNode.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
               />
             )}
             <>
@@ -2372,7 +2428,14 @@ export default function App() {
                         const hasPrediction = placarPreenchido(palpite.placarA, palpite.placarB);
 
                         return (
-                          <div key={jogo.id} className={`${GLASS_CARD} p-4 lg:p-5`}>
+                          <div
+                            key={jogo.id}
+                            ref={(node) => {
+                              if (node) timelineMatchRefs.current[jogo.id] = node;
+                              else delete timelineMatchRefs.current[jogo.id];
+                            }}
+                            className={`${GLASS_CARD} p-4 lg:p-5`}
+                          >
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                               <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
@@ -2423,7 +2486,14 @@ export default function App() {
                       }
 
                       return (
-                        <div key={jogo.id} className={`${GLASS_CARD} p-4 lg:p-5`}>
+                        <div
+                          key={jogo.id}
+                          ref={(node) => {
+                            if (node) timelineMatchRefs.current[jogo.id] = node;
+                            else delete timelineMatchRefs.current[jogo.id];
+                          }}
+                          className={`${GLASS_CARD} p-4 lg:p-5`}
+                        >
                           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
