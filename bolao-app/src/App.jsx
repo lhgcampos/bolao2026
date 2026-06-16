@@ -1916,6 +1916,23 @@ export default function App() {
     jogosReais,
     ranking
   ]);
+  const timelineReferenceNowMs = useMemo(
+    () => (
+      parseReferenceTimestamp(officialResultsSyncStatus?.lastRunAt)
+      || parseReferenceTimestamp(officialResultsSyncStatus?.lastAppliedAt)
+      || parseReferenceTimestamp(officialResultsSyncStatus?.lastSuccessAt)
+      || Date.now()
+    ),
+    [
+      officialResultsSyncStatus?.lastAppliedAt,
+      officialResultsSyncStatus?.lastRunAt,
+      officialResultsSyncStatus?.lastSuccessAt
+    ]
+  );
+  const nearestTimelineMatchId = useMemo(
+    () => getNearestTimelineMatchId(jogosReais, timelineReferenceNowMs),
+    [jogosReais, timelineReferenceNowMs]
+  );
 
   useEffect(() => {
     if (!currentUser) return;
@@ -2204,23 +2221,6 @@ export default function App() {
     providers: Array.isArray(officialResultsSyncStatus?.providers) ? officialResultsSyncStatus.providers : [],
     providerErrors: Array.isArray(officialResultsSyncStatus?.providerErrors) ? officialResultsSyncStatus.providerErrors : []
   };
-  const timelineReferenceNowMs = useMemo(
-    () => (
-      parseReferenceTimestamp(officialResultsSyncStatus?.lastRunAt)
-      || parseReferenceTimestamp(officialResultsSyncStatus?.lastAppliedAt)
-      || parseReferenceTimestamp(officialResultsSyncStatus?.lastSuccessAt)
-      || Date.now()
-    ),
-    [
-      officialResultsSyncStatus?.lastAppliedAt,
-      officialResultsSyncStatus?.lastRunAt,
-      officialResultsSyncStatus?.lastSuccessAt
-    ]
-  );
-  const nearestTimelineMatchId = useMemo(
-    () => getNearestTimelineMatchId(jogosReais, timelineReferenceNowMs),
-    [jogosReais, timelineReferenceNowMs]
-  );
 
   return (
     <div className="app-shell min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#f4f7fb_100%)] text-slate-900 font-sans pb-28 lg:pb-10">
