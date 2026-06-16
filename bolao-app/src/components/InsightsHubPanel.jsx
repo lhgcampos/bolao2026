@@ -56,8 +56,7 @@ export default function InsightsHubPanel({
   const personalCards = personalInsight?.insights || [];
   const editorialCards = editorialInsight?.items || [];
   const showConsensus = Boolean(canSeeConsensus && consensusDashboard && !consensusDashboard.insufficientSample);
-  const heroTitle = personalInsight?.title || (isAdminViewer ? 'Central do Bolão' : 'Resumo do seu Bolão');
-  const heroPrimary = personalInsight?.primaryLine || (showConsensus ? 'Visão geral do bolão em um só lugar.' : 'Envie seus palpites para liberar as comparações do bolão.');
+  const heroTitle = 'Informações';
   const heroSecondary = personalInsight?.secondaryLine || (showConsensus
     ? `Base atual: ${consensusDashboard.eligibleCount} apostadores com palpites completos.`
     : 'Assim que você concluir os envios, o painel mostra seu cenário e o comportamento do grupo.');
@@ -71,9 +70,6 @@ export default function InsightsHubPanel({
               <Sparkles size={14} />
               {heroTitle}
             </div>
-            <h2 className="mt-3 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-[30px]">
-              {heroPrimary}
-            </h2>
             <p className="mt-2 text-sm font-semibold text-slate-700 sm:text-[15px]">{heroSecondary}</p>
             {personalInsight?.leaderLine && (
               <p className="mt-2 text-sm leading-relaxed text-slate-600">{personalInsight.leaderLine}</p>

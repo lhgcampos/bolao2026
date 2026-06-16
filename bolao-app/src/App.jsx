@@ -688,6 +688,28 @@ const mergeRemoteRecordMap = (baseMap = {}, overrideMap = {}) => ({
   ...(overrideMap && typeof overrideMap === 'object' ? overrideMap : {})
 });
 
+const mergeRemoteScopedRecordsByCompleteness = (legacyMap = {}, shardedMap = {}, countFilled = () => 0) => {
+  const allUserIds = new Set([
+    ...Object.keys(legacyMap || {}),
+    ...Object.keys(shardedMap || {})
+  ]);
+
+  return Object.fromEntries(
+    [...allUserIds].map((userId) => {
+      const legacyRecord = legacyMap?.[userId];
+      const shardedRecord = shardedMap?.[userId];
+
+      if (!legacyRecord || typeof legacyRecord !== 'object') return [userId, shardedRecord || {}];
+      if (!shardedRecord || typeof shardedRecord !== 'object') return [userId, legacyRecord || {}];
+
+      const legacyCount = countFilled(legacyRecord || {});
+      const shardedCount = countFilled(shardedRecord || {});
+
+      return [userId, legacyCount > shardedCount ? legacyRecord : shardedRecord];
+    })
+  );
+};
+
 const mergeRemotePayloads = (legacyPayload, shardedPayload) => {
   if (!legacyPayload) return shardedPayload;
   if (!shardedPayload) return legacyPayload;
@@ -703,8 +725,16 @@ const mergeRemotePayloads = (legacyPayload, shardedPayload) => {
     matches: authoritative.matches
       ? (Array.isArray(shardedPayload.matches) ? shardedPayload.matches : [])
       : (Array.isArray(shardedPayload.matches) && shardedPayload.matches.length ? shardedPayload.matches : legacyPayload.matches),
-    betsGames: mergeRemoteRecordMap(legacyPayload.betsGames, shardedPayload.betsGames),
-    betsKnockout: mergeRemoteRecordMap(legacyPayload.betsKnockout, shardedPayload.betsKnockout),
+    betsGames: mergeRemoteScopedRecordsByCompleteness(
+      legacyPayload.betsGames,
+      shardedPayload.betsGames,
+      countFilledGameSelections
+    ),
+    betsKnockout: mergeRemoteScopedRecordsByCompleteness(
+      legacyPayload.betsKnockout,
+      shardedPayload.betsKnockout,
+      (record) => countFilledKnockoutSelections(record, KNOCKOUT_PHASE_LENGTHS)
+    ),
     officialKnockout: authoritative.officialKnockout
       ? (shardedPayload.officialKnockout || {})
       : (shardedPayload.officialKnockout || legacyPayload.officialKnockout || {}),

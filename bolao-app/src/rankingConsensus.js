@@ -114,11 +114,9 @@ export function getUpsetScore({ winnerRank, loserRank, pickCount, totalEligible 
 
 export function getConsensusEligibleUsers({
   users,
-  submissions,
   betsGames,
   betsKnockout,
   games,
-  submissionFields,
   isAdminUser,
   usuarioPreencheuTodosOsJogos,
   usuarioPreencheuMataCompleta
@@ -126,13 +124,10 @@ export function getConsensusEligibleUsers({
   return (users || []).filter((user) => {
     if (isAdminUser(user)) return false;
 
-    const userSubmissions = submissions?.[user.id] || {};
     const userGames = betsGames?.[user.id] || {};
     const userKnockout = betsKnockout?.[user.id] || {};
 
     return (
-      Boolean(userSubmissions[submissionFields.JOGOS]) &&
-      Boolean(userSubmissions[submissionFields.MATA]) &&
       usuarioPreencheuTodosOsJogos(games, userGames) &&
       usuarioPreencheuMataCompleta(userKnockout)
     );
