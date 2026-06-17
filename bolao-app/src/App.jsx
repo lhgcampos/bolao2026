@@ -1791,18 +1791,15 @@ export default function App() {
   const palpitesUsuarioAtual = currentUser ? palpitesJogos[currentUser.id] : undefined;
   const palpitesMataUsuarioAtual = currentUser ? (palpitesMataMata[currentUser.id] || {}) : {};
   const gruposCompletos = currentUser ? faseDeGruposCompleta(jogosReais, modoAdmin ? undefined : palpitesUsuarioAtual) : false;
+  const jogosCompletosUsuarioAtual = Boolean(currentUser && gruposCompletos);
   const jogosEnviadosAt = currentUser ? submissoes[currentUser.id]?.[SUBMISSION_FIELDS.JOGOS] : null;
   const mataEnviadosAt = currentUser ? submissoes[currentUser.id]?.[SUBMISSION_FIELDS.MATA] : null;
   const mataCompletaUsuarioAtual = usuarioPreencheuMataCompleta(palpitesMataUsuarioAtual);
+  const mataConcluidaUsuarioAtual = Boolean(currentUser && mataCompletaUsuarioAtual);
   const palpitesTravadosJogos = !modoAdmin && Boolean(jogosEnviadosAt);
   const palpitesTravadosMata = !modoAdmin && Boolean(mataEnviadosAt);
   const jogosPendentesUsuario = currentUser ? contarJogosPendentes(jogosReais, palpitesUsuarioAtual) : 0;
-  const currentUserCanSeeConsensusPanel = modoAdmin || (
-    Boolean(jogosEnviadosAt) &&
-    Boolean(mataEnviadosAt) &&
-    usuarioPreencheuTodosOsJogos(jogosReais, palpitesUsuarioAtual) &&
-    usuarioPreencheuMataCompleta(palpitesMataUsuarioAtual)
-  );
+  const currentUserCanSeeConsensusPanel = modoAdmin || (jogosCompletosUsuarioAtual && mataConcluidaUsuarioAtual);
   const participanteUsuarios = useMemo(
     () => usuarios.filter((user) => !isAdminUser(user)),
     [usuarios]
@@ -2362,8 +2359,8 @@ export default function App() {
                 editorialInsight={homeEditorialInsights}
                 consensusDashboard={consensusDashboard}
                 canSeeConsensus={currentUserCanSeeConsensusPanel}
-                jogosSubmitted={Boolean(jogosEnviadosAt)}
-                mataSubmitted={Boolean(mataEnviadosAt)}
+                jogosSubmitted={jogosCompletosUsuarioAtual}
+                mataSubmitted={mataConcluidaUsuarioAtual}
                 isAdminViewer={modoAdmin}
                 onNavigateToClosestMatch={() => {
                   const targetId = nearestTimelineMatchId;
