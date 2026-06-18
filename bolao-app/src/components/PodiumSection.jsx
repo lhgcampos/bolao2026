@@ -86,7 +86,7 @@ function PodiumSection({
 
   return (
     <div className={`${GLASS_CARD} mb-3 transition-all ${secaoExpandida === 'podium' ? 'ring-1 ring-yellow-500/50' : ''}`}>
-      <button onClick={() => setSecaoExpandida(secaoExpandida === 'podium' ? null : 'podium')} className="flex min-h-13 w-full items-center justify-between bg-gradient-to-r from-yellow-500/10 to-transparent p-4"><div className="flex items-center gap-3"><Crown className="text-yellow-500" size={18} /><span className="font-bold text-sm text-slate-900 uppercase tracking-wide">Pódio Final</span></div>{secaoExpandida === 'podium' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
+      <button onClick={() => setSecaoExpandida(secaoExpandida === 'podium' ? null : 'podium')} className="theme-podium-header flex min-h-13 w-full items-center justify-between p-4"><div className="flex items-center gap-3"><Crown className="text-yellow-500" size={18} /><span className="font-bold text-sm text-slate-900 uppercase tracking-wide">Pódio Final</span></div>{secaoExpandida === 'podium' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
       {secaoExpandida === 'podium' && (
         <div className="space-y-4 border-t border-slate-200 p-4">
           {showReviewMode ? (

@@ -330,7 +330,7 @@ function ReviewSheet({
   const renderSummaryCell = (row) => {
     if (isGameMode) {
       return (
-        <div className="rounded-[14px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-2.5 py-2 shadow-[0_10px_20px_-22px_rgba(15,23,42,0.4)]">
+        <div className="theme-review-summary rounded-[14px] border border-slate-200 px-2.5 py-2 shadow-[0_10px_20px_-22px_rgba(15,23,42,0.4)]">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-sky-700">Grupo {row.grupo} • {row.dataHora}</div>
@@ -369,7 +369,7 @@ function ReviewSheet({
     }
 
     return (
-      <div className="rounded-[14px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fbfbff_100%)] px-2.5 py-2 shadow-[0_10px_20px_-22px_rgba(15,23,42,0.4)]">
+      <div className="theme-review-summary rounded-[14px] border border-slate-200 px-2.5 py-2 shadow-[0_10px_20px_-22px_rgba(15,23,42,0.4)]">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">{row.metaTop} • {row.metaBottom}</div>

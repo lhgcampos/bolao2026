@@ -1,21 +1,11 @@
-/* Tailwind source reference. Runtime imports index.prebuilt.css. */
-@import "tailwindcss" source(none);
-@source "../index.html";
-@source "../src";
-
 :root {
-  font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   --app-bg-start: #f8fbff;
   --app-bg-end: #eef5ff;
   --app-text-primary: #0f172a;
   --app-text-secondary: #334155;
   --app-text-muted: #475569;
   --app-text-soft: #64748b;
-  --app-surface-card: rgba(255, 255, 255, 0.96);
+  --app-surface-card: #ffffff;
   --app-surface-card-strong: #ffffff;
   --app-surface-soft: rgba(248, 250, 252, 0.96);
   --app-surface-muted: rgba(241, 245, 249, 0.98);
@@ -55,9 +45,6 @@
   --app-accent-red-bg: rgba(239, 68, 68, 0.12);
   --app-accent-red-border: rgba(252, 165, 165, 0.72);
   --app-accent-red-text: #b91c1c;
-  color: var(--app-text-primary);
-  background: var(--app-bg-start);
-  color-scheme: light;
 }
 
 html[data-theme='dark'] {
@@ -110,67 +97,10 @@ html[data-theme='dark'] {
   color-scheme: dark;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  width: 100%;
-  min-width: 320px;
-  min-height: 100%;
-}
-
-html {
-  overflow-x: hidden;
-  -webkit-text-size-adjust: 100%;
-}
-
 body {
-  margin: 0;
   color: var(--app-text-primary);
   background: linear-gradient(180deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%);
-  overflow-x: hidden;
   transition: background-color 180ms ease, color 180ms ease, background-image 180ms ease;
-}
-
-body,
-input,
-select,
-textarea,
-button {
-  font-family: inherit;
-}
-
-button,
-input,
-select,
-textarea {
-  touch-action: manipulation;
-}
-
-img,
-svg,
-video,
-canvas {
-  max-width: 100%;
-}
-
-#root {
-  isolation: isolate;
-}
-
-.app-shell {
-  padding-top: max(12px, env(safe-area-inset-top));
-  padding-bottom: max(12px, env(safe-area-inset-bottom));
-  padding-left: max(12px, env(safe-area-inset-left));
-  padding-right: max(12px, env(safe-area-inset-right));
 }
 
 .theme-login-shell,
@@ -381,7 +311,8 @@ html[data-theme='dark'] [class*='border-yellow-500/30'] {
   border-color: var(--app-accent-amber-border) !important;
 }
 
-html[data-theme='dark'] [class*='border-emerald-200'] {
+html[data-theme='dark'] [class*='border-emerald-200'],
+html[data-theme='dark'] [class*='border-green-500/30'] {
   border-color: var(--app-accent-emerald-border) !important;
 }
 
@@ -391,7 +322,8 @@ html[data-theme='dark'] [class*='border-orange-500/30'] {
 }
 
 html[data-theme='dark'] [class*='border-rose-200'],
-html[data-theme='dark'] [class*='border-red-200'] {
+html[data-theme='dark'] [class*='border-red-200'],
+html[data-theme='dark'] [class*='border-red-500/30'] {
   border-color: var(--app-accent-rose-border) !important;
 }
 
@@ -438,20 +370,4 @@ html[data-theme='dark'] [class*='text-violet-700'] {
 
 html[data-theme='dark'] [class*='ring-sky-200'] {
   --tw-ring-color: rgba(56, 189, 248, 0.4) !important;
-}
-
-.app-topbar {
-  top: 0;
-  padding-top: calc(0.75rem + env(safe-area-inset-top));
-}
-
-.mobile-bottom-nav {
-  bottom: calc(0.75rem + env(safe-area-inset-bottom));
-}
-
-@media (max-width: 640px) {
-  .app-shell {
-    padding-left: max(10px, env(safe-area-inset-left));
-    padding-right: max(10px, env(safe-area-inset-right));
-  }
 }

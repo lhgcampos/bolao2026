@@ -74,7 +74,7 @@ export default function InsightsHubPanel({
         onNavigateToClosestMatch?.();
       }}
     >
-      <div className="border-b border-slate-200/80 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_38%,#ecfeff_100%)] px-5 py-5 sm:px-6">
+      <div className="theme-insights-hero border-b border-slate-200/80 px-5 py-5 sm:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-white">

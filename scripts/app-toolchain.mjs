@@ -15,6 +15,7 @@ export const PUBLIC_DIR = path.join(APP_DIR, 'public');
 export const DIST_DIR = path.join(APP_DIR, 'dist');
 export const HTML_TEMPLATE_PATH = path.join(APP_DIR, 'index.html');
 export const CSS_RUNTIME_PATH = path.join(SRC_DIR, 'index.prebuilt.css');
+export const THEME_RUNTIME_PATH = path.join(SRC_DIR, 'theme.runtime.css');
 export const APP_ENTRY_PATH = path.join(SRC_DIR, 'App.jsx');
 
 const MIME_TYPES = {
@@ -73,7 +74,11 @@ async function copyDirectory(sourceDir, targetDir) {
 
 async function copyCssRuntime(outdir, cssFileName) {
   await fs.mkdir(path.join(outdir, 'assets'), { recursive: true });
-  await fs.copyFile(CSS_RUNTIME_PATH, path.join(outdir, 'assets', cssFileName));
+  const [runtimeCss, themeCss] = await Promise.all([
+    fs.readFile(CSS_RUNTIME_PATH, 'utf8'),
+    fs.readFile(THEME_RUNTIME_PATH, 'utf8')
+  ]);
+  await fs.writeFile(path.join(outdir, 'assets', cssFileName), `${runtimeCss}\n${themeCss}\n`);
 }
 
 async function writeIndexHtml({ base, outdir, cssFileName, jsFileName }) {

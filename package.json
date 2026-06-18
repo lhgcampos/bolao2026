@@ -14,6 +14,7 @@
     "test:official-results": "node scripts/test-official-results-sync.mjs",
     "test:app-smoke": "node scripts/test-app-smoke.mjs",
     "test:login-shell": "node scripts/test-login-shell.mjs",
+    "test:theme-preference": "node scripts/test-theme-preference.mjs",
     "test:andrebitt-home": "node scripts/test-andrebitt-home.mjs",
     "test:ranking-positions": "node scripts/test-ranking-positions.mjs",
     "test:ranking-consensus": "node scripts/test-ranking-consensus.mjs",

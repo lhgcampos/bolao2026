@@ -9,6 +9,7 @@ import { buildEditorialStatsDashboard, buildHomeEditorialInsights } from './edit
 import { AvatarBadge, InsightsHubPanel, PodiumSection, RankingTable, RestrictedMatchDropdown, ReviewSheet, TabelaClassificacao } from './components/index.js';
 import { MATA_MATA_CONFIG, PONTOS, PONTOS_CONDUTA, SUBMISSION_FIELDS } from './constants.js';
 import { GLASS_CARD, GLASS_BTN_PRIMARY, GLASS_BTN_SECONDARY, GLASS_INPUT, TEXT_HIGHLIGHT, TEXT_MUTED } from './styles.js';
+import { applyThemeToDocument, getStoredThemePreference, getSystemTheme, normalizeThemePreference, THEME_PREFERENCE_KEY } from './theme.js';
 import { buildGroupBetReview, calcularPontosJogo, formatScoreDisplay, formatSubmissionDate } from './utils.js';
 import {
   GRUPOS_2026,
@@ -1210,7 +1211,7 @@ const findUserByName = (users, inputName) => users.find((user) => user.nomeKey =
 
 const InstallGuideCard = () => (
   <div className={`${GLASS_CARD} overflow-hidden`}>
-    <div className="border-b border-slate-200 bg-gradient-to-r from-sky-50 to-cyan-50 px-5 py-4">
+    <div className="theme-install-hero border-b border-slate-200 px-5 py-4">
       <div className="flex items-center gap-3">
         <div className="rounded-2xl border border-sky-100 bg-white p-2.5 text-sky-600 shadow-sm">
           <Smartphone size={18} />
@@ -1248,7 +1249,23 @@ const InstallGuideCard = () => (
   </div>
 );
 
-const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', syncError = '', isDemoMode = false }) => {
+const THEME_LABELS = {
+  system: 'Automático',
+  light: 'Claro',
+  dark: 'Noturno'
+};
+
+const LoginScreen = ({
+  onLogin,
+  onRefreshUsers,
+  users,
+  syncStatus = 'online',
+  syncError = '',
+  isDemoMode = false,
+  themePreference = 'system',
+  setThemePreference = () => {},
+  effectiveTheme = 'light'
+}) => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
@@ -1331,10 +1348,10 @@ const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', sy
   };
 
   return (
-    <div className="app-shell min-h-screen flex flex-col items-center justify-center bg-[linear-gradient(180deg,#f8fbff_0%,#eef5ff_100%)] px-4 py-6 text-slate-900 font-sans sm:px-6">
+    <div className="app-shell theme-login-shell min-h-screen flex flex-col items-center justify-center px-4 py-6 text-slate-900 font-sans sm:px-6">
       <div className="w-full max-w-md space-y-4">
       <div className={`${GLASS_CARD} w-full p-6 md:p-8 relative overflow-hidden`}>
-        <div className="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.18),_transparent_70%)]"></div>
+        <div className="theme-login-glow absolute inset-x-0 top-0 h-24"></div>
         <div className="flex justify-center mb-6">
           <div className="bg-sky-50 p-4 rounded-full shadow-inner border border-sky-100">
             <Trophy size={40} className="text-amber-500" />
@@ -1370,6 +1387,36 @@ const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', sy
             {syncError && <div className="mt-2 text-[11px] text-rose-600">{syncError}</div>}
           </div>
         )}
+        <div className="theme-settings-card mb-5 rounded-2xl px-4 py-4">
+          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-700">
+            <Settings size={14} />
+            Aparência
+          </div>
+          <p className={`mt-2 text-[11px] leading-relaxed ${TEXT_MUTED}`}>
+            Automático segue o padrão do aparelho. Visual ativo agora: <strong className="text-slate-900">{THEME_LABELS[effectiveTheme]}</strong>.
+          </p>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {[
+              { value: 'system', label: 'Automático' },
+              { value: 'light', label: 'Claro' },
+              { value: 'dark', label: 'Noturno' }
+            ].map((option) => {
+              const active = themePreference === option.value;
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setThemePreference(option.value)}
+                  data-active={active}
+                  className="theme-toggle-button min-h-11 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em]"
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className={`text-[10px] font-bold uppercase ml-1 mb-1.5 block ${TEXT_MUTED}`}>Nome de Usuário</label>
@@ -1407,6 +1454,8 @@ const LoginScreen = ({ onLogin, onRefreshUsers, users, syncStatus = 'online', sy
 
 export default function App() {
   const isDemoMode = useMemo(() => new URLSearchParams(window.location.search).get('demo') === 'planilha', []);
+  const [themePreference, setThemePreference] = useState(() => getStoredThemePreference());
+  const [systemTheme, setSystemTheme] = useState(() => getSystemTheme());
   const [currentUser, setCurrentUser] = useState(null); 
   const [abaAtiva, setAbaAtiva] = useState('jogos');
   const [secaoExpandida, setSecaoExpandida] = useState('r32');
@@ -1432,6 +1481,31 @@ export default function App() {
   const syncInFlightRef = useRef(false);
   const latestLocalSnapshotRef = useRef('');
   const nextSyncScopeRef = useRef(null);
+  const effectiveTheme = normalizeThemePreference(themePreference) === 'system' ? systemTheme : normalizeThemePreference(themePreference);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (event) => {
+      setSystemTheme(event.matches ? 'dark' : 'light');
+    };
+
+    setSystemTheme(mediaQuery.matches ? 'dark' : 'light');
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  useEffect(() => {
+    applyThemeToDocument(effectiveTheme);
+
+    try {
+      window.localStorage.setItem(THEME_PREFERENCE_KEY, normalizeThemePreference(themePreference));
+    } catch {
+      // noop
+    }
+  }, [effectiveTheme, themePreference]);
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return undefined;
@@ -2213,6 +2287,9 @@ export default function App() {
         syncStatus={syncStatus}
         syncError={syncError}
         isDemoMode={isDemoMode}
+        themePreference={themePreference}
+        setThemePreference={setThemePreference}
+        effectiveTheme={effectiveTheme}
       />
     );
   }
@@ -2238,8 +2315,8 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#f4f7fb_100%)] text-slate-900 font-sans pb-28 lg:pb-10">
-      <header className="app-topbar sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-xl lg:hidden">
+    <div className="app-shell theme-main-shell min-h-screen text-slate-900 font-sans pb-28 lg:pb-10">
+      <header className="app-topbar theme-topbar sticky top-0 z-20 flex items-center justify-between px-4 py-3 shadow-sm backdrop-blur-xl lg:hidden">
         <div className="flex items-center gap-3">
           <AvatarBadge user={currentUser} size="md" />
           <div><h1 className="text-sm font-bold text-slate-900 leading-tight">{currentUser.nome}</h1><p className={`text-[10px] font-medium tracking-wide ${TEXT_MUTED}`}>{modoAdmin ? 'ADMINISTRADOR' : 'Participante'}</p></div>
@@ -2446,7 +2523,7 @@ export default function App() {
 
               {gabaritoTimeline.map((dayGroup) => (
                 <div key={dayGroup.dayKey} className="space-y-3">
-                  <div className="sticky top-20 z-10 inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-700 shadow-sm backdrop-blur">
+                  <div className="theme-floating-chip sticky top-20 z-10 inline-flex items-center rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-700 shadow-sm backdrop-blur">
                     {dayGroup.dayLabel}
                   </div>
                   <div className="space-y-3">
@@ -2934,7 +3011,7 @@ export default function App() {
         </section>
       </main>
 
-      <nav className="mobile-bottom-nav fixed left-1/2 z-50 flex w-[min(96vw,32rem)] -translate-x-1/2 justify-between gap-1 rounded-[28px] border border-slate-200 bg-white/95 px-2 py-2 shadow-[0_20px_45px_-25px_rgba(15,23,42,0.35)] backdrop-blur-xl lg:hidden">
+      <nav className="mobile-bottom-nav theme-bottom-nav fixed left-1/2 z-50 flex w-[min(96vw,32rem)] -translate-x-1/2 justify-between gap-1 rounded-[28px] px-2 py-2 shadow-[0_20px_45px_-25px_rgba(15,23,42,0.35)] backdrop-blur-xl lg:hidden">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = abaAtiva === item.id;
