@@ -1,15 +1,15 @@
 import React from 'react';
 import { AlertCircle, Lock, MessageCircle, Radar, Sparkles, Target, Trophy } from '../lucideIcons';
 import { formatEditorialStatLine } from '../editorialStats.js';
-import { GLASS_CARD } from '../styles.js';
+import { GLASS_CARD, TEXT_MUTED } from '../styles.js';
 
-const SUB_CARD = 'rounded-[24px] border border-slate-200 bg-white/90 p-4 shadow-sm';
-const METRIC_CARD = 'rounded-[24px] border border-slate-200 bg-slate-50/80 p-4 shadow-sm';
-const CHIP = 'rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold tracking-wide text-sky-900';
+const SUB_CARD = 'theme-insights-subcard rounded-[24px] p-4 shadow-sm';
+const METRIC_CARD = 'theme-insights-metric-card rounded-[24px] p-4 shadow-sm';
+const CHIP = 'theme-insights-chip rounded-full px-3 py-1 text-[11px] font-semibold tracking-wide';
 const INSIGHT_TONE = {
-  positive: 'border-emerald-200 bg-emerald-50 text-emerald-950',
-  neutral: 'border-sky-200 bg-sky-50 text-sky-950',
-  warning: 'border-amber-200 bg-amber-50 text-amber-950'
+  positive: 'theme-toned-card-positive',
+  neutral: 'theme-toned-card-neutral',
+  warning: 'theme-toned-card-warning'
 };
 
 const formatPercent = (value) => `${Math.round((value || 0) * 100)}%`;
@@ -34,9 +34,9 @@ const LockedBlock = ({ title, text, jogosSubmitted, mataSubmitted }) => (
 
 const ConsensusMetric = ({ title, value, detail }) => (
   <article className={METRIC_CARD}>
-    <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">{title}</div>
+    <div className={`text-[11px] font-bold uppercase tracking-[0.18em] ${TEXT_MUTED}`}>{title}</div>
     <div className="mt-3 text-xl font-black text-slate-950">{value}</div>
-    <p className="mt-2 text-sm leading-relaxed text-slate-600">{detail}</p>
+    <p className={`mt-2 text-sm leading-relaxed ${TEXT_MUTED}`}>{detail}</p>
   </article>
 );
 
@@ -83,29 +83,29 @@ export default function InsightsHubPanel({
             </div>
             <p className="mt-2 text-sm font-semibold text-slate-700 sm:text-[15px]">{heroSecondary}</p>
             {personalInsight?.leaderLine && (
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{personalInsight.leaderLine}</p>
+              <p className={`mt-2 text-sm leading-relaxed ${TEXT_MUTED}`}>{personalInsight.leaderLine}</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:min-w-[210px]">
             {typeof personalInsight?.rank === 'number' && (
               <div className={SUB_CARD}>
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Posição</div>
+                <div className={`text-[10px] font-bold uppercase tracking-[0.18em] ${TEXT_MUTED}`}>Posição</div>
                 <div className="mt-1 text-2xl font-black text-slate-950">{personalInsight.rank}º</div>
               </div>
             )}
             {typeof personalInsight?.points === 'number' && (
               <div className={SUB_CARD}>
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Pontos</div>
+                <div className={`text-[10px] font-bold uppercase tracking-[0.18em] ${TEXT_MUTED}`}>Pontos</div>
                 <div className="mt-1 text-2xl font-black text-emerald-700">{personalInsight.points}</div>
               </div>
             )}
             <div className={SUB_CARD}>
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Fase de grupos</div>
+              <div className={`text-[10px] font-bold uppercase tracking-[0.18em] ${TEXT_MUTED}`}>Fase de grupos</div>
               <div className="mt-1 text-sm font-black text-slate-950">{jogosSubmitted ? 'Enviada' : 'Pendente'}</div>
             </div>
             <div className={SUB_CARD}>
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Mata-mata</div>
+              <div className={`text-[10px] font-bold uppercase tracking-[0.18em] ${TEXT_MUTED}`}>Mata-mata</div>
               <div className="mt-1 text-sm font-black text-slate-950">{mataSubmitted ? 'Enviado' : 'Pendente'}</div>
             </div>
           </div>
@@ -115,7 +115,7 @@ export default function InsightsHubPanel({
       <div className="space-y-6 p-5 sm:p-6">
         {personalCards.length > 0 && (
           <div>
-            <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
+            <div className={`mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] ${TEXT_MUTED}`}>
               <Trophy size={14} />
               Seu momento
             </div>
@@ -123,7 +123,7 @@ export default function InsightsHubPanel({
               {personalCards.slice(0, 3).map((entry) => (
                 <article
                   key={`${entry.type}-${entry.text}`}
-                  className={`rounded-[24px] border px-4 py-4 shadow-sm ${INSIGHT_TONE[entry.tone] || INSIGHT_TONE.neutral}`}
+                  className={`rounded-[24px] px-4 py-4 shadow-sm ${INSIGHT_TONE[entry.tone] || INSIGHT_TONE.neutral}`}
                 >
                   <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em]">
                     <Target size={14} />
@@ -137,7 +137,7 @@ export default function InsightsHubPanel({
         )}
 
         <div>
-          <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
+          <div className={`mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] ${TEXT_MUTED}`}>
             <Radar size={14} />
             Leitura do bolão
           </div>
@@ -192,7 +192,7 @@ export default function InsightsHubPanel({
         </div>
 
         <div>
-          <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
+          <div className={`mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] ${TEXT_MUTED}`}>
             <MessageCircle size={14} />
             Estatísticas e recortes
           </div>

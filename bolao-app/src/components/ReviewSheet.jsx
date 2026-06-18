@@ -90,7 +90,7 @@ function ReviewSheet({
         <span className="text-[9px] font-bold uppercase tracking-[0.16em]">{palpite.status.label}</span>
       </div>
       <div className="mt-1.5 text-[10px] font-bold text-slate-700">{palpite.pontos} pts</div>
-      <div className="mt-1 text-[9px] leading-tight text-slate-400">{palpite.envio}</div>
+      <div className="mt-1 text-[9px] leading-tight text-slate-500">{palpite.envio}</div>
     </div>
   );
 
@@ -336,26 +336,26 @@ function ReviewSheet({
               <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-sky-700">Grupo {row.grupo} • {row.dataHora}</div>
             </div>
             <div className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-black text-slate-900 shadow-sm">
-              <span className="mr-1 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-400">
+              <span className="mr-1 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-500">
                 {row.realStatusLabel === 'Placar temporário' ? 'Ao vivo' : 'Oficial'}
               </span>
               {row.real}
             </div>
           </div>
 
-          <div className="mt-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+          <div className="mt-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
             <span>Jogo {row.id}</span>
-            <span className="text-slate-300">•</span>
+            <span className="text-slate-400">•</span>
             <span>Até {PONTOS.JOGO.CHEIO} pts</span>
           </div>
 
           <div className="mt-1.5 flex items-center gap-2 text-[13px] font-bold text-slate-900">
             <span className="truncate">{row.timeA}</span>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">x</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">x</span>
             <span className="truncate">{row.timeB}</span>
           </div>
 
-          <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-slate-500">
+          <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-slate-600">
             <span className="truncate">{row.local}</span>
             <span className={`inline-flex items-center gap-1 truncate rounded-full px-2 py-1 text-right font-semibold ${
               row.realStatus?.tone || 'bg-slate-100 text-slate-500'
@@ -375,30 +375,30 @@ function ReviewSheet({
             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">{row.metaTop} • {row.metaBottom}</div>
           </div>
           <div className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-black text-slate-900 shadow-sm">
-            <span className="mr-1 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-400">Oficial</span>
+            <span className="mr-1 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-500">Oficial</span>
             {row.official}
           </div>
         </div>
 
-        <div className="mt-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+        <div className="mt-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
           <span>{row.matchupTitle}</span>
-          <span className="text-slate-300">•</span>
+          <span className="text-slate-400">•</span>
           <span>{row.kind === 'match' ? row.officialMeta : row.matchupSubtitle}</span>
         </div>
 
         {row.kind === 'match' ? (
           <div className="mt-1.5 flex items-center gap-2 text-[13px] font-bold text-slate-900">
             <span className="truncate">{row.sideA}</span>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">x</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">x</span>
             <span className="truncate">{row.sideB}</span>
           </div>
         ) : (
           <div className="mt-1.5 text-[13px] font-bold text-slate-900">{row.matchupSubtitle}</div>
         )}
 
-        <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-slate-500">
+        <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-slate-600">
           <span className="truncate">{row.metaNote}</span>
-          {row.kind === 'match' && <span className="shrink-0 font-semibold text-slate-500">{row.official === '—' ? 'Aguardando definição' : row.officialMeta}</span>}
+          {row.kind === 'match' && <span className="shrink-0 font-semibold text-slate-600">{row.official === '—' ? 'Aguardando definição' : row.officialMeta}</span>}
         </div>
       </div>
     );
@@ -419,7 +419,7 @@ function ReviewSheet({
         <div className="text-right">
           <div className="text-[15px] font-black tracking-[-0.03em] text-slate-900">{palpite.palpite}</div>
           <div className="mt-0.5 text-[10px] font-semibold text-slate-600">{palpite.pontos} pts</div>
-          <div className="mt-0.5 text-[9px] text-slate-400">{palpite.envio}</div>
+          <div className="mt-0.5 text-[9px] text-slate-500">{palpite.envio}</div>
         </div>
       </div>
     );
@@ -520,7 +520,7 @@ function ReviewSheet({
 
       <div className="space-y-4 lg:hidden">
         {linhas.length === 0 && (
-          <div className={`${GLASS_CARD} px-4 py-10 text-center text-slate-400`}>Nenhum registro encontrado com os filtros atuais.</div>
+          <div className={`${GLASS_CARD} px-4 py-10 text-center text-slate-500`}>Nenhum registro encontrado com os filtros atuais.</div>
         )}
 
         {reviewMode === 'jogos' ? (
@@ -574,7 +574,7 @@ function ReviewSheet({
             </div>
 
             {linhas.length === 0 && (
-              <div className="px-4 py-10 text-center text-slate-400">Nenhum registro encontrado com os filtros atuais.</div>
+              <div className="px-4 py-10 text-center text-slate-500">Nenhum registro encontrado com os filtros atuais.</div>
             )}
 
             {reviewMode === 'jogos' ? (

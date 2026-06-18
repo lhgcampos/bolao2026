@@ -63,22 +63,22 @@
 html[data-theme='dark'] {
   --app-bg-start: #07111f;
   --app-bg-end: #111c31;
-  --app-text-primary: #e8eefc;
-  --app-text-secondary: #d1def6;
-  --app-text-muted: #b6c3dc;
-  --app-text-soft: #92a3c3;
-  --app-surface-card: rgba(15, 23, 42, 0.92);
-  --app-surface-card-strong: #172236;
-  --app-surface-soft: rgba(17, 29, 49, 0.92);
-  --app-surface-muted: rgba(26, 39, 63, 0.94);
-  --app-surface-overlay: rgba(11, 18, 32, 0.88);
-  --app-surface-hero-start: #14253f;
-  --app-surface-hero-mid: #172841;
-  --app-surface-hero-end: #113043;
-  --app-surface-review-start: #1a2740;
-  --app-surface-review-end: #132135;
-  --app-border-soft: rgba(71, 85, 105, 0.72);
-  --app-border-strong: rgba(96, 110, 132, 0.9);
+  --app-text-primary: #f2f7ff;
+  --app-text-secondary: #dce8fb;
+  --app-text-muted: #c6d3ea;
+  --app-text-soft: #aebddb;
+  --app-surface-card: rgba(18, 28, 46, 0.96);
+  --app-surface-card-strong: #1c2c47;
+  --app-surface-soft: rgba(24, 37, 60, 0.96);
+  --app-surface-muted: rgba(31, 47, 76, 0.97);
+  --app-surface-overlay: rgba(14, 24, 40, 0.92);
+  --app-surface-hero-start: #183150;
+  --app-surface-hero-mid: #213653;
+  --app-surface-hero-end: #173d53;
+  --app-surface-review-start: #223653;
+  --app-surface-review-end: #182945;
+  --app-border-soft: rgba(97, 118, 149, 0.84);
+  --app-border-strong: rgba(123, 146, 180, 0.94);
   --app-shadow-lg: 0 26px 70px -36px rgba(2, 6, 23, 0.78);
   --app-shadow-md: 0 18px 45px -24px rgba(8, 145, 178, 0.48);
   --app-login-glow: rgba(34, 211, 238, 0.18);
@@ -86,27 +86,27 @@ html[data-theme='dark'] {
   --app-primary-end: #22d3ee;
   --app-primary-start-hover: #38bdf8;
   --app-primary-end-hover: #67e8f9;
-  --app-accent-sky-bg: rgba(14, 165, 233, 0.18);
-  --app-accent-sky-border: rgba(56, 189, 248, 0.3);
-  --app-accent-sky-text: #bae6fd;
-  --app-accent-amber-bg: rgba(245, 158, 11, 0.18);
-  --app-accent-amber-border: rgba(245, 158, 11, 0.32);
-  --app-accent-amber-text: #fde68a;
-  --app-accent-emerald-bg: rgba(16, 185, 129, 0.18);
-  --app-accent-emerald-border: rgba(16, 185, 129, 0.32);
-  --app-accent-emerald-text: #a7f3d0;
-  --app-accent-orange-bg: rgba(249, 115, 22, 0.18);
-  --app-accent-orange-border: rgba(249, 115, 22, 0.32);
-  --app-accent-orange-text: #fdba74;
-  --app-accent-rose-bg: rgba(244, 63, 94, 0.18);
-  --app-accent-rose-border: rgba(244, 63, 94, 0.3);
-  --app-accent-rose-text: #fda4af;
-  --app-accent-violet-bg: rgba(139, 92, 246, 0.18);
-  --app-accent-violet-border: rgba(139, 92, 246, 0.3);
-  --app-accent-violet-text: #c4b5fd;
-  --app-accent-red-bg: rgba(239, 68, 68, 0.18);
-  --app-accent-red-border: rgba(239, 68, 68, 0.3);
-  --app-accent-red-text: #fca5a5;
+  --app-accent-sky-bg: rgba(14, 165, 233, 0.24);
+  --app-accent-sky-border: rgba(56, 189, 248, 0.44);
+  --app-accent-sky-text: #e0f2fe;
+  --app-accent-amber-bg: rgba(245, 158, 11, 0.22);
+  --app-accent-amber-border: rgba(245, 158, 11, 0.42);
+  --app-accent-amber-text: #fef3c7;
+  --app-accent-emerald-bg: rgba(16, 185, 129, 0.22);
+  --app-accent-emerald-border: rgba(16, 185, 129, 0.42);
+  --app-accent-emerald-text: #d1fae5;
+  --app-accent-orange-bg: rgba(249, 115, 22, 0.22);
+  --app-accent-orange-border: rgba(249, 115, 22, 0.42);
+  --app-accent-orange-text: #ffedd5;
+  --app-accent-rose-bg: rgba(244, 63, 94, 0.22);
+  --app-accent-rose-border: rgba(244, 63, 94, 0.4);
+  --app-accent-rose-text: #ffe4e6;
+  --app-accent-violet-bg: rgba(139, 92, 246, 0.22);
+  --app-accent-violet-border: rgba(139, 92, 246, 0.4);
+  --app-accent-violet-text: #ede9fe;
+  --app-accent-red-bg: rgba(239, 68, 68, 0.22);
+  --app-accent-red-border: rgba(239, 68, 68, 0.4);
+  --app-accent-red-text: #fee2e2;
   color-scheme: dark;
 }
 
@@ -254,6 +254,7 @@ canvas {
 .theme-settings-card {
   border: 1px solid var(--app-border-soft);
   background: var(--app-surface-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .theme-toggle-button {
@@ -289,6 +290,47 @@ canvas {
 .theme-install-hero,
 .theme-insights-hero {
   background: linear-gradient(135deg, var(--app-surface-hero-start) 0%, var(--app-surface-hero-mid) 38%, var(--app-surface-hero-end) 100%);
+}
+
+.theme-insights-subcard {
+  border: 1px solid var(--app-border-soft);
+  background: color-mix(in srgb, var(--app-surface-card-strong) 90%, transparent);
+}
+
+.theme-insights-metric-card {
+  border: 1px solid var(--app-border-soft);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--app-surface-card-strong) 92%, transparent) 0%, var(--app-surface-soft) 100%);
+}
+
+.theme-insights-chip {
+  border: 1px solid var(--app-accent-sky-border);
+  background: var(--app-accent-sky-bg);
+  color: var(--app-accent-sky-text);
+}
+
+.theme-toned-card-positive,
+.theme-toned-card-neutral,
+.theme-toned-card-warning {
+  border-width: 1px;
+  border-style: solid;
+}
+
+.theme-toned-card-positive {
+  border-color: var(--app-accent-emerald-border);
+  background: var(--app-accent-emerald-bg);
+  color: var(--app-accent-emerald-text);
+}
+
+.theme-toned-card-neutral {
+  border-color: var(--app-accent-sky-border);
+  background: var(--app-accent-sky-bg);
+  color: var(--app-accent-sky-text);
+}
+
+.theme-toned-card-warning {
+  border-color: var(--app-accent-amber-border);
+  background: var(--app-accent-amber-bg);
+  color: var(--app-accent-amber-text);
 }
 
 .theme-review-summary {
@@ -335,7 +377,10 @@ html[data-theme='dark'] [class*='text-slate-600'] {
   color: var(--app-text-secondary) !important;
 }
 
-html[data-theme='dark'] [class*='text-slate-500'],
+html[data-theme='dark'] [class*='text-slate-500'] {
+  color: var(--app-text-secondary) !important;
+}
+
 html[data-theme='dark'] [class*='text-slate-400'],
 html[data-theme='dark'] [class*='text-slate-300'] {
   color: var(--app-text-muted) !important;
@@ -400,6 +445,7 @@ html[data-theme='dark'] [class*='border-violet-200'] {
 }
 
 html[data-theme='dark'] [class*='text-sky-900'],
+html[data-theme='dark'] [class*='text-sky-950'],
 html[data-theme='dark'] [class*='text-sky-700'],
 html[data-theme='dark'] [class*='text-sky-600'],
 html[data-theme='dark'] [class*='text-sky-500'],

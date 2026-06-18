@@ -33,7 +33,7 @@ const lockedInsight = buildUserHomeInsights({
 });
 
 assert.equal(lockedInsight.locked, true);
-assert.equal(lockedInsight.primaryLine, 'Complete seus palpites para liberar seu painel do Bolao.');
+assert.equal(lockedInsight.primaryLine, 'Complete seus palpites para liberar seu painel do Bolão.');
 
 const allZeroInsight = buildUserHomeInsights({
   currentUserId: 1,
@@ -75,7 +75,7 @@ const tiedUserInsight = buildUserHomeInsights({
 });
 
 assert.match(tiedUserInsight.secondaryLine, /empatado com 1 pessoa/);
-assert.equal(tiedUserInsight.leaderLine, 'Voce esta empatado na lideranca.');
+assert.equal(tiedUserInsight.leaderLine, 'Você está empatado na liderança.');
 
 const isolatedLeaderInsight = buildUserHomeInsights({
   currentUserId: 1,
@@ -93,7 +93,7 @@ const isolatedLeaderInsight = buildUserHomeInsights({
   nowMs: TEST_NOW
 });
 
-assert.equal(isolatedLeaderInsight.leaderLine, 'Voce esta liderando por 3 pontos.');
+assert.equal(isolatedLeaderInsight.leaderLine, 'Você está liderando por 3 pontos.');
 
 const top3OpportunityInsight = buildUserHomeInsights({
   currentUserId: 4,

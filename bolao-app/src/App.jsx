@@ -1210,7 +1210,7 @@ const isAdminUser = (user) => user?.role === 'admin' || user?.id === ADMIN_USER_
 const findUserByName = (users, inputName) => users.find((user) => user.nomeKey === normalizeUserNameKey(inputName));
 
 const InstallGuideCard = () => (
-  <div className={`${GLASS_CARD} overflow-hidden`}>
+  <div data-testid="install-guide-card" className={`${GLASS_CARD} overflow-hidden`}>
     <div className="theme-install-hero border-b border-slate-200 px-5 py-4">
       <div className="flex items-center gap-3">
         <div className="rounded-2xl border border-sky-100 bg-white p-2.5 text-sky-600 shadow-sm">
@@ -1254,6 +1254,44 @@ const THEME_LABELS = {
   light: 'Claro',
   dark: 'Noturno'
 };
+
+const AppearanceSettingsCard = ({
+  themePreference = 'system',
+  setThemePreference = () => {},
+  effectiveTheme = 'light',
+  className = ''
+}) => (
+  <div data-testid="appearance-settings-card" className={`theme-settings-card rounded-2xl px-4 py-4 ${className}`.trim()}>
+    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] theme-text-highlight">
+      <Settings size={14} />
+      Aparência
+    </div>
+    <p className="theme-text-muted mt-2 text-[11px] leading-relaxed">
+      Automático segue o padrão do aparelho. Visual ativo agora: <strong className="theme-text-highlight">{THEME_LABELS[effectiveTheme]}</strong>.
+    </p>
+    <div className="mt-3 grid grid-cols-3 gap-2">
+      {[
+        { value: 'system', label: 'Automático' },
+        { value: 'light', label: 'Claro' },
+        { value: 'dark', label: 'Noturno' }
+      ].map((option) => {
+        const active = themePreference === option.value;
+
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => setThemePreference(option.value)}
+            data-active={active}
+            className="theme-toggle-button min-h-11 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em]"
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
 
 const LoginScreen = ({
   onLogin,
@@ -1349,7 +1387,7 @@ const LoginScreen = ({
 
   return (
     <div className="app-shell theme-login-shell min-h-screen flex flex-col items-center justify-center px-4 py-6 text-slate-900 font-sans sm:px-6">
-      <div className="w-full max-w-md space-y-4">
+      <div data-testid="login-screen-stack" className="w-full max-w-md space-y-4">
       <div className={`${GLASS_CARD} w-full p-6 md:p-8 relative overflow-hidden`}>
         <div className="theme-login-glow absolute inset-x-0 top-0 h-24"></div>
         <div className="flex justify-center mb-6">
@@ -1387,36 +1425,6 @@ const LoginScreen = ({
             {syncError && <div className="mt-2 text-[11px] text-rose-600">{syncError}</div>}
           </div>
         )}
-        <div className="theme-settings-card mb-5 rounded-2xl px-4 py-4">
-          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-700">
-            <Settings size={14} />
-            Aparência
-          </div>
-          <p className={`mt-2 text-[11px] leading-relaxed ${TEXT_MUTED}`}>
-            Automático segue o padrão do aparelho. Visual ativo agora: <strong className="text-slate-900">{THEME_LABELS[effectiveTheme]}</strong>.
-          </p>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {[
-              { value: 'system', label: 'Automático' },
-              { value: 'light', label: 'Claro' },
-              { value: 'dark', label: 'Noturno' }
-            ].map((option) => {
-              const active = themePreference === option.value;
-
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setThemePreference(option.value)}
-                  data-active={active}
-                  className="theme-toggle-button min-h-11 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.16em]"
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className={`text-[10px] font-bold uppercase ml-1 mb-1.5 block ${TEXT_MUTED}`}>Nome de Usuário</label>
@@ -1447,6 +1455,11 @@ const LoginScreen = ({
         <div className="mt-8 text-center"><button onClick={() => { setIsRegistering(!isRegistering); setError(''); setAvatarPreview(''); }} className="text-xs text-slate-500 hover:text-slate-800 transition-colors underline decoration-slate-300 hover:decoration-slate-700">{isRegistering ? 'Já tenho conta. Fazer Login.' : 'Não tem conta? Criar nova.'}</button></div>
       </div>
       <InstallGuideCard />
+      <AppearanceSettingsCard
+        themePreference={themePreference}
+        setThemePreference={setThemePreference}
+        effectiveTheme={effectiveTheme}
+      />
       </div>
     </div>
   );

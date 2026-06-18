@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import assert from 'node:assert/strict';
 import process from 'node:process';
 import { chromium } from 'playwright';
 
@@ -80,6 +81,21 @@ async function run() {
     await page.goto(APP_URL, { waitUntil: 'networkidle' });
     await page.getByRole('heading', { name: 'BOLÃO 2026' }).waitFor({ state: 'visible', timeout: 15000 });
     await page.getByText('Aparência').waitFor({ state: 'visible', timeout: 15000 });
+
+    const appearanceCardIsLast = await page.evaluate(() => {
+      const stack = document.querySelector('[data-testid="login-screen-stack"]');
+      const appearance = document.querySelector('[data-testid="appearance-settings-card"]');
+      return Boolean(stack && appearance && stack.lastElementChild === appearance);
+    });
+    assert.equal(appearanceCardIsLast, true, 'O card de aparência deve ser o último elemento da tela de login.');
+
+    const appearanceAfterInstallGuide = await page.evaluate(() => {
+      const install = document.querySelector('[data-testid="install-guide-card"]');
+      const appearance = document.querySelector('[data-testid="appearance-settings-card"]');
+      if (!install || !appearance) return false;
+      return Boolean(install.compareDocumentPosition(appearance) & Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+    assert.equal(appearanceAfterInstallGuide, true, 'O card de aparência deve aparecer após o guia de instalação.');
 
     await assertTheme(page, 'dark', 'Tema automático inicial');
     await assertStoredPreference(page, 'system');

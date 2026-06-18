@@ -107,7 +107,7 @@ function PodiumSection({
                           <span>{card.schedule.day}/{card.schedule.month} • {card.schedule.time} BR</span>
                           {card.location && <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{card.location}</span>}
                         </div>
-                        {card.kickoffHint && <div className="mt-2 text-[13px] text-slate-500">{card.kickoffHint}</div>}
+                        {card.kickoffHint && <div className="mt-2 text-[13px] text-slate-600">{card.kickoffHint}</div>}
                       </div>
                       <div className={`self-start rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] ${review.tone}`}>
                         {review.label}
@@ -118,7 +118,7 @@ function PodiumSection({
                       <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
                         <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu palpite</div>
                         <div className="mt-3 text-[22px] font-black text-slate-900 lg:text-[26px]">{card.choice || 'Sem palpite'}</div>
-                        <div className="mt-2 text-[13px] leading-snug text-slate-500">
+                        <div className="mt-2 text-[13px] leading-snug text-slate-600">
                           {card.choice ? 'Escolha enviada para esta posição.' : 'Nenhuma escolha foi registrada para esta posição.'}
                         </div>
                       </div>
@@ -143,13 +143,13 @@ function PodiumSection({
                   <div className="text-[10px] font-bold uppercase text-amber-700">Final oficial</div>
                   <div className="mt-2 text-xs font-semibold text-slate-900">{finalSchedule.day}/{finalSchedule.month} • {finalSchedule.time} BR</div>
                   <div className={`mt-1 text-[10px] ${TEXT_MUTED}`}>{finalInfo.local}</div>
-                  {finalKickoffHint && <div className="mt-1 text-[10px] text-slate-400">{finalKickoffHint}</div>}
+                  {finalKickoffHint && <div className="mt-1 text-[10px] text-slate-500">{finalKickoffHint}</div>}
                 </div>
                 <div className={`${GLASS_CARD} bg-orange-50/70 p-3`}>
                   <div className="text-[10px] font-bold uppercase text-orange-700">3º lugar oficial</div>
                   <div className="mt-2 text-xs font-semibold text-slate-900">{bronzeSchedule.day}/{bronzeSchedule.month} • {bronzeSchedule.time} BR</div>
                   <div className={`mt-1 text-[10px] ${TEXT_MUTED}`}>{bronzeInfo.local}</div>
-                  {bronzeKickoffHint && <div className="mt-1 text-[10px] text-slate-400">{bronzeKickoffHint}</div>}
+                  {bronzeKickoffHint && <div className="mt-1 text-[10px] text-slate-500">{bronzeKickoffHint}</div>}
                 </div>
               </div>
               <div className="space-y-2">
