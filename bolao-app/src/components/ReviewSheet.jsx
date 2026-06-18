@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect, useRef } from 'react';
 import AvatarBadge from './AvatarBadge.jsx';
 import { GRUPOS_2026, buildChronologicalMatchGroups, formatBrazilMatchSchedule, parseMatchDateTime } from '../matchData';
 import { GLASS_CARD, GLASS_INPUT, TEXT_MUTED } from '../styles.js';
@@ -22,10 +22,13 @@ function ReviewSheet({
   palpitesJogos,
   submissoes,
   palpitesMataMata,
-  gabaritoMataMata
+  gabaritoMataMata,
+  scrollToMatchId,
+  scrollRequestKey
 }) {
   const searchTerm = reviewSearch.trim().toLowerCase();
   const isGameMode = reviewMode === 'jogos';
+  const gameRowRefs = useRef({});
   const usersFiltrados = [...participanteUsuarios]
     .filter((user) => !searchTerm || user.nome.toLowerCase().includes(searchTerm))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
@@ -38,6 +41,35 @@ function ReviewSheet({
     ? 'Cada confronto fica resumido na primeira coluna, deixando mais espaço para comparar os placares dos participantes. Placares temporários aparecem sinalizados.'
     : 'Cada vaga do mata-mata e do pódio fica condensada numa coluna-resumo, com foco total na leitura dos apostadores.';
   const reviewSubmissionField = isGameMode ? SUBMISSION_FIELDS.JOGOS : SUBMISSION_FIELDS.MATA;
+
+  const setGameRowRef = (rowId, surface) => (node) => {
+    if (!gameRowRefs.current[rowId]) {
+      gameRowRefs.current[rowId] = {};
+    }
+
+    if (node) {
+      gameRowRefs.current[rowId][surface] = node;
+      return;
+    }
+
+    delete gameRowRefs.current[rowId][surface];
+    if (!Object.keys(gameRowRefs.current[rowId]).length) {
+      delete gameRowRefs.current[rowId];
+    }
+  };
+
+  useEffect(() => {
+    if (!isGameMode || !scrollToMatchId || !scrollRequestKey) return undefined;
+
+    const animationFrameId = window.requestAnimationFrame(() => {
+      const rowNodes = Object.values(gameRowRefs.current[scrollToMatchId] || {});
+      const targetNode = rowNodes.find((node) => node && node.offsetParent !== null) || rowNodes.find(Boolean);
+      if (!targetNode) return;
+      targetNode.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    return () => window.cancelAnimationFrame(animationFrameId);
+  }, [isGameMode, scrollRequestKey, scrollToMatchId]);
 
   const buildStatus = (variant) => {
     if (variant === 'cravou') return { label: 'Cravou', tone: 'border-emerald-200 bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' };
@@ -394,7 +426,12 @@ function ReviewSheet({
   };
 
   const renderMobileRowCard = (row) => (
-    <div key={row.id} className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_16px_32px_-28px_rgba(15,23,42,0.38)]">
+    <div
+      key={row.id}
+      ref={isGameMode ? setGameRowRef(row.id, 'mobile') : undefined}
+      data-match-row-id={isGameMode ? row.id : undefined}
+      className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_16px_32px_-28px_rgba(15,23,42,0.38)]"
+    >
       <div className="p-3">
         {renderSummaryCell(row)}
       </div>
@@ -516,7 +553,7 @@ function ReviewSheet({
       </div>
 
       <div className={`${GLASS_CARD} hidden overflow-hidden lg:block`}>
-        <div className="max-h-[calc(100vh-220px)] overflow-auto overscroll-contain">
+        <div data-testid="review-scroll-container" className="max-h-[calc(100vh-220px)] overflow-auto overscroll-contain">
           <div className="min-w-max text-xs bg-white">
             <div
               className="sticky top-0 z-40 grid border-b border-slate-200 bg-slate-50/95 text-[10px] uppercase text-slate-500 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.55)] backdrop-blur"
@@ -553,6 +590,8 @@ function ReviewSheet({
                     {group.rows.map((row) => (
                       <div
                         key={row.id}
+                        ref={setGameRowRef(row.id, 'desktop')}
+                        data-match-row-id={row.id}
                         className="grid border-b border-slate-100 bg-white last:border-0"
                         style={{ gridTemplateColumns: reviewGridTemplate }}
                       >

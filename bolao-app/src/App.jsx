@@ -1440,6 +1440,7 @@ export default function App() {
   const [reviewGroupFilter, setReviewGroupFilter] = useState('todos');
   const [reviewGameSort, setReviewGameSort] = useState('date');
   const [reviewPhaseFilter, setReviewPhaseFilter] = useState('todos');
+  const [reviewScrollRequest, setReviewScrollRequest] = useState(0);
   const [avatarError, setAvatarError] = useState('');
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState(isDemoMode ? 'demo' : 'connecting');
@@ -1993,6 +1994,20 @@ export default function App() {
   };
 
   const handleLogout = () => setCurrentUser(null);
+  const handleNavItemClick = (itemId) => {
+    if (itemId !== 'painel') {
+      setAbaAtiva(itemId);
+      return;
+    }
+
+    setReviewMode('jogos');
+    setReviewGroupFilter('todos');
+    setReviewGameSort('date');
+    setAbaAtiva('painel');
+
+    if (!nearestTimelineMatchId) return;
+    setReviewScrollRequest((currentValue) => currentValue + 1);
+  };
   const handleAvatarSelected = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -2280,7 +2295,7 @@ export default function App() {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => setAbaAtiva(item.id)}
+                      onClick={() => handleNavItemClick(item.id)}
                       className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all ${
                         active
                           ? 'bg-sky-600 text-white shadow-[0_18px_40px_-24px_rgba(2,132,199,0.9)]'
@@ -2872,6 +2887,8 @@ export default function App() {
             submissoes={submissoes}
             palpitesMataMata={palpitesMataMata}
             gabaritoMataMata={gabaritoMataMata}
+            scrollToMatchId={nearestTimelineMatchId}
+            scrollRequestKey={reviewScrollRequest}
           />
         )}
         
@@ -2945,7 +2962,7 @@ export default function App() {
           const Icon = item.icon;
           const active = abaAtiva === item.id;
           return (
-            <button key={item.id} onClick={() => setAbaAtiva(item.id)} className={`flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-bold uppercase tracking-[0.12em] transition-all ${active ? 'bg-sky-50 text-sky-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
+            <button key={item.id} onClick={() => handleNavItemClick(item.id)} className={`flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-bold uppercase tracking-[0.12em] transition-all ${active ? 'bg-sky-50 text-sky-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
               <Icon size={20} strokeWidth={active ? 2.5 : 2} />
               <span className="truncate">{item.mobileLabel || item.label}</span>
             </button>

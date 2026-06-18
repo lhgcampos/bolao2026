@@ -19,6 +19,7 @@
     "test:ranking-consensus": "node scripts/test-ranking-consensus.mjs",
     "test:user-home-insights": "node scripts/test-user-home-insights.mjs",
     "test:editorial-stats": "node scripts/test-editorial-stats.mjs",
+    "test:painel-scroll": "node scripts/test-painel-scroll.mjs",
     "validate:roqueia": "node scripts/seed-roqueia-picks.mjs --validate-only",
     "preview": "node scripts/dev-app.mjs"
   },
