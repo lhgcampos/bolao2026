@@ -105,13 +105,6 @@ const INSTALLATION_TIPS = {
 };
 // --- CONFIGURAÇÃO INICIAL ---
 const getShortCountryName = (name) => COUNTRY_SHORT_NAMES[name] || name;
-const BRAZIL_DATE_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
-  timeZone: 'America/Sao_Paulo',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit'
-});
-
 const getMatchReferenceTime = (match) => {
   if (match?.kickoffEt) {
     const timestamp = Date.parse(match.kickoffEt);
@@ -124,11 +117,6 @@ const getMatchReferenceTime = (match) => {
   return Number.isNaN(timestamp) ? null : timestamp;
 };
 
-const getBrazilDayKey = (timestamp) => {
-  if (!Number.isFinite(timestamp)) return '';
-  return BRAZIL_DATE_FORMATTER.format(new Date(timestamp));
-};
-
 const parseReferenceTimestamp = (value) => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string' && value) {
@@ -139,32 +127,21 @@ const parseReferenceTimestamp = (value) => {
 };
 
 const getNearestTimelineMatchId = (matches = [], nowMs = Date.now()) => {
-  const candidates = (matches || [])
+  const pendingMatches = (matches || [])
     .map((match) => ({
       id: match.id,
-      timestamp: getMatchReferenceTime(match)
+      timestamp: getMatchReferenceTime(match),
+      variant: getMatchResultVariant(match)
     }))
-    .filter((entry) => Number.isFinite(entry.timestamp));
+    .filter((entry) => Number.isFinite(entry.timestamp) && entry.variant === 'pending')
+    .sort((a, b) => a.timestamp - b.timestamp || a.id - b.id);
 
-  if (!candidates.length) return null;
+  if (!pendingMatches.length) return null;
 
-  const todayKey = getBrazilDayKey(nowMs);
-  const todaysMatches = candidates.filter((entry) => getBrazilDayKey(entry.timestamp) === todayKey);
-  const futureTodayMatches = todaysMatches
-    .filter((entry) => entry.timestamp >= nowMs)
-    .sort((a, b) => a.timestamp - b.timestamp);
+  const startedOrPastPendingMatch = pendingMatches.find((entry) => entry.timestamp <= nowMs);
+  if (startedOrPastPendingMatch) return startedOrPastPendingMatch.id;
 
-  const pool = futureTodayMatches.length
-    ? futureTodayMatches
-    : todaysMatches.length
-      ? todaysMatches
-      : candidates;
-
-  return pool.sort((a, b) => (
-    Math.abs(a.timestamp - nowMs) - Math.abs(b.timestamp - nowMs) ||
-    a.timestamp - b.timestamp ||
-    a.id - b.id
-  ))[0]?.id || null;
+  return pendingMatches[0]?.id || null;
 };
 
 // --- LÓGICA DE NEGÓCIO ---

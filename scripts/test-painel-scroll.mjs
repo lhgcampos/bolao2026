@@ -2,14 +2,37 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import process from 'node:process';
 import { chromium } from 'playwright';
+import { gerarJogosIniciais } from '../bolao-app/src/matchData.js';
 
 const HOST = process.env.APP_HOST || '127.0.0.1';
 const PORT = Number(process.env.APP_PORT || 4177);
-const APP_URL = process.env.APP_URL || `http://${HOST}:${PORT}/?demo=planilha`;
+const APP_URL = process.env.APP_URL || `http://${HOST}:${PORT}/`;
 const START_TIMEOUT_MS = 45000;
+const TARGET_MATCH_ID = 67;
+const FUTURE_PENDING_MATCH_ID = 63;
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function buildSeedMatches() {
+  return gerarJogosIniciais().map((match) => {
+    if (match.id === TARGET_MATCH_ID || match.id === FUTURE_PENDING_MATCH_ID) {
+      return {
+        ...match,
+        placarA: '',
+        placarB: '',
+        isFinal: false
+      };
+    }
+
+    return {
+      ...match,
+      placarA: '1',
+      placarB: '0',
+      isFinal: true
+    };
+  });
 }
 
 async function waitForServer(url, timeoutMs) {
@@ -44,8 +67,10 @@ function startDevServer() {
   return child;
 }
 
-async function clickVisibleButton(page, label) {
-  await page.locator('button:visible', { hasText: new RegExp(`^${label}$`) }).first().click();
+async function clickUniqueButton(page, label) {
+  const button = page.getByRole('button', { name: label, exact: true });
+  assert.equal(await button.count(), 1, `Esperava exatamente um botao "${label}".`);
+  await button.click();
 }
 
 async function run() {
@@ -57,61 +82,44 @@ async function run() {
 
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage({ viewport: { width: 1600, height: 1100 } });
+    const seedMatches = buildSeedMatches();
+
+    await page.addInitScript((matches) => {
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const requestUrl = typeof input === 'string' ? input : input?.url || '';
+        if (requestUrl.startsWith('https://mantledb.sh/v2/lhgcampos-bolao2026-live-20260609/')) {
+          return new Response(JSON.stringify({ error: 'blocked-for-test' }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        return nativeFetch(input, init);
+      };
+
+      window.localStorage.clear();
+      window.localStorage.setItem('bolao26_users', JSON.stringify([
+        { id: 1, nome: 'Teste User', senha: '123', role: 'participant' }
+      ]));
+      window.localStorage.setItem('bolao26_matches', JSON.stringify(matches));
+      window.localStorage.setItem('bolao26_bets_games', JSON.stringify({}));
+      window.localStorage.setItem('bolao26_bets_knockout_v2', JSON.stringify({}));
+      window.localStorage.setItem('bolao26_official_knockout_v2', JSON.stringify({}));
+      window.localStorage.setItem('bolao26_group_conduct', JSON.stringify({}));
+      window.localStorage.setItem('bolao26_submissions', JSON.stringify({}));
+    }, seedMatches);
 
     await page.goto(APP_URL, { waitUntil: 'networkidle' });
-    await page.getByText('Planilha de Palpites', { exact: true }).waitFor({ timeout: 15000 });
+    await page.getByText('BOLÃO 2026', { exact: true }).waitFor({ timeout: 15000 });
 
-    const expectedMatchId = await page.evaluate(() => {
-      const formatDayKey = (timestamp) => new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'America/Sao_Paulo',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      }).format(new Date(timestamp));
+    await page.getByPlaceholder('Ex: Fera Braba').fill('Admin');
+    await page.getByPlaceholder('Sua senha secreta').fill('qwer');
+    await clickUniqueButton(page, 'Entrar');
 
-      const visibleRows = Array.from(document.querySelectorAll('[data-match-row-id]'))
-        .filter((node) => node instanceof HTMLElement && node.offsetParent !== null)
-        .map((node) => {
-          const rawId = node.getAttribute('data-match-row-id');
-          const scheduleMatch = (node.textContent || '').match(/(\d{1,2})\/(\d{1,2})\s*•\s*(\d{2}:\d{2})\s*BR/);
-          if (!rawId || !scheduleMatch) return null;
-
-          const [, day, month, hourText] = scheduleMatch;
-          const [hour, minute] = hourText.split(':').map(Number);
-          return {
-            id: Number(rawId),
-            timestamp: new Date(2026, Number(month) - 1, Number(day), hour || 0, minute || 0).getTime()
-          };
-        })
-        .filter((row) => row && Number.isFinite(row.timestamp));
-
-      if (!visibleRows.length) return null;
-
-      const nowMs = Date.now();
-      const todayKey = formatDayKey(nowMs);
-      const todaysRows = visibleRows.filter((row) => formatDayKey(row.timestamp) === todayKey);
-      const futureTodayRows = todaysRows
-        .filter((row) => row.timestamp >= nowMs)
-        .sort((a, b) => a.timestamp - b.timestamp);
-      const candidateRows = futureTodayRows.length
-        ? futureTodayRows
-        : todaysRows.length
-          ? todaysRows
-          : visibleRows;
-
-      return candidateRows.sort((a, b) => (
-        Math.abs(a.timestamp - nowMs) - Math.abs(b.timestamp - nowMs)
-        || a.timestamp - b.timestamp
-        || a.id - b.id
-      ))[0]?.id || null;
-    });
-
-    assert.ok(expectedMatchId, 'Nao foi possivel identificar o proximo jogo esperado.');
-
-    await clickVisibleButton(page, 'Ranking');
+    await clickUniqueButton(page, 'Ranking');
     await page.getByText('Ranking', { exact: true }).first().waitFor({ timeout: 15000 });
 
-    await clickVisibleButton(page, 'Painel');
+    await clickUniqueButton(page, 'Painel');
     await page.getByText('Planilha de Palpites', { exact: true }).waitFor({ timeout: 15000 });
     await page.waitForTimeout(1200);
 
@@ -130,18 +138,20 @@ async function run() {
       return {
         scrollTop: container.scrollTop,
         topOffset: targetRect.top - containerRect.top,
-        containerHeight: container.clientHeight
+        targetText: targetNode.textContent || ''
       };
-    }, expectedMatchId);
+    }, TARGET_MATCH_ID);
 
     assert.ok(scrollResult, 'Nao foi possivel localizar o container ou a linha alvo no painel.');
     assert.ok(scrollResult.scrollTop > 120, `Painel nao rolou o suficiente (scrollTop=${scrollResult.scrollTop}).`);
     assert.ok(
-      scrollResult.topOffset >= -8 && scrollResult.topOffset <= Math.min(220, scrollResult.containerHeight * 0.35),
-      `Linha do proximo jogo nao ficou posicionada no topo util do painel (offset=${scrollResult.topOffset}).`
+      scrollResult.topOffset >= -8 && scrollResult.topOffset <= 220,
+      `Linha do proximo jogo pendente nao ficou no topo util do painel (offset=${scrollResult.topOffset}).`
     );
+    assert.match(scrollResult.targetText, /Gana/);
+    assert.match(scrollResult.targetText, /Panama|Panamá/);
 
-    console.log(`painel scroll ok (jogo ${expectedMatchId})`);
+    console.log(`painel scroll ok (jogo ${TARGET_MATCH_ID})`);
   } finally {
     await browser?.close();
     devServer.kill('SIGTERM');
