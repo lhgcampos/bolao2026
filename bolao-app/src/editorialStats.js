@@ -1,10 +1,16 @@
 import { getConsensusEligibleUsers } from './rankingConsensus.js';
+import { calculateKnockoutPhasePoints } from './officialResults/knockoutPhaseScoring.js';
 
 const COLLATOR = new Intl.Collator('pt-BR', { sensitivity: 'base' });
 
 const EMPTY_COMPARATIVE_TEXT = 'Assim que mais gente enviar tudo, o bolão começa a revelar os estilos de palpite.';
 const LOCKED_HOME_TEXT = 'Envie seus palpites para liberar o raio-X do bolão.';
 const LOCKED_RANKING_TEXT = 'Envie seus palpites para liberar os comentários da mesa.';
+const STALE_HOME_CANDIDATE_TYPES = new Set([
+  'consensusFollowerIndex',
+  'consensusTwin',
+  'oneNilIndex'
+]);
 
 const isFilled = (value) => value !== '' && value !== null && value !== undefined;
 const isFilledScore = (pick) => isFilled(pick?.placarA) && isFilled(pick?.placarB);
@@ -141,10 +147,17 @@ const buildProfileBase = (user) => ({
   nearMissCount: 0,
   championPick: '',
   vicePick: '',
+  thirdPick: '',
+  fourthPick: '',
   championPopularity: 0,
   vicePopularity: 0,
+  thirdPopularity: 0,
+  fourthPopularity: 0,
+  finalPairPopularity: 0,
   knockoutBoldnessIndex: 0,
   knockoutConsensusIndex: 0,
+  confirmedKnockoutPoints: 0,
+  confirmedPodiumHits: 0,
   elasticScoreIndex: 0,
   lowScoreIndex: 0,
   chaosWriterIndex: 0,
@@ -324,14 +337,29 @@ const createMatchContexts = ({ games = [], eligibleUsers = [], betsGames = {}, t
 const buildKnockoutPopularity = ({ eligibleUsers = [], betsKnockout = {} }) => {
   const championCounts = new Map();
   const viceCounts = new Map();
+  const thirdCounts = new Map();
+  const fourthCounts = new Map();
   const finalistCounts = new Map();
+  const semifinalistCounts = new Map();
+  const finalPairCounts = new Map();
 
   eligibleUsers.forEach((user) => {
     const bracket = betsKnockout?.[user.id] || {};
     const champion = bracket.campeao || '';
     const vice = bracket.vice || '';
+    const third = bracket.terceiro || '';
+    const fourth = bracket.quarto || '';
     if (champion) championCounts.set(champion, (championCounts.get(champion) || 0) + 1);
     if (vice) viceCounts.set(vice, (viceCounts.get(vice) || 0) + 1);
+    if (third) thirdCounts.set(third, (thirdCounts.get(third) || 0) + 1);
+    if (fourth) fourthCounts.set(fourth, (fourthCounts.get(fourth) || 0) + 1);
+
+    (bracket.semis || [])
+      .filter(Boolean)
+      .filter((team, index, list) => list.indexOf(team) === index)
+      .forEach((team) => {
+        semifinalistCounts.set(team, (semifinalistCounts.get(team) || 0) + 1);
+      });
 
     [champion, vice]
       .filter(Boolean)
@@ -339,12 +367,21 @@ const buildKnockoutPopularity = ({ eligibleUsers = [], betsKnockout = {} }) => {
       .forEach((team) => {
         finalistCounts.set(team, (finalistCounts.get(team) || 0) + 1);
       });
+
+    if (champion && vice) {
+      const finalPairKey = `${champion}|||${vice}`;
+      finalPairCounts.set(finalPairKey, (finalPairCounts.get(finalPairKey) || 0) + 1);
+    }
   });
 
   return {
     championCounts,
     viceCounts,
-    finalistCounts
+    thirdCounts,
+    fourthCounts,
+    finalistCounts,
+    semifinalistCounts,
+    finalPairCounts
   };
 };
 
@@ -501,11 +538,19 @@ export function calculateUserStyleProfiles(input = {}) {
   eligibleUsers.forEach((user) => {
     const profile = profileByUserId[user.id];
     const bracket = input.betsKnockout?.[user.id] || {};
+    const scoringRules = input.scoringRules || {};
 
     profile.championPick = bracket.campeao || '';
     profile.vicePick = bracket.vice || '';
+    profile.thirdPick = bracket.terceiro || '';
+    profile.fourthPick = bracket.quarto || '';
     profile.championPopularity = profile.championPick ? (knockoutPopularity.championCounts.get(profile.championPick) || 0) : 0;
     profile.vicePopularity = profile.vicePick ? (knockoutPopularity.viceCounts.get(profile.vicePick) || 0) : 0;
+    profile.thirdPopularity = profile.thirdPick ? (knockoutPopularity.thirdCounts.get(profile.thirdPick) || 0) : 0;
+    profile.fourthPopularity = profile.fourthPick ? (knockoutPopularity.fourthCounts.get(profile.fourthPick) || 0) : 0;
+    profile.finalPairPopularity = profile.championPick && profile.vicePick
+      ? (knockoutPopularity.finalPairCounts.get(`${profile.championPick}|||${profile.vicePick}`) || 0)
+      : 0;
 
     [
       ['dezeszeseisavos', bracket.dezeszeseisavos || []],
@@ -536,6 +581,41 @@ export function calculateUserStyleProfiles(input = {}) {
 
     profile.knockoutBoldnessIndex = ((1 - championShare) * 4) + ((1 - viceShare) * 2) + ((2 - finalistShare) * 0.8);
     profile.knockoutConsensusIndex = (championShare * 4) + (viceShare * 2) + (finalistShare * 0.8);
+    profile.confirmedKnockoutPoints = (
+      calculateKnockoutPhasePoints({
+        phaseKey: 'dezeszeseisavos',
+        picks: bracket.dezeszeseisavos || [],
+        points: scoringRules?.MATA?.R32 ?? 0,
+        officialKnockout: input.officialKnockout,
+        officialBracketSlots: input.officialBracketSlots
+      }) +
+      calculateKnockoutPhasePoints({
+        phaseKey: 'oitavas',
+        picks: bracket.oitavas || [],
+        points: scoringRules?.MATA?.R16 ?? 0,
+        officialKnockout: input.officialKnockout,
+        officialBracketSlots: input.officialBracketSlots
+      }) +
+      calculateKnockoutPhasePoints({
+        phaseKey: 'quartas',
+        picks: bracket.quartas || [],
+        points: scoringRules?.MATA?.QF ?? 0,
+        officialKnockout: input.officialKnockout,
+        officialBracketSlots: input.officialBracketSlots
+      }) +
+      calculateKnockoutPhasePoints({
+        phaseKey: 'semis',
+        picks: bracket.semis || [],
+        points: scoringRules?.MATA?.SF ?? 0,
+        officialKnockout: input.officialKnockout,
+        officialBracketSlots: input.officialBracketSlots
+      })
+    );
+    profile.confirmedPodiumHits = 0;
+    if (input.officialKnockout?.campeao && profile.championPick === input.officialKnockout.campeao) profile.confirmedPodiumHits += 1;
+    if (input.officialKnockout?.vice && profile.vicePick === input.officialKnockout.vice) profile.confirmedPodiumHits += 1;
+    if (input.officialKnockout?.terceiro && profile.thirdPick === input.officialKnockout.terceiro) profile.confirmedPodiumHits += 1;
+    if (input.officialKnockout?.quarto && profile.fourthPick === input.officialKnockout.quarto) profile.confirmedPodiumHits += 1;
 
     const biasEntries = Object.keys({
       ...profile.groupWinsByTeam,
@@ -981,6 +1061,24 @@ const buildStatCandidates = ({ profiles = [], pairings = [] }) => {
     }));
   }
 
+  const knockoutConfirmed = sortProfiles(profiles, (profile) => profile.confirmedKnockoutPoints)[0];
+  if (knockoutConfirmed && knockoutConfirmed.confirmedKnockoutPoints > 0) {
+    register('knockoutConfirmedPoints', buildCandidate({
+      id: `knockout-confirmed-${knockoutConfirmed.userId}`,
+      type: 'knockoutConfirmedPoints',
+      family: 'official-knockout',
+      title: 'Mata-mata no caixa',
+      text: `${knockoutConfirmed.userName} já tem ${knockoutConfirmed.confirmedKnockoutPoints} pts confirmados com o mata-mata oficial.`,
+      userId: knockoutConfirmed.userId,
+      userName: knockoutConfirmed.userName,
+      score: knockoutConfirmed.confirmedKnockoutPoints,
+      strength: knockoutConfirmed.confirmedKnockoutPoints + 20,
+      debug: {
+        confirmedKnockoutPoints: knockoutConfirmed.confirmedKnockoutPoints
+      }
+    }));
+  }
+
   const knockoutConsensus = sortProfiles(profiles, (profile) => profile.knockoutConsensusIndex)[0];
   if (knockoutConsensus && knockoutConsensus.championPick) {
     register('knockoutConsensusIndex', buildCandidate({
@@ -998,6 +1096,89 @@ const buildStatCandidates = ({ profiles = [], pairings = [] }) => {
         championPopularity: knockoutConsensus.championPopularity,
         vicePick: knockoutConsensus.vicePick,
         vicePopularity: knockoutConsensus.vicePopularity
+      }
+    }));
+  }
+
+  const soloChampion = sortProfilesAsc(
+    profiles.filter((profile) => profile.championPick && profile.championPopularity > 0),
+    (profile) => profile.championPopularity
+  )[0];
+  if (soloChampion && soloChampion.championPopularity === 1) {
+    register('soloChampion', buildCandidate({
+      id: `solo-champion-${soloChampion.userId}`,
+      type: 'soloChampion',
+      family: 'podium',
+      title: 'Campeão solo',
+      text: `${soloChampion.userName} está sozinho com ${soloChampion.championPick} campeão.`,
+      userId: soloChampion.userId,
+      userName: soloChampion.userName,
+      score: 1,
+      strength: 24,
+      debug: {
+        championPick: soloChampion.championPick
+      }
+    }));
+  }
+
+  const rareFinalPair = sortProfilesAsc(
+    profiles.filter((profile) => profile.championPick && profile.vicePick && profile.finalPairPopularity > 0),
+    (profile) => profile.finalPairPopularity
+  )[0];
+  if (rareFinalPair && rareFinalPair.finalPairPopularity <= 2) {
+    register('rareFinalPair', buildCandidate({
+      id: `rare-final-pair-${rareFinalPair.userId}`,
+      type: 'rareFinalPair',
+      family: 'final',
+      title: 'Final alternativa',
+      text: `${rareFinalPair.userName} desenhou uma final pouco repetida: ${rareFinalPair.championPick} campeão sobre ${rareFinalPair.vicePick}.`,
+      userId: rareFinalPair.userId,
+      userName: rareFinalPair.userName,
+      score: 3 - rareFinalPair.finalPairPopularity,
+      strength: 22 + (3 - rareFinalPair.finalPairPopularity),
+      debug: {
+        championPick: rareFinalPair.championPick,
+        vicePick: rareFinalPair.vicePick,
+        finalPairPopularity: rareFinalPair.finalPairPopularity
+      }
+    }));
+  }
+
+  const bronzeSolo = sortProfilesAsc(
+    profiles.filter((profile) => profile.thirdPick && profile.thirdPopularity > 0),
+    (profile) => profile.thirdPopularity
+  )[0];
+  if (bronzeSolo && bronzeSolo.thirdPopularity === 1) {
+    register('bronzeSolo', buildCandidate({
+      id: `bronze-solo-${bronzeSolo.userId}`,
+      type: 'bronzeSolo',
+      family: 'podium',
+      title: 'Bronze isolado',
+      text: `${bronzeSolo.userName} foi sozinho com ${bronzeSolo.thirdPick} em 3º lugar.`,
+      userId: bronzeSolo.userId,
+      userName: bronzeSolo.userName,
+      score: 1,
+      strength: 18,
+      debug: {
+        thirdPick: bronzeSolo.thirdPick
+      }
+    }));
+  }
+
+  const podiumConfirmed = sortProfiles(profiles, (profile) => profile.confirmedPodiumHits)[0];
+  if (podiumConfirmed && podiumConfirmed.confirmedPodiumHits > 0) {
+    register('podiumConfirmed', buildCandidate({
+      id: `podium-confirmed-${podiumConfirmed.userId}`,
+      type: 'podiumConfirmed',
+      family: 'official-podium',
+      title: 'Pódio no radar',
+      text: `${podiumConfirmed.userName} já confirmou ${podiumConfirmed.confirmedPodiumHits} peça${podiumConfirmed.confirmedPodiumHits === 1 ? '' : 's'} do pódio oficial.`,
+      userId: podiumConfirmed.userId,
+      userName: podiumConfirmed.userName,
+      score: podiumConfirmed.confirmedPodiumHits,
+      strength: 26 + (podiumConfirmed.confirmedPodiumHits * 2),
+      debug: {
+        confirmedPodiumHits: podiumConfirmed.confirmedPodiumHits
       }
     }));
   }
@@ -1107,6 +1288,7 @@ export function buildEditorialStatsDashboard(input = {}) {
     eligibleUsers
   });
   const { stats, candidates } = buildStatCandidates(profileState);
+  const freshHomeCandidates = candidates.filter((candidate) => !STALE_HOME_CANDIDATE_TYPES.has(candidate.type));
 
   return {
     ...profileState,
@@ -1115,10 +1297,10 @@ export function buildEditorialStatsDashboard(input = {}) {
     emptyText: EMPTY_COMPARATIVE_TEXT,
     stats,
     candidates,
-    homeInsights: selectEditorialCandidates(candidates, {
+    homeInsights: selectEditorialCandidates(freshHomeCandidates.length ? freshHomeCandidates : candidates, {
       minItems: 3,
       maxItems: 6,
-      preferredItems: 4,
+      preferredItems: 5,
       maxPerUser: 1
     }),
     rankingComments: selectEditorialCandidates(candidates, {

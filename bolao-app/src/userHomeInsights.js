@@ -1,4 +1,5 @@
 import { buildDenseRanking } from './ranking.js';
+import { evaluateKnockoutPhasePick, getKnockoutPhaseOfficialState } from './officialResults/knockoutPhaseScoring.js';
 
 const PHASE_LENGTHS = {
   dezeszeseisavos: 32,
@@ -6,6 +7,12 @@ const PHASE_LENGTHS = {
   quartas: 8,
   semis: 4
 };
+const KNOCKOUT_PHASES = [
+  { key: 'dezeszeseisavos', label: '16 avos', pointsKey: 'R32' },
+  { key: 'oitavas', label: 'oitavas', pointsKey: 'R16' },
+  { key: 'quartas', label: 'quartas', pointsKey: 'QF' },
+  { key: 'semis', label: 'semifinais', pointsKey: 'SF' }
+];
 const MATCH_ACTIONABLE_BUFFER_MS = 0;
 
 const isFilled = (value) => value !== '' && value !== null && value !== undefined;
@@ -112,6 +119,13 @@ const getTopAlivePhase = (officialKnockout = {}) => {
   return null;
 };
 
+const formatNamesList = (names = []) => {
+  if (!names.length) return '';
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} e ${names[1]}`;
+  return `${names[0]}, ${names[1]} e mais ${names.length - 2}`;
+};
+
 const buildChampionEliminatedInsight = ({ championPick, officialKnockout }) => {
   if (!championPick) return null;
   const alivePhase = getTopAlivePhase(officialKnockout);
@@ -126,6 +140,135 @@ const buildChampionEliminatedInsight = ({ championPick, officialKnockout }) => {
   }
 
   return null;
+};
+
+const buildKnockoutProgressInsights = ({
+  officialKnockout = {},
+  officialBracketSlots = {},
+  knockoutPredictions = {},
+  scoringRules = {}
+}) => {
+  const insights = [];
+
+  KNOCKOUT_PHASES.forEach(({ key, label, pointsKey }) => {
+    const picks = knockoutPredictions?.[key] || [];
+    if (!picks.some(Boolean)) return;
+
+    const officialState = getKnockoutPhaseOfficialState({
+      phaseKey: key,
+      officialKnockout,
+      officialBracketSlots
+    });
+    if (officialState.isPending) return;
+
+    const reviews = picks
+      .map((pick, pickIndex) => ({
+        pick,
+        review: evaluateKnockoutPhasePick({
+          phaseKey: key,
+          pick,
+          pickIndex,
+          allPicks: picks,
+          points: scoringRules?.MATA?.[pointsKey] ?? 0,
+          officialKnockout,
+          officialBracketSlots,
+          successLabel: 'Acertou'
+        })
+      }))
+      .filter(({ review }) => review.state !== 'no-pick');
+
+    const confirmedTeams = reviews
+      .filter(({ review }) => review.pointsAwarded > 0)
+      .map(({ pick }) => pick)
+      .filter(Boolean);
+    const pendingTeams = reviews
+      .filter(({ review }) => review.state === 'partial-pending')
+      .length;
+    const confirmedPoints = reviews.reduce((total, entry) => total + (entry.review.pointsAwarded || 0), 0);
+
+    if (confirmedTeams.length > 0) {
+      insights.push({
+        type: `knockout-progress-${key}`,
+        tone: 'positive',
+        text: officialState.isPartial
+          ? `No mata-mata, você já confirmou ${formatNamesList(confirmedTeams)} nos ${label} e garantiu ${confirmedPoints} pts.`
+          : `Nos ${label}, você já garantiu ${confirmedPoints} pts com ${formatNamesList(confirmedTeams)}.`
+      });
+      return;
+    }
+
+    if (officialState.isPartial && pendingTeams > 0) {
+      insights.push({
+        type: `knockout-progress-${key}`,
+        tone: 'neutral',
+        text: `A FIFA já abriu parte dos ${label}, mas seus palpites dessa fase ainda estão em aberto.`
+      });
+    }
+  });
+
+  return insights;
+};
+
+const buildKnockoutConsensusInsight = ({
+  currentUserId,
+  users = [],
+  knockoutPredictionsByUser = {}
+}) => {
+  const participantUsers = (users || []).filter((user) => user.role !== 'admin');
+  const currentBracket = knockoutPredictionsByUser?.[currentUserId] || {};
+  const championPick = currentBracket.campeao || '';
+  const vicePick = currentBracket.vice || '';
+  if (!championPick && !vicePick) return null;
+
+  const championCounts = new Map();
+  const finalPairCounts = new Map();
+
+  participantUsers.forEach((user) => {
+    const bracket = knockoutPredictionsByUser?.[user.id] || {};
+    if (bracket.campeao) {
+      championCounts.set(bracket.campeao, (championCounts.get(bracket.campeao) || 0) + 1);
+    }
+    if (bracket.campeao && bracket.vice) {
+      const pairKey = `${bracket.campeao}|||${bracket.vice}`;
+      finalPairCounts.set(pairKey, (finalPairCounts.get(pairKey) || 0) + 1);
+    }
+  });
+
+  if (championPick && vicePick) {
+    const pairKey = `${championPick}|||${vicePick}`;
+    const pairCount = finalPairCounts.get(pairKey) || 0;
+    if (pairCount === 1) {
+      return {
+        type: 'knockout-consensus',
+        tone: 'neutral',
+        text: `Sua final ${championPick} campeão sobre ${vicePick} é única no bolão.`
+      };
+    }
+    if (pairCount >= 2) {
+      return {
+        type: 'knockout-consensus',
+        tone: 'neutral',
+        text: `Sua final ${championPick} campeão sobre ${vicePick} aparece em ${pairCount} chaves.`
+      };
+    }
+  }
+
+  if (!championPick) return null;
+
+  const championCount = championCounts.get(championPick) || 0;
+  if (championCount <= 1) {
+    return {
+      type: 'knockout-consensus',
+      tone: 'neutral',
+      text: `Só você colocou ${championPick} campeão.`
+    };
+  }
+
+  return {
+    type: 'knockout-consensus',
+    tone: 'neutral',
+    text: `Mais ${championCount - 1} apostador${championCount - 1 === 1 ? '' : 'es'} também fecharam com ${championPick} campeão.`
+  };
 };
 
 const buildNoMathematicalChanceInsight = ({ currentEntry, leaderEntry, matches, predictions, knockoutPredictions, officialKnockout, scoringRules }) => {
@@ -403,7 +546,9 @@ export function buildUserHomeInsights({
   pendingGroupPicksCount = 0,
   knockoutComplete = false,
   officialKnockout = {},
+  officialBracketSlots = {},
   knockoutPredictions = {},
+  knockoutPredictionsByUser = {},
   nowMs = Date.now()
 }) {
   const title = 'Seu Bolão';
@@ -462,6 +607,22 @@ export function buildUserHomeInsights({
   });
   if (rankingPressureInsight) insightCandidates.push(rankingPressureInsight);
 
+  insightCandidates.push(
+    ...buildKnockoutProgressInsights({
+      officialKnockout,
+      officialBracketSlots,
+      knockoutPredictions,
+      scoringRules
+    })
+  );
+
+  const knockoutConsensusInsight = buildKnockoutConsensusInsight({
+    currentUserId,
+    users: participantUsers,
+    knockoutPredictionsByUser
+  });
+  if (knockoutConsensusInsight) insightCandidates.push(knockoutConsensusInsight);
+
   if (nextMatch) {
     const overtakeInsight = buildNextMatchOvertakeInsight({
       currentEntry,
@@ -471,15 +632,6 @@ export function buildUserHomeInsights({
       scoringRules
     });
     if (overtakeInsight) insightCandidates.push(overtakeInsight);
-
-    insightCandidates.push(
-      ...buildNextMatchPickInsights({
-        currentUserId,
-        users: participantUsers,
-        predictionsByUser: predictions,
-        nextMatch
-      })
-    );
   } else {
     const awaitingResultsInsight = buildAwaitingResultsInsight({
       matches,

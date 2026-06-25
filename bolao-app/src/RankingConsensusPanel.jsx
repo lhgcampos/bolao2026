@@ -1,6 +1,5 @@
 import React from 'react';
-import { AlertCircle, Flame, Radar, ShieldAlert, Sparkles, Target, Trophy } from './lucideIcons';
-import { formatMatchName } from './rankingConsensus';
+import { AlertCircle, Radar, Sparkles, Trophy } from './lucideIcons';
 
 const PANEL_CARD = 'rounded-[28px] border border-slate-200/80 bg-white/88 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl';
 const METRIC_CARD = 'rounded-[24px] border border-slate-200/80 bg-slate-50/80 p-4';
@@ -77,6 +76,9 @@ export default function RankingConsensusPanel({
   if (!dashboard) return null;
 
   const championTop = dashboard.knockoutConsensus?.champion?.[0] || null;
+  const viceTop = dashboard.knockoutConsensus?.vice?.[0] || null;
+  const thirdTop = dashboard.knockoutConsensus?.third?.[0] || null;
+  const finalPairTop = dashboard.knockoutConsensus?.finalPairs?.[0] || null;
 
   return (
     <section className={`${PANEL_CARD} overflow-hidden`}>
@@ -87,7 +89,7 @@ export default function RankingConsensusPanel({
               <Sparkles size={14} />
               Radar do Bolao
             </div>
-            <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-900">Consenso, zebra e narrativa do ranking</h2>
+            <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-900">Consenso de mata-mata, pódio e narrativa do ranking</h2>
             <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600">
               Base: {dashboard.eligibleCount} apostadores com palpites completos e enviados.
             </p>
@@ -119,74 +121,76 @@ export default function RankingConsensusPanel({
             ))}
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-4">
             <div className={METRIC_CARD}>
               <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">
-                <Target size={14} />
-                Palpite mais comum
+                <Trophy size={14} />
+                Campeão do povo
               </div>
-              {dashboard.mostCommonPick ? (
+              {championTop ? (
                 <>
-                  <div className="text-lg font-black text-slate-950">{dashboard.mostCommonPick.scoreLabel}</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-700">{dashboard.mostCommonPick.matchName}</div>
+                  <div className="text-lg font-black text-slate-950">{championTop.team}</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-700">{championTop.count} voto{championTop.count === 1 ? '' : 's'}</div>
                   <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                    {dashboard.mostCommonPick.count} de {dashboard.eligibleCount} apostadores foram nesse placar.
+                    {formatPercent(championTop.share)} da base fechou com esse campeão.
                   </p>
-                  {dashboard.topCommonPicks.length > 1 && (
-                    <div className="mt-4 space-y-2 border-t border-slate-200 pt-3">
-                      {dashboard.topCommonPicks.slice(0, 3).map((entry) => (
-                        <div key={`${entry.match.id}-${entry.scoreLabel}`} className="flex items-center justify-between gap-3 text-xs text-slate-500">
-                          <span className="truncate">{entry.matchName} {entry.scoreLabel}</span>
-                          <span className="shrink-0 font-bold text-slate-700">{entry.count} voto{entry.count === 1 ? '' : 's'}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </>
               ) : (
-                <p className="text-sm leading-relaxed text-slate-500">Ainda nao ha um placar dominante entre os palpites enviados.</p>
+                <p className="text-sm leading-relaxed text-slate-500">Ainda nao ha campeao do povo definido.</p>
               )}
             </div>
 
             <div className={METRIC_CARD}>
               <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">
-                <ShieldAlert size={14} />
-                Maior zebra
+                <Trophy size={14} />
+                Vice do povo
               </div>
-              {dashboard.biggestUpset ? (
+              {viceTop ? (
                 <>
-                  <div className="text-lg font-black text-slate-950">{dashboard.biggestUpset.underdogTeam}</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-700">contra {dashboard.biggestUpset.favoriteTeam}</div>
+                  <div className="text-lg font-black text-slate-950">{viceTop.team}</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-700">{viceTop.count} voto{viceTop.count === 1 ? '' : 's'}</div>
                   <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                    {dashboard.biggestUpset.count} apostador{dashboard.biggestUpset.count === 1 ? '' : 'es'} bancou{dashboard.biggestUpset.count === 1 ? '' : 'ram'} esse resultado.
+                    {formatPercent(viceTop.share)} da base colocou esse vice.
                   </p>
-                  <div className="mt-3 inline-flex rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">
-                    Diferenca FIFA: +{dashboard.biggestUpset.rankGap} posicoes
-                  </div>
                 </>
               ) : (
-                <p className="text-sm leading-relaxed text-slate-500">Ninguem bancou zebra pesada ainda.</p>
+                <p className="text-sm leading-relaxed text-slate-500">Ainda nao ha vice dominante.</p>
               )}
             </div>
 
             <div className={METRIC_CARD}>
               <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">
-                <Flame size={14} />
-                Jogo com maior divergencia
+                <Trophy size={14} />
+                3º lugar do povo
               </div>
-              {dashboard.biggestDivergence ? (
+              {thirdTop ? (
                 <>
-                  <div className="text-lg font-black text-slate-950">{dashboard.biggestDivergence.matchName}</div>
+                  <div className="text-lg font-black text-slate-950">{thirdTop.team}</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-700">{thirdTop.count} voto{thirdTop.count === 1 ? '' : 's'}</div>
                   <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                    {dashboard.biggestDivergence.uniqueScores} placares diferentes e apostas nos {dashboard.biggestDivergence.uniqueOutcomes} caminhos do jogo.
+                    {formatPercent(thirdTop.share)} da base colocou esse time no bronze.
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-                    <span className="rounded-full bg-white px-3 py-1 shadow-sm">Score {dashboard.biggestDivergence.divergenceScore.toFixed(1)}</span>
-                    <span className="rounded-full bg-white px-3 py-1 shadow-sm">{Math.round(dashboard.biggestDivergence.topScoreShare * 100)}% no placar lider</span>
-                  </div>
                 </>
               ) : (
-                <p className="text-sm leading-relaxed text-slate-500">O bolao esta bem alinhado: nenhum jogo rachou de verdade ainda.</p>
+                <p className="text-sm leading-relaxed text-slate-500">Ainda nao ha bronze dominante.</p>
+              )}
+            </div>
+
+            <div className={METRIC_CARD}>
+              <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                <Trophy size={14} />
+                Final mais montada
+              </div>
+              {finalPairTop ? (
+                <>
+                  <div className="text-lg font-black text-slate-950">{finalPairTop.label}</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-700">{finalPairTop.count} chave{finalPairTop.count === 1 ? '' : 's'}</div>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                    {formatPercent(finalPairTop.share)} da base repetiu essa final.
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm leading-relaxed text-slate-500">Ainda nao existe uma final repetida com força.</p>
               )}
             </div>
           </div>
@@ -205,25 +209,12 @@ export default function RankingConsensusPanel({
                 emptyText="Sem consenso de vice por enquanto."
               />
               <ConsensusList
-                title="Finalistas mais escolhidos"
-                entries={(dashboard.knockoutConsensus?.finalists || []).slice(0, 4)}
-                emptyText="Sem finalistas recorrentes por enquanto."
+                title="Semifinalistas mais escolhidos"
+                entries={(dashboard.knockoutConsensus?.semifinalists || []).slice(0, 4)}
+                emptyText="Sem semifinalistas recorrentes por enquanto."
               />
             </div>
           </div>
-
-          {dashboard.finalizedWithoutExactHits?.length > 0 && (
-            <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
-              <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Jogos sem cravada</div>
-              <div className="flex flex-wrap gap-2">
-                {dashboard.finalizedWithoutExactHits.slice(0, 4).map(({ match }) => (
-                  <span key={`no-exact-${match.id}`} className="rounded-full bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">
-                    {formatMatchName(match)}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </section>

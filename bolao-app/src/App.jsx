@@ -2029,7 +2029,9 @@ export default function App() {
       pendingGroupPicksCount: jogosPendentesUsuario,
       knockoutComplete: mataCompletaUsuarioAtual,
       officialKnockout: gabaritoMataMata,
-      knockoutPredictions: palpitesMataUsuarioAtual
+      officialBracketSlots,
+      knockoutPredictions: palpitesMataUsuarioAtual,
+      knockoutPredictionsByUser: palpitesMataMata
     });
   }, [
     currentUser,
@@ -2041,8 +2043,10 @@ export default function App() {
     currentUserCanSeeConsensusPanel,
     jogosPendentesUsuario,
     palpitesMataUsuarioAtual,
+    palpitesMataMata,
     mataCompletaUsuarioAtual,
-    gabaritoMataMata
+    gabaritoMataMata,
+    officialBracketSlots
   ]);
   const editorialStatsDashboard = useMemo(() => {
     if (!currentUser || !currentUserCanSeeConsensusPanel) return null;
@@ -2054,7 +2058,10 @@ export default function App() {
       betsKnockout: palpitesMataMata,
       games: jogosReais,
       ranking,
+      scoringRules: PONTOS,
       teamRankings: TEAM_FIFA_RANKINGS,
+      officialKnockout: gabaritoMataMata,
+      officialBracketSlots,
       submissionFields: SUBMISSION_FIELDS,
       isAdminUser,
       usuarioPreencheuTodosOsJogos,
@@ -2068,7 +2075,9 @@ export default function App() {
     palpitesJogos,
     palpitesMataMata,
     jogosReais,
-    ranking
+    ranking,
+    gabaritoMataMata,
+    officialBracketSlots
   ]);
   const homeEditorialInsights = useMemo(() => {
     if (!currentUser) return null;
@@ -2089,6 +2098,8 @@ export default function App() {
       games: jogosReais,
       ranking,
       teamRankings: TEAM_FIFA_RANKINGS,
+      officialKnockout: gabaritoMataMata,
+      officialBracketSlots,
       submissionFields: SUBMISSION_FIELDS,
       isAdminUser,
       usuarioPreencheuTodosOsJogos,
@@ -2101,7 +2112,9 @@ export default function App() {
     palpitesJogos,
     palpitesMataMata,
     jogosReais,
-    ranking
+    ranking,
+    gabaritoMataMata,
+    officialBracketSlots
   ]);
   const timelineReferenceNowMs = useMemo(
     () => (

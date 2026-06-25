@@ -51,9 +51,9 @@ export default function InsightsHubPanel({
   onNavigateToClosestMatch
 }) {
   const championTop = consensusDashboard?.knockoutConsensus?.champion?.[0] || null;
-  const mostCommonPick = consensusDashboard?.mostCommonPick || null;
-  const biggestUpset = consensusDashboard?.biggestUpset || null;
-  const divergence = consensusDashboard?.biggestDivergence || null;
+  const viceTop = consensusDashboard?.knockoutConsensus?.vice?.[0] || null;
+  const thirdTop = consensusDashboard?.knockoutConsensus?.third?.[0] || null;
+  const finalPairTop = consensusDashboard?.knockoutConsensus?.finalPairs?.[0] || null;
   const personalCards = personalInsight?.insights || [];
   const editorialCards = editorialInsight?.items || [];
   const showConsensus = Boolean(canSeeConsensus && consensusDashboard && !consensusDashboard.insufficientSample);
@@ -158,25 +158,25 @@ export default function InsightsHubPanel({
                     detail={`${championTop.count} voto${championTop.count === 1 ? '' : 's'} (${formatPercent(championTop.share)})`}
                   />
                 )}
-                {mostCommonPick && (
+                {viceTop && (
                   <ConsensusMetric
-                    title="Placar mais comum"
-                    value={mostCommonPick.scoreLabel}
-                    detail={`${mostCommonPick.matchName} • ${mostCommonPick.count} de ${consensusDashboard.eligibleCount} apostadores`}
+                    title="Vice do povo"
+                    value={viceTop.team}
+                    detail={`${viceTop.count} voto${viceTop.count === 1 ? '' : 's'} (${formatPercent(viceTop.share)})`}
                   />
                 )}
-                {biggestUpset && (
+                {thirdTop && (
                   <ConsensusMetric
-                    title="Maior zebra"
-                    value={biggestUpset.underdogTeam}
-                    detail={`${biggestUpset.count} apostador${biggestUpset.count === 1 ? '' : 'es'} bancou${biggestUpset.count === 1 ? '' : 'ram'} contra ${biggestUpset.favoriteTeam}`}
+                    title="3º lugar do povo"
+                    value={thirdTop.team}
+                    detail={`${thirdTop.count} voto${thirdTop.count === 1 ? '' : 's'} para o bronze`}
                   />
                 )}
-                {divergence && (
+                {finalPairTop && (
                   <ConsensusMetric
-                    title="Maior divergência"
-                    value={divergence.matchName}
-                    detail={`${divergence.uniqueScores} placares diferentes e ${divergence.uniqueOutcomes} caminhos do jogo`}
+                    title="Final mais montada"
+                    value={finalPairTop.label}
+                    detail={`${finalPairTop.count} chave${finalPairTop.count === 1 ? '' : 's'} repetem essa final`}
                   />
                 )}
               </div>
@@ -204,8 +204,8 @@ export default function InsightsHubPanel({
               mataSubmitted={mataSubmitted}
             />
           ) : (
-            <div className="grid gap-3 md:grid-cols-3">
-              {editorialCards.slice(0, 3).map((item) => (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {editorialCards.slice(0, 4).map((item) => (
                 <article key={item.id} className={METRIC_CARD}>
                   <div className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white">
                     <Sparkles size={12} />

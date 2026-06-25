@@ -329,12 +329,53 @@ export function buildKnockoutConsensus({ eligibleUsers, betsKnockout }) {
       .sort(compareConsensusTeam);
   };
 
+  const countPairs = (getPair) => {
+    const counts = new Map();
+    const supporters = new Map();
+
+    eligibleUsers.forEach((user) => {
+      const bracket = betsKnockout?.[user.id] || {};
+      const pair = getPair(bracket);
+      if (!pair?.key || !pair?.label) return;
+
+      counts.set(pair.key, (counts.get(pair.key) || 0) + 1);
+      supporters.set(pair.key, [...(supporters.get(pair.key) || []), user.nome]);
+    });
+
+    return getCountEntries(counts, eligibleUsers.length)
+      .map((entry) => {
+        const [champion = '', vice = ''] = String(entry.value).split('|||');
+        return {
+          key: entry.value,
+          label: `${champion} campeão / ${vice} vice`,
+          champion,
+          vice,
+          count: entry.count,
+          share: entry.share,
+          supporterNames: supporters.get(entry.value) || []
+        };
+      })
+      .sort((a, b) => (
+        b.count - a.count ||
+        b.share - a.share ||
+        compareText(a.label, b.label)
+      ));
+  };
+
   const champion = countValues((bracket) => [bracket.campeao]);
   const vice = countValues((bracket) => [bracket.vice]);
   const third = countValues((bracket) => [bracket.terceiro]);
   const fourth = countValues((bracket) => [bracket.quarto]);
   const semifinalists = countValues((bracket) => bracket.semis || []);
   const finalists = countValues((bracket) => [bracket.campeao, bracket.vice]);
+  const finalPairs = countPairs((bracket) => (
+    bracket.campeao && bracket.vice
+      ? {
+        key: `${bracket.campeao}|||${bracket.vice}`,
+        label: `${bracket.campeao} campeão / ${bracket.vice} vice`
+      }
+      : null
+  ));
 
   return {
     champion,
@@ -342,7 +383,8 @@ export function buildKnockoutConsensus({ eligibleUsers, betsKnockout }) {
     third,
     fourth,
     semifinalists,
-    finalists
+    finalists,
+    finalPairs
   };
 }
 
@@ -363,6 +405,33 @@ export function buildNarrativeLines({ dashboard, ranking = [] }) {
       championTop.count === 1
         ? `${formatNamesList(championTop.supporterNames)} foi de ${championTop.team} campeão.`
         : `${formatApostadorLabel(championTop.count)} foram de ${championTop.team} campeão.`
+    );
+  }
+
+  const viceTop = dashboard.knockoutConsensus?.vice?.[0];
+  if (viceTop) {
+    pushLine(
+      viceTop.count === 1
+        ? `${formatNamesList(viceTop.supporterNames)} segurou ${viceTop.team} como vice.`
+        : `${formatApostadorLabel(viceTop.count)} colocaram ${viceTop.team} como vice.`
+    );
+  }
+
+  const finalPairTop = dashboard.knockoutConsensus?.finalPairs?.[0];
+  if (finalPairTop) {
+    pushLine(
+      finalPairTop.count === 1
+        ? `${formatNamesList(finalPairTop.supporterNames)} desenhou sozinho a final ${finalPairTop.label}.`
+        : `${formatApostadorLabel(finalPairTop.count)} repetem a final ${finalPairTop.label}.`
+    );
+  }
+
+  const thirdTop = dashboard.knockoutConsensus?.third?.[0];
+  if (thirdTop) {
+    pushLine(
+      thirdTop.count === 1
+        ? `${formatNamesList(thirdTop.supporterNames)} bancou ${thirdTop.team} em 3º lugar.`
+        : `${formatApostadorLabel(thirdTop.count)} mantêm ${thirdTop.team} no bronze.`
     );
   }
 
@@ -420,18 +489,6 @@ export function buildNarrativeLines({ dashboard, ranking = [] }) {
       pushLine(`${formatNamesList(supporterNames)} foi o único a bancar ${underdogTeam} contra ${favoriteTeam}.`);
     } else {
       pushLine(`${formatApostadorLabel(count)} bancaram ${underdogTeam} sobre ${favoriteTeam}.`);
-    }
-  }
-
-  if (dashboard.biggestDivergence) {
-    pushLine(`${dashboard.biggestDivergence.matchName} rachou o bolão: ${dashboard.biggestDivergence.uniqueScores} placares diferentes.`);
-  }
-
-  if (dashboard.mostCommonPick) {
-    if (dashboard.mostCommonPick.count === 1) {
-      pushLine(`${formatNamesList(dashboard.mostCommonPick.supporterNames)} segurou sozinho ${dashboard.mostCommonPick.matchName} ${dashboard.mostCommonPick.scoreLabel}.`);
-    } else {
-      pushLine(`${dashboard.mostCommonPick.matchName} ${dashboard.mostCommonPick.scoreLabel} foi o placar mais popular.`);
     }
   }
 
