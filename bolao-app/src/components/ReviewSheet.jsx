@@ -4,6 +4,8 @@ import { GRUPOS_2026, buildChronologicalMatchGroups, formatBrazilMatchSchedule, 
 import { GLASS_CARD, GLASS_INPUT, TEXT_MUTED } from '../styles.js';
 import { MATA_MATA_CONFIG, PONTOS, SUBMISSION_FIELDS } from '../constants.js';
 import { formatScoreDisplay, formatSubmissionDate, calcularPontosJogo, getWinnerOfMatch } from '../utils.js';
+import { getOfficialBracketSlotTeam } from '../officialResults/officialBracketSlots.js';
+import { evaluateKnockoutPhasePick, getKnockoutPhaseOfficialState } from '../officialResults/knockoutPhaseScoring.js';
 import { getMatchResultVariant } from '../officialResults/officialResultsView';
 
 function ReviewSheet({
@@ -23,6 +25,7 @@ function ReviewSheet({
   submissoes,
   palpitesMataMata,
   gabaritoMataMata,
+  officialBracketSlots,
   scrollToMatchId,
   scrollRequestKey
 }) {
@@ -75,9 +78,11 @@ function ReviewSheet({
     if (variant === 'cravou') return { label: 'Cravou', tone: 'border-emerald-200 bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' };
     if (variant === 'winner') return { label: 'Acertou vencedor', tone: 'border-sky-200 bg-sky-50 text-sky-700', dot: 'bg-sky-500' };
     if (variant === 'correct') return { label: 'Acertou', tone: 'border-emerald-200 bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' };
+    if (variant === 'partial') return { label: 'Oficial parcial', tone: 'border-amber-200 bg-amber-50 text-amber-700', dot: 'bg-amber-500' };
     if (variant === 'error') return { label: 'Errou', tone: 'border-rose-200 bg-rose-50 text-rose-700', dot: 'bg-rose-500' };
     if (variant === 'waiting-real') return { label: 'Aguardando real', tone: 'border-amber-200 bg-amber-50 text-amber-700', dot: 'bg-amber-500' };
     if (variant === 'waiting-official') return { label: 'Aguardando oficial', tone: 'border-amber-200 bg-amber-50 text-amber-700', dot: 'bg-amber-500' };
+    if (variant === 'duplicate') return { label: 'Duplicado', tone: 'border-slate-200 bg-slate-50 text-slate-600', dot: 'bg-slate-400' };
     if (variant === 'temporary') return { label: 'Temporário', tone: 'border-orange-200 bg-orange-50 text-orange-700', dot: 'bg-orange-500' };
     return { label: 'Sem palpite', tone: 'border-slate-200 bg-slate-50 text-slate-500', dot: 'bg-slate-400' };
   };
@@ -188,18 +193,55 @@ function ReviewSheet({
   ];
 
   const resolveKnockoutSides = (phaseKey, match) => {
+    const officialTeamA = getOfficialBracketSlotTeam(officialBracketSlots, match.id, 'A');
+    const officialTeamB = getOfficialBracketSlotTeam(officialBracketSlots, match.id, 'B');
+
     if (phaseKey === 'dezeszeseisavos' && match?.label?.includes(' x ')) {
       const [sideA, sideB] = match.label.split(' x ');
-      return { sideA, sideB };
+      return {
+        sideA: officialTeamA || sideA,
+        sideB: officialTeamB || sideB
+      };
     }
 
     return {
-      sideA: getWinnerOfMatch(match.feedA, gabaritoMataMata) || `Venc. ${match.feedA}`,
-      sideB: getWinnerOfMatch(match.feedB, gabaritoMataMata) || `Venc. ${match.feedB}`
+      sideA: officialTeamA || getWinnerOfMatch(match.feedA, gabaritoMataMata) || `Venc. ${match.feedA}`,
+      sideB: officialTeamB || getWinnerOfMatch(match.feedB, gabaritoMataMata) || `Venc. ${match.feedB}`
     };
   };
 
-  const buildKnockoutPalpites = ({ official, points, getter }) => usersFiltrados.map((user) => {
+  const buildPhaseKnockoutPalpites = ({ phaseKey, points, pickIndex }) => usersFiltrados.map((user) => {
+    const userMata = palpitesMataMata[user.id] || {};
+    const phasePicks = userMata[phaseKey] || [];
+    const palpite = phasePicks[pickIndex] || '';
+    const review = evaluateKnockoutPhasePick({
+      phaseKey,
+      pick: palpite,
+      pickIndex,
+      allPicks: phasePicks,
+      points,
+      officialKnockout: gabaritoMataMata,
+      officialBracketSlots,
+      successLabel: 'Acertou'
+    });
+
+    let status = buildStatus();
+    if (review.state === 'waiting-official') status = buildStatus('waiting-official');
+    if (review.state === 'partial-pending') status = buildStatus('partial');
+    if (review.state === 'partial-confirmed' || review.state === 'confirmed') status = buildStatus('correct');
+    if (review.state === 'duplicate') status = buildStatus('duplicate');
+    if (review.state === 'error') status = buildStatus('error');
+
+    return {
+      userId: user.id,
+      palpite: palpite || '—',
+      status,
+      pontos: review.pointsAwarded,
+      envio: formatSubmissionDate(submissoes[user.id]?.[SUBMISSION_FIELDS.MATA])
+    };
+  });
+
+  const buildPodiumPalpites = ({ official, points, getter }) => usersFiltrados.map((user) => {
     const palpite = getter(palpitesMataMata[user.id] || {});
     const preenchido = Boolean(palpite);
     const pontos = preenchido && official !== '—' && palpite === official ? points : 0;
@@ -227,7 +269,19 @@ function ReviewSheet({
     rows: section.list.map((match, idx) => {
       const schedule = formatBrazilMatchSchedule(match);
       const { sideA, sideB } = resolveKnockoutSides(section.phaseKey, match);
-      const official = gabaritoMataMata[section.phaseKey]?.[idx] || '—';
+      const officialState = getKnockoutPhaseOfficialState({
+        phaseKey: section.phaseKey,
+        officialKnockout: gabaritoMataMata,
+        officialBracketSlots
+      });
+      const officialTeamA = getOfficialBracketSlotTeam(officialBracketSlots, match.id, 'A');
+      const officialTeamB = getOfficialBracketSlotTeam(officialBracketSlots, match.id, 'B');
+      const official = [officialTeamA, officialTeamB].filter(Boolean).join(' / ') || '—';
+      const officialMeta = officialState.isClosed
+        ? `${section.points} pts em jogo`
+        : officialState.isPartial
+          ? 'Oficial parcial'
+          : 'Aguardando definicao';
 
       return {
         id: `${section.id}-${match.id}`,
@@ -240,11 +294,12 @@ function ReviewSheet({
         sideA,
         sideB,
         official,
-        officialMeta: official === '—' ? 'Aguardando definição' : `${section.points} pts`,
-        palpites: buildKnockoutPalpites({
-          official,
+        officialBadgeLabel: officialState.isPartial ? 'Oficial parcial' : 'Oficial',
+        officialMeta,
+        palpites: buildPhaseKnockoutPalpites({
+          phaseKey: section.phaseKey,
           points: section.points,
-          getter: (userMata) => userMata[section.phaseKey]?.[idx]
+          pickIndex: idx
         })
       };
     })
@@ -310,7 +365,8 @@ function ReviewSheet({
     ].map((row) => ({
       ...row,
       kind: 'podium',
-      palpites: buildKnockoutPalpites({
+      officialBadgeLabel: 'Oficial',
+      palpites: buildPodiumPalpites({
         official: row.official,
         points: row.points,
         getter: (userMata) => userMata[row.field]
@@ -375,7 +431,7 @@ function ReviewSheet({
             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">{row.metaTop} • {row.metaBottom}</div>
           </div>
           <div className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-black text-slate-900 shadow-sm">
-            <span className="mr-1 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-500">Oficial</span>
+            <span className="mr-1 text-[8px] font-bold uppercase tracking-[0.18em] text-slate-500">{row.officialBadgeLabel || 'Oficial'}</span>
             {row.official}
           </div>
         </div>
@@ -398,7 +454,7 @@ function ReviewSheet({
 
         <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-slate-600">
           <span className="truncate">{row.metaNote}</span>
-          {row.kind === 'match' && <span className="shrink-0 font-semibold text-slate-600">{row.official === '—' ? 'Aguardando definição' : row.officialMeta}</span>}
+          {row.kind === 'match' && <span className="shrink-0 font-semibold text-slate-600">{row.officialMeta}</span>}
         </div>
       </div>
     );
@@ -508,7 +564,9 @@ function ReviewSheet({
             <>
               <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span> Acertou</span>
               <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-2.5 py-1 text-rose-700"><span className="h-2.5 w-2.5 rounded-full bg-rose-500"></span> Errou</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-2.5 py-1 text-amber-700"><span className="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Oficial parcial</span>
               <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-2.5 py-1 text-amber-700"><span className="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Aguardando oficial</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-slate-400"></span> Duplicado</span>
             </>
           )}
           <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-slate-400"></span> Sem palpite</span>

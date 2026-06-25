@@ -2,8 +2,9 @@ import React, { memo } from 'react';
 import { ChevronDown, Lock } from '../lucideIcons';
 import { PONTOS } from '../constants.js';
 import { getOfficialBracketSlotTeam } from '../officialResults/officialBracketSlots.js';
+import { evaluateKnockoutPhasePick } from '../officialResults/knockoutPhaseScoring.js';
 import { GLASS_CARD, GLASS_INPUT, TEXT_MUTED } from '../styles.js';
-import { buildChoiceReview, getWinnerOfMatch } from '../utils.js';
+import { getWinnerOfMatch } from '../utils.js';
 import { formatBrazilMatchSchedule, formatOfficialKickoffHint } from '../matchData';
 
 function RestrictedMatchDropdown({
@@ -42,17 +43,19 @@ function RestrictedMatchDropdown({
     timeA = getWinnerOfMatch(match.feedA, source) || `Venc. ${match.feedA}`;
     timeB = getWinnerOfMatch(match.feedB, source) || `Venc. ${match.feedB}`;
   }
-  const currentValue = modoAdmin ? gabaritoMataMata[phaseKey]?.[idx] : palpitesMataMata[currentUser.id]?.[phaseKey]?.[idx];
+  const phasePicks = modoAdmin ? (gabaritoMataMata[phaseKey] || []) : (palpitesMataMata[currentUser.id]?.[phaseKey] || []);
+  const currentValue = phasePicks?.[idx];
   const options = [timeA, timeB].filter((t) => t && t !== 'A definir' && !t.includes('Aguardando') && !t.includes('Venc.') && !t.startsWith('3º de '));
   const normalizedOptions = currentValue && !options.includes(currentValue)
     ? [currentValue, ...options]
     : options;
   const isReady = options.length === 2;
   const isLocked = !modoAdmin && palpitesTravadosMata;
-  const officialWinner = gabaritoMataMata[phaseKey]?.[idx] || '';
-  const review = buildChoiceReview({
-    choice: currentValue,
-    official: officialWinner,
+  const review = evaluateKnockoutPhasePick({
+    phaseKey,
+    pick: currentValue,
+    pickIndex: idx,
+    allPicks: phasePicks,
     points: points ?? (
       phaseKey === 'dezeszeseisavos'
         ? PONTOS.MATA.R32
@@ -62,6 +65,8 @@ function RestrictedMatchDropdown({
             ? PONTOS.MATA.QF
             : PONTOS.MATA.SF
     ),
+    officialKnockout: gabaritoMataMata,
+    officialBracketSlots,
     successLabel: 'Acertou o classificado'
   });
   const schedule = formatBrazilMatchSchedule(match);
@@ -101,15 +106,17 @@ function RestrictedMatchDropdown({
               {currentValue ? 'Escolha enviada para este confronto.' : 'Nenhum classificado foi escolhido neste confronto.'}
             </div>
           </div>
-          <div className={`rounded-[20px] border px-4 py-4 ${review.tone}`}>
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em]">{review.label}</div>
-            <div className="mt-3 text-[20px] font-black lg:text-[24px]">{review.detail}</div>
-            <div className="mt-2 text-[13px] leading-snug opacity-80">
-              {officialWinner
-                ? `Classificado oficial: ${officialWinner}`
-                : 'A comparação aparece quando o classificado oficial for definido.'}
-            </div>
-          </div>
+                      <div className={`rounded-[20px] border px-4 py-4 ${review.tone}`}>
+                        <div className="text-[11px] font-bold uppercase tracking-[0.16em]">{review.label}</div>
+                        <div className="mt-3 text-[20px] font-black lg:text-[24px]">{review.detail}</div>
+                        <div className="mt-2 text-[13px] leading-snug opacity-80">
+              {review.officialState.isClosed
+                ? 'A fase ja tem lista oficial completa para pontuacao.'
+                : review.officialState.isPartial
+                  ? 'A FIFA ja publicou parte dos classificados desta fase.'
+                  : 'A comparacao aparece quando a definicao oficial sair.'}
+                        </div>
+                      </div>
         </div>
       </div>
     );

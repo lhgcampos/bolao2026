@@ -42,6 +42,7 @@ import {
   getMatchResultVariant
 } from './officialResults/officialResultsView';
 import { normalizeOfficialBracketSlots } from './officialResults/officialBracketSlots.js';
+import { calculateKnockoutPhasePoints } from './officialResults/knockoutPhaseScoring.js';
 
 const TODOS_TIMES = Object.values(GRUPOS_2026).flat().sort();
 
@@ -1926,10 +1927,12 @@ export default function App() {
       if (gabaritoMataMata.quarto && userMM.quarto === gabaritoMataMata.quarto) ptsMataMata += PONTOS.MATA.TOP4;
 
       const checkPhase = (field, points) => {
-        const official = gabaritoMataMata[field] || [];
-        const userBet = userMM[field] || [];
-        userBet.forEach((betTeam) => {
-          if (betTeam && official.includes(betTeam)) ptsMataMata += points;
+        ptsMataMata += calculateKnockoutPhasePoints({
+          phaseKey: field,
+          picks: userMM[field] || [],
+          points,
+          officialKnockout: gabaritoMataMata,
+          officialBracketSlots
         });
       };
 
@@ -1942,7 +1945,7 @@ export default function App() {
     });
 
     return buildDenseRanking(rankingEntries, (user) => user.total, (user) => user.nome);
-  }, [usuarios, jogosReais, palpitesJogos, palpitesMataMata, gabaritoMataMata]);
+  }, [usuarios, jogosReais, palpitesJogos, palpitesMataMata, gabaritoMataMata, officialBracketSlots]);
   const homeInsightCard = useMemo(() => {
     if (!currentUser || modoAdmin) return null;
 
@@ -2982,6 +2985,7 @@ export default function App() {
             submissoes={submissoes}
             palpitesMataMata={palpitesMataMata}
             gabaritoMataMata={gabaritoMataMata}
+            officialBracketSlots={officialBracketSlots}
             scrollToMatchId={nearestTimelineMatchId}
             scrollRequestKey={reviewScrollRequest}
           />
@@ -3004,6 +3008,7 @@ export default function App() {
                     <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time Oitavas</span><span className="font-bold text-slate-900">{PONTOS.MATA.R16} pts</span></div>
                     <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time Quartas</span><span className="font-bold text-slate-900">{PONTOS.MATA.QF} pts</span></div>
                     <div className="flex justify-between text-xs p-3 bg-white/80 rounded-lg border border-slate-200 text-slate-700"><span>Acertar Time Semis</span><span className="font-bold text-indigo-700">{PONTOS.MATA.SF} pts</span></div>
+                    <div className="mt-2 text-[10px] text-slate-500 italic p-2 border-l-2 border-amber-300 pl-3">Quando a FIFA publicar uma fase parcialmente, o bolão já pontua cada time oficialmente confirmado nessa fase, sem exigir o slot exato.</div>
                  </div>
                  <div className="space-y-2 pt-2">
                     <div className="text-[10px] font-bold text-slate-500 border-b border-slate-200 pb-1 mb-2">PÓDIO FINAL</div>

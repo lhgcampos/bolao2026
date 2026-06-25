@@ -7,6 +7,11 @@ import {
   getOfficialBracketSlotTeam,
   mergeOfficialBracketSlots
 } from '../bolao-app/src/officialResults/officialBracketSlots.js';
+import {
+  calculateKnockoutPhasePoints,
+  evaluateKnockoutPhasePick,
+  getKnockoutPhaseOfficialState
+} from '../bolao-app/src/officialResults/knockoutPhaseScoring.js';
 import { syncOfficialResults } from '../bolao-app/src/officialResults/officialResultSync.js';
 import { buildChronologicalMatchGroups, gerarJogosIniciais, sortMatchesChronologically } from '../bolao-app/src/matchData.js';
 import { deriveOfficialKnockout, mergeOfficialKnockout } from '../bolao-app/src/officialResults/tournamentSync.js';
@@ -251,6 +256,122 @@ const buildExternalMatch = (override = {}) => ({
 
   assert.equal(getOfficialBracketSlotTeam(merged, 73, 'A'), 'Coreia do Sul', 'merge deve aceitar novos lados publicados');
   assert.equal(getOfficialBracketSlotTeam(merged, 73, 'B'), 'Canadá', 'merge deve preservar lado antigo quando refresh vier parcial');
+}
+
+{
+  const partialSlots = {
+    schemaVersion: 1,
+    source: 'fifa',
+    seasonId: '285023',
+    updatedAt: 1_800_000_000_300,
+    matches: {
+      '73': {
+        teamB: 'Canadá',
+        placeholderA: '2A',
+        placeholderB: '2B',
+        publishedAt: 1_800_000_000_300
+      },
+      '74': {
+        teamA: 'Alemanha',
+        placeholderA: '1E',
+        placeholderB: '3ABCDF',
+        publishedAt: 1_800_000_000_300
+      },
+      '76': {
+        teamA: 'Brasil',
+        placeholderA: '1C',
+        placeholderB: '2F',
+        publishedAt: 1_800_000_000_300
+      }
+    }
+  };
+
+  const partialState = getKnockoutPhaseOfficialState({
+    phaseKey: 'dezeszeseisavos',
+    officialBracketSlots: partialSlots
+  });
+  assert.equal(partialState.isPartial, true, 'slots publicados devem abrir fase parcial');
+  assert.equal(partialState.isClosed, false, 'fase parcial nao pode ser tratada como fechada');
+  assert.equal(partialState.publishedCount, 3, 'deve contar so os times ja publicados pela FIFA');
+
+  const partialPoints = calculateKnockoutPhasePoints({
+    phaseKey: 'dezeszeseisavos',
+    picks: ['Canadá', 'Canadá', 'Alemanha', 'Uruguai'],
+    points: 5,
+    officialBracketSlots: partialSlots
+  });
+  assert.equal(partialPoints, 10, 'palpite duplicado nao pode pontuar em dobro no parcial');
+
+  const confirmedReview = evaluateKnockoutPhasePick({
+    phaseKey: 'dezeszeseisavos',
+    pick: 'Canadá',
+    pickIndex: 0,
+    allPicks: ['Canadá', 'Alemanha'],
+    points: 5,
+    officialBracketSlots: partialSlots
+  });
+  assert.equal(confirmedReview.state, 'partial-confirmed', 'time publicado pela FIFA deve pontuar no parcial');
+  assert.equal(confirmedReview.pointsAwarded, 5, 'parcial confirmado precisa liberar pontos imediatos');
+
+  const pendingReview = evaluateKnockoutPhasePick({
+    phaseKey: 'dezeszeseisavos',
+    pick: 'Uruguai',
+    pickIndex: 1,
+    allPicks: ['Canadá', 'Uruguai'],
+    points: 5,
+    officialBracketSlots: partialSlots
+  });
+  assert.equal(pendingReview.state, 'partial-pending', 'time ainda nao publicado deve ficar pendente no parcial');
+
+  const duplicateReview = evaluateKnockoutPhasePick({
+    phaseKey: 'dezeszeseisavos',
+    pick: 'Canadá',
+    pickIndex: 1,
+    allPicks: ['Canadá', 'Canadá'],
+    points: 5,
+    officialBracketSlots: partialSlots
+  });
+  assert.equal(duplicateReview.state, 'duplicate', 'palpite duplicado precisa ser bloqueado na revisao');
+  assert.equal(duplicateReview.pointsAwarded, 0, 'palpite duplicado nao pontua');
+}
+
+{
+  const closedOfficialKnockout = {
+    dezeszeseisavos: [
+      'México',
+      'Canadá',
+      'Brasil',
+      'Alemanha',
+      'Holanda',
+      'Bélgica',
+      'Espanha',
+      'França',
+      'Argentina',
+      'Portugal',
+      'Inglaterra',
+      'EUA',
+      'Marrocos',
+      'Suíça',
+      'Croácia',
+      'Uruguai'
+    ]
+  };
+
+  const closedState = getKnockoutPhaseOfficialState({
+    phaseKey: 'oitavas',
+    officialKnockout: closedOfficialKnockout
+  });
+  assert.equal(closedState.isClosed, true, 'lista oficial completa da proxima fase deve fechar a pontuacao');
+
+  const closedReview = evaluateKnockoutPhasePick({
+    phaseKey: 'oitavas',
+    pick: 'Chile',
+    pickIndex: 0,
+    allPicks: ['Chile'],
+    points: 10,
+    officialKnockout: closedOfficialKnockout
+  });
+  assert.equal(closedReview.state, 'error', 'fase fechada deve zerar time fora da lista oficial');
 }
 
 console.log('official results sync tests: ok');
