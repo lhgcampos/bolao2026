@@ -8,10 +8,11 @@ Ele:
 
 - busca resultados finais em provider gratuito server-side
 - aplica automaticamente apenas placares finalizados e validados
+- busca os slots oficiais do mata-mata publicados pela FIFA em endpoint proprio, sem misturar isso com o gabarito de vencedores
 - grava histórico por jogo
 - grava diagnóstico global em `official-results-sync-status` e `official-results-sync-history`
 - respeita `manualLock` para não sobrescrever correções manuais
-- atualiza `matches` e `official-knockout`, fazendo o ranking refletir o novo gabarito pelo fluxo normal do app
+- atualiza `matches`, `official-knockout` e `official-bracket-slots`; os slots da FIFA servem para preencher automaticamente participantes já publicados no mata-mata, sem alterar pontuação
 
 O script `npm run sync:official-results` ficou apenas como runner de suporte para debug e dry-run local. Ele não é mais o mecanismo principal de produção.
 
@@ -38,6 +39,9 @@ FOOTBALL_DATA_SEASON=2026
 API_FOOTBALL_KEY=
 API_FOOTBALL_LEAGUE_ID=1
 API_FOOTBALL_SEASON=2026
+OFFICIAL_BRACKET_SLOTS_ENABLED=true
+FIFA_BRACKET_SEASON_ID=285023
+FIFA_BRACKET_LANGUAGE=en
 OFFICIAL_RESULTS_SYNC_HISTORY_LIMIT=40
 ```
 

@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { ChevronDown, Lock } from '../lucideIcons';
 import { PONTOS } from '../constants.js';
+import { getOfficialBracketSlotTeam } from '../officialResults/officialBracketSlots.js';
 import { GLASS_CARD, GLASS_INPUT, TEXT_MUTED } from '../styles.js';
 import { buildChoiceReview, getWinnerOfMatch } from '../utils.js';
 import { formatBrazilMatchSchedule, formatOfficialKickoffHint } from '../matchData';
@@ -18,6 +19,7 @@ function RestrictedMatchDropdown({
   palpitesUsuarioAtual,
   condutaGrupos,
   gruposCompletos,
+  officialBracketSlots,
   alocacaoTerceiros,
   atualizarMataMata,
   getR32Team,
@@ -27,10 +29,14 @@ function RestrictedMatchDropdown({
   let timeA;
   let timeB;
   if (phaseKey === 'dezeszeseisavos') {
-    timeA = getR32Team(match.refA, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos);
-    timeB = match.refThirdGroups
-      ? getThirdPlaceCandidate(match, alocacaoTerceiros, gruposCompletos)
-      : getR32Team(match.refB, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos);
+    const officialTeamA = getOfficialBracketSlotTeam(officialBracketSlots, match.id, 'A');
+    const officialTeamB = getOfficialBracketSlotTeam(officialBracketSlots, match.id, 'B');
+    timeA = officialTeamA || getR32Team(match.refA, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos);
+    timeB = officialTeamB || (
+      match.refThirdGroups
+        ? getThirdPlaceCandidate(match, alocacaoTerceiros, gruposCompletos)
+        : getR32Team(match.refB, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos)
+    );
   } else {
     const source = modoAdmin ? gabaritoMataMata : (palpitesMataMata[currentUser.id] || {});
     timeA = getWinnerOfMatch(match.feedA, source) || `Venc. ${match.feedA}`;

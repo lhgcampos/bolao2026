@@ -41,6 +41,7 @@ import {
   getOfficialCompetitionLabel,
   getMatchResultVariant
 } from './officialResults/officialResultsView';
+import { normalizeOfficialBracketSlots } from './officialResults/officialBracketSlots.js';
 
 const TODOS_TIMES = Object.values(GRUPOS_2026).flat().sort();
 
@@ -54,6 +55,7 @@ const REMOTE_PATHS = {
   usersIndex: 'users-index',
   matches: 'matches',
   officialKnockout: 'official-knockout',
+  officialBracketSlots: 'official-bracket-slots',
   officialResultsSyncStatus: 'official-results-sync-status',
   officialResultsSyncHistory: 'official-results-sync-history',
   conduct: 'conduct',
@@ -384,12 +386,20 @@ const reconcileSubmissionState = ({ submissions = {}, matches = [], betsGames = 
   })
 );
 
-const getR32Team = (ref, jogos, palpitesUsuario, condutaGrupos, gruposCompletos) => {
-  if (!gruposCompletos) return "A definir";
+const getR32Team = (ref, jogos, palpitesUsuario, condutaGrupos) => {
   if (!ref) return "???";
   if (ref.length === 2) {
     const pos = parseInt(ref[0]);
     const grp = ref[1];
+    const jogosDoGrupo = jogos.filter((jogo) => jogo.grupo === grp);
+    const grupoCompleto = jogosDoGrupo.every((jogo) => {
+      if (placarPreenchido(jogo.placarA, jogo.placarB)) return true;
+      const palpite = palpitesUsuario?.[jogo.id];
+      return placarPreenchido(palpite?.placarA, palpite?.placarB);
+    });
+
+    if (!grupoCompleto) return "A definir";
+
     const tabela = calcularTabelaGrupo(grp, jogos, palpitesUsuario, condutaGrupos, { preferPredictions: Boolean(palpitesUsuario) });
     return tabela[pos-1]?.time || "A definir";
   }
@@ -525,6 +535,7 @@ const createInitialAppState = () => ({
   betsGames: {},
   betsKnockout: {},
   officialKnockout: {},
+  officialBracketSlots: normalizeOfficialBracketSlots(),
   officialResultsSyncStatus: {},
   officialResultsSyncHistory: [],
   conduct: {},
@@ -537,6 +548,7 @@ const buildStateDocument = ({
   betsGames,
   betsKnockout,
   officialKnockout,
+  officialBracketSlots,
   conduct,
   submissions
 }, { includeUpdatedAt = true } = {}) => ({
@@ -547,6 +559,7 @@ const buildStateDocument = ({
   betsGames,
   betsKnockout,
   officialKnockout,
+  officialBracketSlots,
   conduct,
   submissions: reconcileSubmissionState({
     submissions,
@@ -594,6 +607,7 @@ const parseRemotePayload = (payload) => {
     betsGames: normalizedGameData.betsGames,
     betsKnockout,
     officialKnockout: payload.officialKnockout || {},
+    officialBracketSlots: normalizeOfficialBracketSlots(payload.officialBracketSlots || {}),
     officialResultsSyncStatus: payload.officialResultsSyncStatus || {},
     officialResultsSyncHistory: Array.isArray(payload.officialResultsSyncHistory) ? payload.officialResultsSyncHistory : [],
     conduct: payload.conduct || {},
@@ -634,17 +648,18 @@ const fetchRemoteEntry = async (path) => {
 const fetchLegacyRemoteState = async () => fetchRemoteEntry(REMOTE_LEGACY_STATE_PATH);
 
 const fetchShardedRemoteState = async () => {
-  const [metaDoc, usersIndexDoc, matchesDoc, officialKnockoutDoc, officialResultsSyncStatusDoc, officialResultsSyncHistoryDoc, conductDoc] = await Promise.all([
+  const [metaDoc, usersIndexDoc, matchesDoc, officialKnockoutDoc, officialBracketSlotsDoc, officialResultsSyncStatusDoc, officialResultsSyncHistoryDoc, conductDoc] = await Promise.all([
     fetchRemoteEntry(REMOTE_PATHS.meta),
     fetchRemoteEntry(REMOTE_PATHS.usersIndex),
     fetchRemoteEntry(REMOTE_PATHS.matches),
     fetchRemoteEntry(REMOTE_PATHS.officialKnockout),
+    fetchRemoteEntry(REMOTE_PATHS.officialBracketSlots),
     fetchRemoteEntry(REMOTE_PATHS.officialResultsSyncStatus),
     fetchRemoteEntry(REMOTE_PATHS.officialResultsSyncHistory),
     fetchRemoteEntry(REMOTE_PATHS.conduct)
   ]);
 
-  const hasShardState = [metaDoc, usersIndexDoc, matchesDoc, officialKnockoutDoc, officialResultsSyncStatusDoc, officialResultsSyncHistoryDoc, conductDoc].some((entry) => entry !== null);
+  const hasShardState = [metaDoc, usersIndexDoc, matchesDoc, officialKnockoutDoc, officialBracketSlotsDoc, officialResultsSyncStatusDoc, officialResultsSyncHistoryDoc, conductDoc].some((entry) => entry !== null);
   if (!hasShardState) return null;
 
   const usersIndex = usersIndexDoc && typeof usersIndexDoc === 'object' && !Array.isArray(usersIndexDoc) ? usersIndexDoc : {};
@@ -708,6 +723,7 @@ const fetchShardedRemoteState = async () => {
     betsGames,
     betsKnockout,
     officialKnockout: officialKnockoutDoc || {},
+    officialBracketSlots: normalizeOfficialBracketSlots(officialBracketSlotsDoc || {}),
     officialResultsSyncStatus: officialResultsSyncStatusDoc || {},
     officialResultsSyncHistory: Array.isArray(officialResultsSyncHistoryDoc) ? officialResultsSyncHistoryDoc : [],
     conduct: conductDoc || {},
@@ -716,6 +732,7 @@ const fetchShardedRemoteState = async () => {
       users: usersIndexDoc !== null,
       matches: matchesDoc !== null,
       officialKnockout: officialKnockoutDoc !== null,
+      officialBracketSlots: officialBracketSlotsDoc !== null,
       officialResultsSyncStatus: officialResultsSyncStatusDoc !== null,
       officialResultsSyncHistory: officialResultsSyncHistoryDoc !== null,
       conduct: conductDoc !== null
@@ -778,6 +795,9 @@ const mergeRemotePayloads = (legacyPayload, shardedPayload) => {
     officialKnockout: authoritative.officialKnockout
       ? (shardedPayload.officialKnockout || {})
       : (shardedPayload.officialKnockout || legacyPayload.officialKnockout || {}),
+    officialBracketSlots: authoritative.officialBracketSlots
+      ? normalizeOfficialBracketSlots(shardedPayload.officialBracketSlots || {})
+      : normalizeOfficialBracketSlots(shardedPayload.officialBracketSlots || legacyPayload.officialBracketSlots || {}),
     officialResultsSyncStatus: authoritative.officialResultsSyncStatus
       ? (shardedPayload.officialResultsSyncStatus || {})
       : (shardedPayload.officialResultsSyncStatus || legacyPayload.officialResultsSyncStatus || {}),
@@ -912,6 +932,7 @@ const mergeRemoteState = (baseState, localState, { currentUserId = null, isAdmin
     betsGames: mergedBetsGames,
     betsKnockout: mergedBetsKnockout,
     officialKnockout: isAdmin ? (localState.officialKnockout || baseState.officialKnockout || {}) : (baseState.officialKnockout || {}),
+    officialBracketSlots: normalizeOfficialBracketSlots(baseState.officialBracketSlots || {}),
     conduct: isAdmin ? (localState.conduct || baseState.conduct || {}) : (baseState.conduct || {}),
     submissions: reconcileSubmissionState({
       submissions: mergedSubmissions,
@@ -1568,7 +1589,8 @@ export default function App() {
     return {
       users: savedUsers.map(normalizeUser),
       matches: savedMatches.length ? normalizedGameData.matches : gerarJogosIniciais(),
-      betsGames: savedMatches.length ? normalizedGameData.betsGames : savedBetsGames
+      betsGames: savedMatches.length ? normalizedGameData.betsGames : savedBetsGames,
+      officialBracketSlots: normalizeOfficialBracketSlots(JSON.parse(localStorage.getItem('bolao26_official_bracket_slots_v1')) || {})
     };
   });
 
@@ -1577,6 +1599,7 @@ export default function App() {
   const [palpitesJogos, setPalpitesJogos] = useState(() => bootstrapState.betsGames);
   const [palpitesMataMata, setPalpitesMataMata] = useState(() => JSON.parse(localStorage.getItem('bolao26_bets_knockout_v2')) || {});
   const [gabaritoMataMata, setGabaritoMataMata] = useState(() => JSON.parse(localStorage.getItem('bolao26_official_knockout_v2')) || {});
+  const [officialBracketSlots, setOfficialBracketSlots] = useState(() => bootstrapState.officialBracketSlots || normalizeOfficialBracketSlots());
   const [officialResultsSyncStatus, setOfficialResultsSyncStatus] = useState(() => bootstrapState.officialResultsSyncStatus || {});
   const [officialResultsSyncHistory, setOfficialResultsSyncHistory] = useState(() => bootstrapState.officialResultsSyncHistory || []);
   const [condutaGrupos, setCondutaGrupos] = useState(() => JSON.parse(localStorage.getItem('bolao26_group_conduct')) || {});
@@ -1588,6 +1611,7 @@ export default function App() {
   useEffect(() => { localStorage.setItem('bolao26_bets_games', JSON.stringify(palpitesJogos)); }, [palpitesJogos]);
   useEffect(() => { localStorage.setItem('bolao26_bets_knockout_v2', JSON.stringify(palpitesMataMata)); }, [palpitesMataMata]);
   useEffect(() => { localStorage.setItem('bolao26_official_knockout_v2', JSON.stringify(gabaritoMataMata)); }, [gabaritoMataMata]);
+  useEffect(() => { localStorage.setItem('bolao26_official_bracket_slots_v1', JSON.stringify(officialBracketSlots)); }, [officialBracketSlots]);
   useEffect(() => { localStorage.setItem('bolao26_group_conduct', JSON.stringify(condutaGrupos)); }, [condutaGrupos]);
   useEffect(() => { localStorage.setItem('bolao26_submissions', JSON.stringify(submissoes)); }, [submissoes]);
   useEffect(() => {
@@ -1606,6 +1630,7 @@ export default function App() {
     setPalpitesJogos(nextState.betsGames || {});
     setPalpitesMataMata(nextState.betsKnockout || {});
     setGabaritoMataMata(nextState.officialKnockout || {});
+    setOfficialBracketSlots(normalizeOfficialBracketSlots(nextState.officialBracketSlots || {}));
     setOfficialResultsSyncStatus(nextState.officialResultsSyncStatus || {});
     setOfficialResultsSyncHistory(Array.isArray(nextState.officialResultsSyncHistory) ? nextState.officialResultsSyncHistory : []);
     setCondutaGrupos(nextState.conduct || {});
@@ -1617,6 +1642,7 @@ export default function App() {
       betsGames: nextState.betsGames || {},
       betsKnockout: nextState.betsKnockout || {},
       officialKnockout: nextState.officialKnockout || {},
+      officialBracketSlots: nextState.officialBracketSlots || {},
       conduct: nextState.conduct || {},
       submissions: nextState.submissions || {}
     });
@@ -1633,6 +1659,7 @@ export default function App() {
     betsGames: palpitesJogos,
     betsKnockout: palpitesMataMata,
     officialKnockout: gabaritoMataMata,
+    officialBracketSlots,
     conduct: condutaGrupos,
     submissions: submissoes
   });
@@ -2907,6 +2934,7 @@ export default function App() {
                       palpitesUsuarioAtual={palpitesUsuarioAtual}
                       condutaGrupos={condutaGrupos}
                       gruposCompletos={gruposCompletos}
+                      officialBracketSlots={officialBracketSlots}
                       alocacaoTerceiros={alocacaoTerceiros}
                       atualizarMataMata={atualizarMataMata}
                       getR32Team={getR32Team}

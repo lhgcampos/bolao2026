@@ -66,7 +66,14 @@ Esse worker atualiza:
 
 - `matches`
 - `official-knockout`
+- `official-bracket-slots`
 - `official-results-sync-status`
 - `official-results-sync-history`
+
+Vars adicionais do bracket oficial FIFA:
+
+- `OFFICIAL_BRACKET_SLOTS_ENABLED=true`
+- `FIFA_BRACKET_SEASON_ID=285023`
+- `FIFA_BRACKET_LANGUAGE=en`
 
 O frontend só consome esse estado remoto; ele não chama providers externos nem exige confirmação manual para aplicar placares finais.

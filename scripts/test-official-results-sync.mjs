@@ -2,9 +2,15 @@ import assert from 'node:assert/strict';
 
 import { applyManualResultCorrection, clearManualResultLock } from '../bolao-app/src/officialResults/applyOfficialResult.js';
 import { buildGabaritoTimeline } from '../bolao-app/src/officialResults/officialResultsView.js';
+import {
+  countPublishedOfficialBracketTeams,
+  getOfficialBracketSlotTeam,
+  mergeOfficialBracketSlots
+} from '../bolao-app/src/officialResults/officialBracketSlots.js';
 import { syncOfficialResults } from '../bolao-app/src/officialResults/officialResultSync.js';
 import { buildChronologicalMatchGroups, gerarJogosIniciais, sortMatchesChronologically } from '../bolao-app/src/matchData.js';
 import { deriveOfficialKnockout, mergeOfficialKnockout } from '../bolao-app/src/officialResults/tournamentSync.js';
+import { buildOfficialBracketSlotsFromFifaSeasonBracket } from '../workers/official-results/providers/fifaBracketProvider.js';
 
 const baseMatches = gerarJogosIniciais();
 const baseMatch = baseMatches.find((match) => match.id === 1);
@@ -187,6 +193,64 @@ const buildExternalMatch = (override = {}) => ({
     derived
   );
   assert.equal(merged.campeao, 'Brasil', 'merge do mata-mata deve preservar campeao derivado');
+}
+
+{
+  const slots = buildOfficialBracketSlotsFromFifaSeasonBracket({
+    IdSeason: '285023',
+    KnockoutStages: [{
+      Matches: [
+        {
+          MatchNumber: 73,
+          PlaceHolderA: '2A',
+          PlaceHolderB: '2B',
+          AwayTeam: {
+            TeamName: [{ Description: 'Canada' }],
+            ShortClubName: 'Canada',
+            Abbreviation: 'CAN',
+            IdCountry: 'CAN'
+          }
+        },
+        {
+          MatchNumber: 74,
+          PlaceHolderA: '1E',
+          PlaceHolderB: '3ABCDF',
+          AwayTeam: null,
+          HomeTeam: {
+            TeamName: [{ Description: 'Germany' }],
+            ShortClubName: 'Germany',
+            Abbreviation: 'GER',
+            IdCountry: 'GER'
+          }
+        }
+      ]
+    }]
+  }, { publishedAt: 1_800_000_000_100 });
+
+  assert.equal(getOfficialBracketSlotTeam(slots, 73, 'B'), 'Canadá', 'slots oficiais devem normalizar nomes da FIFA para o padrao local');
+  assert.equal(getOfficialBracketSlotTeam(slots, 74, 'A'), 'Alemanha', 'slots oficiais devem mapear o lado preenchido');
+  assert.equal(countPublishedOfficialBracketTeams(slots), 2, 'deve contar apenas times oficialmente publicados');
+
+  const merged = mergeOfficialBracketSlots(
+    slots,
+    {
+      schemaVersion: 1,
+      source: 'fifa',
+      seasonId: '285023',
+      updatedAt: 1_800_000_000_200,
+      matches: {
+        '73': {
+          teamA: 'Coreia do Sul',
+          placeholderA: '2A',
+          placeholderB: '2B',
+          publishedAt: 1_800_000_000_200
+        }
+      }
+    }
+  );
+
+  assert.equal(getOfficialBracketSlotTeam(merged, 73, 'A'), 'Coreia do Sul', 'merge deve aceitar novos lados publicados');
+  assert.equal(getOfficialBracketSlotTeam(merged, 73, 'B'), 'Canadá', 'merge deve preservar lado antigo quando refresh vier parcial');
 }
 
 console.log('official results sync tests: ok');

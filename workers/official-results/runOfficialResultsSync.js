@@ -1,7 +1,15 @@
 import { gerarJogosIniciais, normalizePersistedGameData } from '../../bolao-app/src/matchData.js';
+import {
+  createEmptyOfficialBracketSlots,
+  countPublishedOfficialBracketMatches,
+  countPublishedOfficialBracketTeams,
+  mergeOfficialBracketSlots,
+  normalizeOfficialBracketSlots
+} from '../../bolao-app/src/officialResults/officialBracketSlots.js';
 import { syncOfficialResults } from '../../bolao-app/src/officialResults/officialResultSync.js';
 import { deriveOfficialKnockout, mergeOfficialKnockout } from '../../bolao-app/src/officialResults/tournamentSync.js';
 import { fetchApiFootballMatches } from './providers/apiFootballProvider.js';
+import { fetchFifaBracketSlots } from './providers/fifaBracketProvider.js';
 import { fetchFootballDataMatches } from './providers/footballDataProvider.js';
 
 const REMOTE_SCHEMA_VERSION = 4;
@@ -10,6 +18,7 @@ const REMOTE_PATHS = {
   meta: 'meta',
   matches: 'matches',
   officialKnockout: 'official-knockout',
+  officialBracketSlots: 'official-bracket-slots',
   officialResultsSyncStatus: 'official-results-sync-status',
   officialResultsSyncHistory: 'official-results-sync-history'
 };
@@ -50,11 +59,12 @@ const writeRemoteEntry = async (fetchImpl, env, path, payload) => {
 };
 
 const loadRemoteState = async (fetchImpl, env) => {
-  const [metaDoc, matchesDoc, legacyDoc, officialKnockoutDoc, syncStatusDoc, syncHistoryDoc] = await Promise.all([
+  const [metaDoc, matchesDoc, legacyDoc, officialKnockoutDoc, officialBracketSlotsDoc, syncStatusDoc, syncHistoryDoc] = await Promise.all([
     fetchRemoteEntry(fetchImpl, env, REMOTE_PATHS.meta),
     fetchRemoteEntry(fetchImpl, env, REMOTE_PATHS.matches),
     fetchRemoteEntry(fetchImpl, env, REMOTE_LEGACY_STATE_PATH),
     fetchRemoteEntry(fetchImpl, env, REMOTE_PATHS.officialKnockout),
+    fetchRemoteEntry(fetchImpl, env, REMOTE_PATHS.officialBracketSlots),
     fetchRemoteEntry(fetchImpl, env, REMOTE_PATHS.officialResultsSyncStatus),
     fetchRemoteEntry(fetchImpl, env, REMOTE_PATHS.officialResultsSyncHistory)
   ]);
@@ -64,6 +74,7 @@ const loadRemoteState = async (fetchImpl, env) => {
       meta: metaDoc || {},
       matches: normalizePersistedGameData(matchesDoc, {}).matches,
       officialKnockout: officialKnockoutDoc || {},
+      officialBracketSlots: normalizeOfficialBracketSlots(officialBracketSlotsDoc || {}),
       syncStatus: syncStatusDoc || {},
       syncHistory: Array.isArray(syncHistoryDoc) ? syncHistoryDoc : []
     };
@@ -74,6 +85,7 @@ const loadRemoteState = async (fetchImpl, env) => {
       meta: metaDoc || legacyDoc || {},
       matches: normalizePersistedGameData(legacyDoc.matches, {}).matches,
       officialKnockout: officialKnockoutDoc || legacyDoc?.officialKnockout || {},
+      officialBracketSlots: normalizeOfficialBracketSlots(officialBracketSlotsDoc || legacyDoc?.officialBracketSlots || {}),
       syncStatus: syncStatusDoc || {},
       syncHistory: Array.isArray(syncHistoryDoc) ? syncHistoryDoc : []
     };
@@ -83,6 +95,7 @@ const loadRemoteState = async (fetchImpl, env) => {
     meta: metaDoc || {},
     matches: gerarJogosIniciais(),
     officialKnockout: officialKnockoutDoc || {},
+    officialBracketSlots: normalizeOfficialBracketSlots(officialBracketSlotsDoc || {}),
     syncStatus: syncStatusDoc || {},
     syncHistory: Array.isArray(syncHistoryDoc) ? syncHistoryDoc : []
   };
@@ -124,12 +137,14 @@ const buildSyncStatus = ({
   providerErrors,
   syncResult,
   officialKnockoutChanged,
+  officialBracketSlotsChanged,
+  officialBracketSlotsMeta,
   autoApply,
   dryRun,
   triggeredBy,
   appliedAt
 }) => {
-  const changed = syncResult.changed || officialKnockoutChanged;
+  const changed = syncResult.changed || officialKnockoutChanged || officialBracketSlotsChanged;
   const outcome = buildOutcome({ dryRun, changed, providerErrors, providerResults });
   const successfulRun = providerResults.length > 0;
 
@@ -150,6 +165,10 @@ const buildSyncStatus = ({
     skippedMatches: Number(syncResult?.report?.skipped?.length || 0),
     conflictMatches: Number(syncResult?.report?.conflicts?.length || 0),
     officialKnockoutChanged: Boolean(officialKnockoutChanged),
+    officialBracketSlotsChanged: Boolean(officialBracketSlotsChanged),
+    officialBracketSlotsPublishedMatches: Number(officialBracketSlotsMeta?.publishedMatches || 0),
+    officialBracketSlotsPublishedTeams: Number(officialBracketSlotsMeta?.publishedTeams || 0),
+    officialBracketSlotsError: officialBracketSlotsMeta?.error || '',
     providers: providerResults.map((entry) => ({
       provider: entry.provider,
       matches: entry.matches.length
@@ -161,7 +180,8 @@ const buildSyncStatus = ({
 const buildSyncHistoryEntry = ({
   syncStatus,
   syncResult,
-  officialKnockoutChanged
+  officialKnockoutChanged,
+  officialBracketSlotsChanged
 }) => ({
   runAt: syncStatus.lastRunAt,
   triggeredBy: syncStatus.triggeredBy,
@@ -172,6 +192,7 @@ const buildSyncHistoryEntry = ({
   skippedMatches: syncStatus.skippedMatches,
   conflictMatches: syncStatus.conflictMatches,
   officialKnockoutChanged,
+  officialBracketSlotsChanged,
   providers: syncStatus.providers,
   providerErrors: syncStatus.providerErrors,
   applied: syncResult.report.applied,
@@ -216,7 +237,22 @@ export const runOfficialResultsSyncJob = async ({
     .filter((attempt) => attempt.error)
     .map(({ provider, error }) => ({ provider, message: error }));
 
-  const { meta, matches, officialKnockout, syncStatus: previousStatus, syncHistory } = await loadRemoteState(fetchImpl, env);
+  const { meta, matches, officialKnockout, officialBracketSlots, syncStatus: previousStatus, syncHistory } = await loadRemoteState(fetchImpl, env);
+  let fetchedOfficialBracketSlots = createEmptyOfficialBracketSlots();
+  let officialBracketSlotsError = '';
+
+  if (env.OFFICIAL_BRACKET_SLOTS_ENABLED !== 'false') {
+    try {
+      fetchedOfficialBracketSlots = await fetchFifaBracketSlots({
+        fetchImpl,
+        seasonId: Number(env.FIFA_BRACKET_SEASON_ID || 285023),
+        language: env.FIFA_BRACKET_LANGUAGE || 'en'
+      });
+    } catch (error) {
+      officialBracketSlotsError = error?.message || String(error);
+    }
+  }
+
   const externalMatches = providerResults.flatMap((entry) => entry.matches);
   const syncResult = syncOfficialResults({
     matches,
@@ -226,6 +262,13 @@ export const runOfficialResultsSyncJob = async ({
   });
   const derivedOfficialKnockout = mergeOfficialKnockout(officialKnockout, deriveOfficialKnockout(externalMatches));
   const officialKnockoutChanged = JSON.stringify(derivedOfficialKnockout) !== JSON.stringify(officialKnockout || {});
+  const derivedOfficialBracketSlots = mergeOfficialBracketSlots(officialBracketSlots, fetchedOfficialBracketSlots);
+  const officialBracketSlotsChanged = JSON.stringify(derivedOfficialBracketSlots) !== JSON.stringify(normalizeOfficialBracketSlots(officialBracketSlots || {}));
+  const officialBracketSlotsMeta = {
+    publishedMatches: countPublishedOfficialBracketMatches(derivedOfficialBracketSlots),
+    publishedTeams: countPublishedOfficialBracketTeams(derivedOfficialBracketSlots),
+    error: officialBracketSlotsError
+  };
   const nextSyncStatus = buildSyncStatus({
     previousStatus,
     configuredProviders,
@@ -233,6 +276,8 @@ export const runOfficialResultsSyncJob = async ({
     providerErrors,
     syncResult,
     officialKnockoutChanged,
+    officialBracketSlotsChanged,
+    officialBracketSlotsMeta,
     autoApply,
     dryRun,
     triggeredBy,
@@ -242,7 +287,8 @@ export const runOfficialResultsSyncJob = async ({
     buildSyncHistoryEntry({
       syncStatus: nextSyncStatus,
       syncResult,
-      officialKnockoutChanged
+      officialKnockoutChanged,
+      officialBracketSlotsChanged
     }),
     ...(Array.isArray(syncHistory) ? syncHistory : [])
   ].slice(0, historyLimit);
@@ -256,6 +302,10 @@ export const runOfficialResultsSyncJob = async ({
 
     if (autoApply && officialKnockoutChanged) {
       await writeRemoteEntry(fetchImpl, env, REMOTE_PATHS.officialKnockout, derivedOfficialKnockout);
+    }
+
+    if (officialBracketSlotsChanged) {
+      await writeRemoteEntry(fetchImpl, env, REMOTE_PATHS.officialBracketSlots, derivedOfficialBracketSlots);
     }
 
     await writeRemoteEntry(fetchImpl, env, REMOTE_PATHS.officialResultsSyncStatus, nextSyncStatus);
@@ -277,6 +327,7 @@ export const runOfficialResultsSyncJob = async ({
     report: {
       ...syncResult.report,
       officialKnockoutChanged,
+      officialBracketSlotsChanged,
       providerErrors
     },
     syncStatus: nextSyncStatus
