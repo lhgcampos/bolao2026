@@ -41,7 +41,7 @@ import {
   getOfficialCompetitionLabel,
   getMatchResultVariant
 } from './officialResults/officialResultsView';
-import { normalizeOfficialBracketSlots } from './officialResults/officialBracketSlots.js';
+import { getOfficialBracketSlotTeam, normalizeOfficialBracketSlots } from './officialResults/officialBracketSlots.js';
 import { calculateKnockoutPhasePoints } from './officialResults/knockoutPhaseScoring.js';
 
 const TODOS_TIMES = Object.values(GRUPOS_2026).flat().sort();
@@ -146,6 +146,75 @@ const getNearestTimelineMatchId = (matches = [], nowMs = Date.now()) => {
   if (startedOrPastPendingMatch) return startedOrPastPendingMatch.id;
 
   return pendingMatches[0]?.id || null;
+};
+
+const getNearestReviewRowId = ({
+  matches = [],
+  officialKnockout = {},
+  officialBracketSlots = {},
+  nowMs = Date.now()
+} = {}) => {
+  const nearestGroupMatchId = getNearestTimelineMatchId(matches, nowMs);
+  if (nearestGroupMatchId) return `game-${nearestGroupMatchId}`;
+
+  const knockoutMatches = [
+    ...MATA_MATA_CONFIG.r32,
+    ...MATA_MATA_CONFIG.r16,
+    ...MATA_MATA_CONFIG.qf,
+    ...MATA_MATA_CONFIG.sf
+  ]
+    .map((match) => {
+      const officialTeamA = getOfficialBracketSlotTeam(officialBracketSlots, match.id, 'A');
+      const officialTeamB = getOfficialBracketSlotTeam(officialBracketSlots, match.id, 'B');
+
+      return {
+        id: `match-${match.id}`,
+        timestamp: getMatchReferenceTime(match),
+        resolved: Boolean(officialTeamA && officialTeamB)
+      };
+    })
+    .filter((entry) => Number.isFinite(entry.timestamp) && !entry.resolved)
+    .sort((a, b) => a.timestamp - b.timestamp || a.id.localeCompare(b.id, 'pt-BR'));
+
+  if (knockoutMatches.length) {
+    const startedOrPastKnockoutMatch = knockoutMatches.find((entry) => entry.timestamp <= nowMs);
+    if (startedOrPastKnockoutMatch) return startedOrPastKnockoutMatch.id;
+    return knockoutMatches[0]?.id || null;
+  }
+
+  const bronzeMatch = MATA_MATA_CONFIG.bronzeFinal[0];
+  const finalMatch = MATA_MATA_CONFIG.final[0];
+  const podiumRows = [
+    {
+      id: 'podio-terceiro',
+      timestamp: getMatchReferenceTime(bronzeMatch),
+      resolved: Boolean(officialKnockout?.terceiro)
+    },
+    {
+      id: 'podio-quarto',
+      timestamp: getMatchReferenceTime(bronzeMatch),
+      resolved: Boolean(officialKnockout?.quarto)
+    },
+    {
+      id: 'podio-campeao',
+      timestamp: getMatchReferenceTime(finalMatch),
+      resolved: Boolean(officialKnockout?.campeao)
+    },
+    {
+      id: 'podio-vice',
+      timestamp: getMatchReferenceTime(finalMatch),
+      resolved: Boolean(officialKnockout?.vice)
+    }
+  ]
+    .filter((entry) => Number.isFinite(entry.timestamp) && !entry.resolved)
+    .sort((a, b) => a.timestamp - b.timestamp || a.id.localeCompare(b.id, 'pt-BR'));
+
+  if (!podiumRows.length) return null;
+
+  const startedOrPastPodiumRow = podiumRows.find((entry) => entry.timestamp <= nowMs);
+  if (startedOrPastPodiumRow) return podiumRows.find((entry) => entry.id === startedOrPastPodiumRow.id)?.id || null;
+
+  return podiumRows[0]?.id || null;
 };
 
 // --- LÓGICA DE NEGÓCIO ---
@@ -1496,7 +1565,7 @@ export default function App() {
   const [secaoExpandida, setSecaoExpandida] = useState('r32');
   const [alocacaoTerceiros, setAlocacaoTerceiros] = useState({});
   const [userDeleteConfirmId, setUserDeleteConfirmId] = useState(null);
-  const [reviewMode, setReviewMode] = useState('jogos');
+  const [reviewMode, setReviewMode] = useState('timeline');
   const [reviewSearch, setReviewSearch] = useState('');
   const [reviewGroupFilter, setReviewGroupFilter] = useState('todos');
   const [reviewGameSort, setReviewGameSort] = useState('date');
@@ -1690,7 +1759,7 @@ export default function App() {
     });
     setCurrentUser(demo.adminUser);
     setAbaAtiva('painel');
-    setReviewMode('jogos');
+    setReviewMode('timeline');
     setReviewSearch('');
     setReviewGroupFilter('todos');
     setReviewPhaseFilter('todos');
@@ -2051,6 +2120,15 @@ export default function App() {
     () => getNearestTimelineMatchId(jogosReais, timelineReferenceNowMs),
     [jogosReais, timelineReferenceNowMs]
   );
+  const nearestReviewRowId = useMemo(
+    () => getNearestReviewRowId({
+      matches: jogosReais,
+      officialKnockout: gabaritoMataMata,
+      officialBracketSlots,
+      nowMs: timelineReferenceNowMs
+    }),
+    [jogosReais, gabaritoMataMata, officialBracketSlots, timelineReferenceNowMs]
+  );
 
   useEffect(() => {
     if (!currentUser) return;
@@ -2094,12 +2172,13 @@ export default function App() {
       return;
     }
 
-    setReviewMode('jogos');
+    setReviewMode('timeline');
     setReviewGroupFilter('todos');
+    setReviewPhaseFilter('todos');
     setReviewGameSort('date');
     setAbaAtiva('painel');
 
-    if (!nearestTimelineMatchId) return;
+    if (!nearestReviewRowId) return;
     setReviewScrollRequest((currentValue) => currentValue + 1);
   };
   const handleAvatarSelected = async (event) => {
@@ -2986,7 +3065,7 @@ export default function App() {
             palpitesMataMata={palpitesMataMata}
             gabaritoMataMata={gabaritoMataMata}
             officialBracketSlots={officialBracketSlots}
-            scrollToMatchId={nearestTimelineMatchId}
+            scrollToMatchId={nearestReviewRowId}
             scrollRequestKey={reviewScrollRequest}
           />
         )}

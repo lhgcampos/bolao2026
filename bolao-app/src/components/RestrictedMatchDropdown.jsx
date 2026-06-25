@@ -102,7 +102,7 @@ function RestrictedMatchDropdown({
           </span>
           {currentValue === team && (
             <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-700">
-              Seu classificado
+              Seu vencedor
             </span>
           )}
         </div>
@@ -193,7 +193,7 @@ function RestrictedMatchDropdown({
 
         <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
           <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu classificado</div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu vencedor neste jogo</div>
             <div className="mt-3 text-[22px] font-black text-slate-900 lg:text-[26px]">
               {currentValue || 'Sem palpite'}
             </div>
