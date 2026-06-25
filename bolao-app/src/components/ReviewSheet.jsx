@@ -185,7 +185,7 @@ function ReviewSheet({
     }));
 
   const knockoutPhaseOptions = [
-    { id: 'r32', label: '32 avos' },
+    { id: 'r32', label: '16 avos' },
     { id: 'r16', label: 'Oitavas' },
     { id: 'qf', label: 'Quartas' },
     { id: 'sf', label: 'Semifinais' },
@@ -260,7 +260,7 @@ function ReviewSheet({
   });
 
   const knockoutSections = [
-    { id: 'r32', title: '32 avos de final', phaseKey: 'dezeszeseisavos', points: PONTOS.MATA.R32, list: MATA_MATA_CONFIG.r32 },
+    { id: 'r32', title: '16 avos de final', phaseKey: 'dezeszeseisavos', points: PONTOS.MATA.R32, list: MATA_MATA_CONFIG.r32 },
     { id: 'r16', title: 'Oitavas de final', phaseKey: 'oitavas', points: PONTOS.MATA.R16, list: MATA_MATA_CONFIG.r16 },
     { id: 'qf', title: 'Quartas de final', phaseKey: 'quartas', points: PONTOS.MATA.QF, list: MATA_MATA_CONFIG.qf },
     { id: 'sf', title: 'Semifinais', phaseKey: 'semis', points: PONTOS.MATA.SF, list: MATA_MATA_CONFIG.sf }

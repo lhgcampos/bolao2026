@@ -1,8 +1,7 @@
 import React, { memo } from 'react';
 import { ChevronDown, Lock } from '../lucideIcons';
 import { PONTOS } from '../constants.js';
-import { getOfficialBracketSlotTeam } from '../officialResults/officialBracketSlots.js';
-import { evaluateKnockoutPhasePick } from '../officialResults/knockoutPhaseScoring.js';
+import { evaluateKnockoutPhasePick, getKnockoutPhaseTeamStatus } from '../officialResults/knockoutPhaseScoring.js';
 import { GLASS_CARD, GLASS_INPUT, TEXT_MUTED } from '../styles.js';
 import { getWinnerOfMatch } from '../utils.js';
 import { formatBrazilMatchSchedule, formatOfficialKickoffHint } from '../matchData';
@@ -29,23 +28,21 @@ function RestrictedMatchDropdown({
 }) {
   let timeA;
   let timeB;
+
   if (phaseKey === 'dezeszeseisavos') {
-    const officialTeamA = getOfficialBracketSlotTeam(officialBracketSlots, match.id, 'A');
-    const officialTeamB = getOfficialBracketSlotTeam(officialBracketSlots, match.id, 'B');
-    timeA = officialTeamA || getR32Team(match.refA, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos);
-    timeB = officialTeamB || (
-      match.refThirdGroups
-        ? getThirdPlaceCandidate(match, alocacaoTerceiros, gruposCompletos)
-        : getR32Team(match.refB, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos)
-    );
+    timeA = getR32Team(match.refA, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos);
+    timeB = match.refThirdGroups
+      ? getThirdPlaceCandidate(match, alocacaoTerceiros, gruposCompletos)
+      : getR32Team(match.refB, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos);
   } else {
     const source = modoAdmin ? gabaritoMataMata : (palpitesMataMata[currentUser.id] || {});
     timeA = getWinnerOfMatch(match.feedA, source) || `Venc. ${match.feedA}`;
     timeB = getWinnerOfMatch(match.feedB, source) || `Venc. ${match.feedB}`;
   }
+
   const phasePicks = modoAdmin ? (gabaritoMataMata[phaseKey] || []) : (palpitesMataMata[currentUser.id]?.[phaseKey] || []);
   const currentValue = phasePicks?.[idx];
-  const options = [timeA, timeB].filter((t) => t && t !== 'A definir' && !t.includes('Aguardando') && !t.includes('Venc.') && !t.startsWith('3º de '));
+  const options = [timeA, timeB].filter((team) => team && team !== 'A definir' && !team.includes('Aguardando') && !team.includes('Venc.') && !team.startsWith('3º de '));
   const normalizedOptions = currentValue && !options.includes(currentValue)
     ? [currentValue, ...options]
     : options;
@@ -69,9 +66,49 @@ function RestrictedMatchDropdown({
     officialBracketSlots,
     successLabel: 'Acertou o classificado'
   });
+  const timeAStatus = getKnockoutPhaseTeamStatus({
+    phaseKey,
+    team: timeA,
+    officialKnockout: gabaritoMataMata,
+    officialBracketSlots
+  });
+  const timeBStatus = getKnockoutPhaseTeamStatus({
+    phaseKey,
+    team: timeB,
+    officialKnockout: gabaritoMataMata,
+    officialBracketSlots
+  });
   const schedule = formatBrazilMatchSchedule(match);
   const officialKickoffHint = formatOfficialKickoffHint(match);
   const showReviewMode = !modoAdmin && isLocked;
+  const phaseBadge = review.officialState.isClosed
+    ? 'Oficial fechado'
+    : review.officialState.isPartial
+      ? 'Oficial parcial'
+      : 'Aguardando oficial';
+  const phaseBadgeTone = review.officialState.isClosed
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    : review.officialState.isPartial
+      ? 'border-amber-200 bg-amber-50 text-amber-700'
+      : 'border-slate-200 bg-slate-50 text-slate-600';
+
+  const renderTeamStatusRow = (team, teamStatus) => (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/90 px-4 py-3">
+      <div className="min-w-0">
+        <div className="truncate text-[16px] font-bold text-slate-900">{team || 'A definir'}</div>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${teamStatus.tone}`}>
+            {teamStatus.label}
+          </span>
+          {currentValue === team && (
+            <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-700">
+              Seu classificado
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   if (showReviewMode) {
     return (
@@ -85,38 +122,41 @@ function RestrictedMatchDropdown({
             </div>
             {officialKickoffHint && <div className="mt-2 text-[13px] text-slate-500">{officialKickoffHint}</div>}
           </div>
-          <div className={`self-start rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] ${review.tone}`}>
-            {review.label}
+          <div className={`self-start rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] ${phaseBadgeTone}`}>
+            {phaseBadge}
           </div>
         </div>
-        <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
-          <div className={`text-right text-[15px] font-bold lg:text-[18px] ${isReady ? 'text-slate-900' : 'text-slate-400'}`}>{timeA}</div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-center text-sm font-black uppercase tracking-[0.18em] text-slate-500 lg:min-w-[112px]">
-            x
+
+        <div className="mt-5 rounded-[22px] border border-slate-200 bg-slate-50/70 p-4">
+          <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Sua chave</div>
+          <div className="mt-3 grid gap-3">
+            {renderTeamStatusRow(timeA, timeAStatus)}
+            <div className="text-center text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">x</div>
+            {renderTeamStatusRow(timeB, timeBStatus)}
           </div>
-          <div className={`text-left text-[15px] font-bold lg:text-[18px] ${isReady ? 'text-slate-900' : 'text-slate-400'}`}>{timeB}</div>
         </div>
+
         <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
           <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu palpite</div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu classificado</div>
             <div className="mt-3 text-[22px] font-black text-slate-900 lg:text-[26px]">
               {currentValue || 'Sem palpite'}
             </div>
             <div className="mt-2 text-[13px] leading-snug text-slate-500">
-              {currentValue ? 'Escolha enviada para este confronto.' : 'Nenhum classificado foi escolhido neste confronto.'}
+              {currentValue ? 'Esse foi o time que voce marcou para avancar na sua chave.' : 'Nenhum classificado foi escolhido neste confronto.'}
             </div>
           </div>
-                      <div className={`rounded-[20px] border px-4 py-4 ${review.tone}`}>
-                        <div className="text-[11px] font-bold uppercase tracking-[0.16em]">{review.label}</div>
-                        <div className="mt-3 text-[20px] font-black lg:text-[24px]">{review.detail}</div>
-                        <div className="mt-2 text-[13px] leading-snug opacity-80">
+          <div className={`rounded-[20px] border px-4 py-4 ${review.tone}`}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em]">Pontuacao do seu classificado</div>
+            <div className="mt-3 text-[20px] font-black lg:text-[24px]">{review.detail}</div>
+            <div className="mt-2 text-[13px] leading-snug opacity-80">
               {review.officialState.isClosed
-                ? 'A fase ja tem lista oficial completa para pontuacao.'
+                ? 'A fase ja foi fechada oficialmente para esta pontuacao.'
                 : review.officialState.isPartial
-                  ? 'A FIFA ja publicou parte dos classificados desta fase.'
-                  : 'A comparacao aparece quando a definicao oficial sair.'}
-                        </div>
-                      </div>
+                  ? 'A FIFA ja publicou parte dos times corretos desta fase.'
+                  : 'A pontuacao entra quando a FIFA publicar a definicao oficial.'}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -141,7 +181,7 @@ function RestrictedMatchDropdown({
       </div>
       <div className="relative">
         {(!isReady || isLocked) && <Lock size={12} className={`absolute left-3 top-4 ${TEXT_MUTED}`} />}
-        <select value={currentValue || ''} onChange={(e) => atualizarMataMata(phaseKey, e.target.value, idx)} disabled={!isReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base font-medium appearance-none ${(!isReady || isLocked) && 'pl-8 text-slate-400'}`}>
+        <select value={currentValue || ''} onChange={(event) => atualizarMataMata(phaseKey, event.target.value, idx)} disabled={!isReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base font-medium appearance-none ${(!isReady || isLocked) && 'pl-8 text-slate-400'}`}>
           <option value="">{isLocked ? 'Palpite enviado' : isReady ? 'Quem vence?' : 'Defina os anteriores'}</option>
           {normalizedOptions.map((team) => <option key={team} value={team}>{team}</option>)}
         </select>

@@ -184,3 +184,60 @@ export const evaluateKnockoutPhasePick = ({
     officialState
   };
 };
+
+export const getKnockoutPhaseTeamStatus = ({
+  phaseKey,
+  team = '',
+  officialKnockout = {},
+  officialBracketSlots = {}
+} = {}) => {
+  const normalizedTeam = normalizeTeamName(team);
+  const officialState = getKnockoutPhaseOfficialState({
+    phaseKey,
+    officialKnockout,
+    officialBracketSlots
+  });
+
+  if (!normalizedTeam || normalizedTeam === 'A definir') {
+    return {
+      state: 'unknown',
+      label: 'A definir',
+      tone: 'border-slate-200 bg-slate-50 text-slate-500',
+      officialState
+    };
+  }
+
+  if (officialState.isPending) {
+    return {
+      state: 'waiting-official',
+      label: 'Sem oficial ainda',
+      tone: 'border-slate-200 bg-slate-50 text-slate-600',
+      officialState
+    };
+  }
+
+  if (officialState.teamSet.has(normalizedTeam)) {
+    return {
+      state: 'confirmed',
+      label: 'Confirmado na fase',
+      tone: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+      officialState
+    };
+  }
+
+  if (officialState.isPartial) {
+    return {
+      state: 'partial-pending',
+      label: 'Ainda em aberto',
+      tone: 'border-amber-200 bg-amber-50 text-amber-700',
+      officialState
+    };
+  }
+
+  return {
+    state: 'eliminated',
+    label: 'Nao entrou na fase',
+    tone: 'border-rose-200 bg-rose-50 text-rose-700',
+    officialState
+  };
+};
