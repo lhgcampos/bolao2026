@@ -110,6 +110,61 @@ function RestrictedMatchDropdown({
     </div>
   );
 
+  if (modoAdmin) {
+    return (
+      <div className={`${GLASS_CARD} mb-3 p-4 lg:p-5`}>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
+              <span>{schedule.day}/{schedule.month} • {schedule.time} BR</span>
+              {match.local && <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{match.local}</span>}
+              <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">Jogo {match.id}</span>
+            </div>
+            {officialKickoffHint && <div className="mt-2 text-[13px] text-slate-500">{officialKickoffHint}</div>}
+          </div>
+          <div className={`self-start rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] ${phaseBadgeTone}`}>
+            {phaseBadge}
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[22px] border border-slate-200 bg-slate-50/70 p-4">
+          <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Confronto oficial atual</div>
+          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+            <div className={`text-right text-[15px] font-bold lg:text-[18px] ${timeA && timeA !== 'A definir' ? 'text-slate-900' : 'text-slate-400'}`}>{timeA || 'A definir'}</div>
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-center text-sm font-black uppercase tracking-[0.18em] text-slate-500 lg:min-w-[112px]">
+              x
+            </div>
+            <div className={`text-left text-[15px] font-bold lg:text-[18px] ${timeB && timeB !== 'A definir' ? 'text-slate-900' : 'text-slate-400'}`}>{timeB || 'A definir'}</div>
+          </div>
+          <div className="mt-3 text-[13px] text-slate-500">
+            {isReady
+              ? 'Use este confronto para conferir os dados e preencher o classificado oficial.'
+              : 'Aguardando os dois lados oficiais para liberar o preenchimento deste confronto.'}
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+          <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Classificado oficial</div>
+          <div className="relative mt-3">
+            {(!isReady || isLocked) && <Lock size={12} className={`absolute left-3 top-4 ${TEXT_MUTED}`} />}
+            <select value={currentValue || ''} onChange={(event) => atualizarMataMata(phaseKey, event.target.value, idx)} disabled={!isReady || isLocked} className={`${GLASS_INPUT} min-h-12 w-full p-3 text-base font-medium appearance-none ${(!isReady || isLocked) && 'pl-8 text-slate-400'}`}>
+              <option value="">{isReady ? 'Selecione o classificado oficial' : 'Aguardando confronto oficial'}</option>
+              {normalizedOptions.map((team) => <option key={team} value={team}>{team}</option>)}
+            </select>
+            {isReady && <ChevronDown size={14} className={`absolute right-3 top-4 pointer-events-none ${TEXT_MUTED}`} />}
+          </div>
+          <div className="mt-3 text-[13px] text-slate-500">
+            {currentValue
+              ? `Classificado oficial marcado: ${currentValue}.`
+              : isReady
+                ? 'Nenhum classificado oficial foi marcado neste confronto ainda.'
+                : 'O seletor sera liberado assim que os dois lados estiverem definidos.'}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (showReviewMode) {
     return (
       <div className={`${GLASS_CARD} mb-3 p-4 lg:p-5 ${!isReady ? 'opacity-60' : ''}`}>
