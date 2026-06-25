@@ -89,11 +89,14 @@ export const reconcileSubmissionMap = ({
       const normalizedEntry = mergeSubmissionEntry({}, submissions?.[userId]);
       const nextEntry = {};
 
-      if (normalizedEntry.jogosAt && userCompletedAllGames(matches, betsGames?.[userId] || {})) {
+      // Submission timestamps are authoritative user actions. We preserve them here
+      // instead of deriving lock state from mutable bet docs, because those docs can
+      // be partially edited, restored, or become inconsistent after submission.
+      if (normalizedEntry.jogosAt) {
         nextEntry.jogosAt = normalizedEntry.jogosAt;
       }
 
-      if (normalizedEntry.mataAt && userCompletedKnockout(betsKnockout?.[userId] || {}, phaseLengths)) {
+      if (normalizedEntry.mataAt) {
         nextEntry.mataAt = normalizedEntry.mataAt;
       }
 
