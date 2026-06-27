@@ -78,6 +78,13 @@ const KNOCKOUT_PHASE_LENGTHS = {
   quartas: 4,
   semis: 2
 };
+
+const sanitizeScoreInput = (value) => {
+  if (value === '' || value === null || value === undefined) return '';
+  const parsed = Number.parseInt(String(value).trim(), 10);
+  if (!Number.isFinite(parsed)) return '';
+  return String(Math.min(9, Math.max(0, parsed)));
+};
 const COUNTRY_SHORT_NAMES = {
   'África do Sul': 'Afr. Sul',
   'Coreia do Sul': 'Cor. Sul',
@@ -2236,19 +2243,20 @@ export default function App() {
     setCurrentUser((current) => ({ ...current, avatar: '', avatarKey: '' }));
   };
   const atualizarJogo = (id, c, v) => {
+    const nextValue = c === 'placarA' || c === 'placarB' ? sanitizeScoreInput(v) : v;
     if (modoAdmin) {
       setAdminMatchDrafts((current) => ({
         ...current,
         [id]: {
           ...(current[id] || { placarA: '', placarB: '' }),
-          [c]: v
+          [c]: nextValue
         }
       }));
       return;
     }
     setJogosReais((current) => current.map((jogo) => {
       if (jogo.id !== id) return jogo;
-      const nextMatch = { ...jogo, [c]: v };
+      const nextMatch = { ...jogo, [c]: nextValue };
       if (!placarPreenchido(nextMatch.placarA, nextMatch.placarB)) {
         nextMatch.isFinal = false;
       }
@@ -2307,7 +2315,8 @@ export default function App() {
   };
   const atualizarPalpite = (id, c, v) => {
     if (palpitesTravadosJogos) return;
-    setPalpitesJogos(p => ({ ...p, [currentUser.id]: { ...(p[currentUser.id] || {}), [id]: { ...(p[currentUser.id]?.[id] || { placarA: '', placarB: '' }), [c]: v } } }));
+    const nextValue = c === 'placarA' || c === 'placarB' ? sanitizeScoreInput(v) : v;
+    setPalpitesJogos(p => ({ ...p, [currentUser.id]: { ...(p[currentUser.id] || {}), [id]: { ...(p[currentUser.id]?.[id] || { placarA: '', placarB: '' }), [c]: nextValue } } }));
   };
   const atualizarCondutaGrupo = (grupo, time, campo, valor) => {
     if (modoAdmin) {
@@ -2768,9 +2777,9 @@ export default function App() {
                           <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center">
                             <div className="text-[14px] font-bold text-slate-900 lg:text-right">{jogo.timeA}</div>
                             <div className="flex items-center justify-center gap-2">
-                              <input type="number" min="0" inputMode="numeric" value={draft.placarA} onChange={e => atualizarJogo(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} h-12 w-14 text-center text-base font-bold`} />
+                              <input type="number" min="0" max="9" inputMode="numeric" value={draft.placarA} onChange={e => atualizarJogo(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} h-12 w-14 text-center text-base font-bold`} />
                               <span className="text-sm font-light text-slate-500">X</span>
-                              <input type="number" min="0" inputMode="numeric" value={draft.placarB} onChange={e => atualizarJogo(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} h-12 w-14 text-center text-base font-bold`} />
+                              <input type="number" min="0" max="9" inputMode="numeric" value={draft.placarB} onChange={e => atualizarJogo(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} h-12 w-14 text-center text-base font-bold`} />
                             </div>
                             <div className="text-[14px] font-bold text-slate-900 lg:text-left">{jogo.timeB}</div>
                           </div>
@@ -2933,9 +2942,9 @@ export default function App() {
                                   </div>
                                 ) : (
                                   <div className="flex items-center gap-2">
-                                    <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos} value={valA} onChange={e => atualizarPalpite(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
+                                    <input type="number" min="0" max="9" inputMode="numeric" disabled={palpitesTravadosJogos} value={valA} onChange={e => atualizarPalpite(jogo.id, 'placarA', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
                                     <span className="text-sm text-slate-500 font-light">X</span>
-                                    <input type="number" min="0" inputMode="numeric" disabled={palpitesTravadosJogos} value={valB} onChange={e => atualizarPalpite(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
+                                    <input type="number" min="0" max="9" inputMode="numeric" disabled={palpitesTravadosJogos} value={valB} onChange={e => atualizarPalpite(jogo.id, 'placarB', e.target.value)} className={`${GLASS_INPUT} h-12 w-12 text-center text-base font-bold`} />
                                   </div>
                                 )}
                                 <span className="text-left text-[13px] font-bold leading-tight text-slate-800 sm:text-[14px]">{jogo.timeB}</span>
