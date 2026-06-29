@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Trophy, Calendar, Settings, Plus, User, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle, Smartphone } from './lucideIcons';
+import { Trophy, Calendar, Settings, Plus, User, Medal, Crown, List, ChevronDown, ChevronUp, AlertCircle, MapPin, Calculator, Lock, LogOut, ArrowRight, Check, Eye, EyeOff, MessageCircle, Smartphone, Swords } from './lucideIcons';
 import { THIRD_PLACE_ASSIGNMENTS } from './thirdPlaceAssignments';
 import { TEAM_FIFA_RANKINGS } from './fifaTeamRankings';
 import { buildConsensusDashboard } from './rankingConsensus';
 import { buildDenseRanking } from './ranking';
 import { buildUserHomeInsights } from './userHomeInsights';
 import { buildEditorialStatsDashboard, buildHomeEditorialInsights } from './editorialStats';
-import { AvatarBadge, InsightsHubPanel, PodiumSection, RankingTable, RestrictedMatchDropdown, ReviewSheet, TabelaClassificacao } from './components/index.js';
+import { AvatarBadge, BracketPanel, InsightsHubPanel, PodiumSection, RankingTable, RestrictedMatchDropdown, ReviewSheet, TabelaClassificacao } from './components/index.js';
 import { MATA_MATA_CONFIG, PONTOS, PONTOS_CONDUTA, SUBMISSION_FIELDS } from './constants.js';
 import { GLASS_CARD, GLASS_BTN_PRIMARY, GLASS_BTN_SECONDARY, GLASS_INPUT, TEXT_HIGHLIGHT, TEXT_MUTED } from './styles.js';
 import { applyThemeToDocument, getStoredThemePreference, getSystemTheme, normalizeThemePreference, THEME_PREFERENCE_KEY } from './theme.js';
@@ -2486,11 +2486,12 @@ export default function App() {
   }
 
   const navItems = [
-    { id: 'jogos', icon: Calendar, label: 'Fase de Grupos', mobileLabel: '1a Fase' },
-    { id: 'matamata', icon: Crown, label: 'Mata-mata', mobileLabel: 'Mata-mata' },
-    { id: 'ranking', icon: Trophy, label: 'Ranking', mobileLabel: 'Ranking' },
+    { id: 'jogos', icon: Calendar, label: 'Fase de Grupos', mobileLabel: '1a' },
+    { id: 'matamata', icon: Crown, label: 'Mata-mata', mobileLabel: 'Mata' },
+    { id: 'chaveamento', icon: Swords, label: 'Chaveamento', mobileLabel: 'Chaves' },
+    { id: 'ranking', icon: Trophy, label: 'Ranking', mobileLabel: 'Rank' },
     { id: 'painel', icon: Medal, label: 'Painel', mobileLabel: 'Painel' },
-    { id: 'regras', icon: List, label: 'Pontuação', mobileLabel: 'Pontuação' }
+    { id: 'regras', icon: List, label: 'Pontuação', mobileLabel: 'Pontos' }
   ];
   const gabaritoTimeline = buildGabaritoTimeline(jogosReais, { isAdmin: modoAdmin });
   const syncDiagnosticsSummary = {
@@ -3145,6 +3146,21 @@ export default function App() {
             currentUser={currentUser}
             ranking={ranking}
             matchResultSummary={matchResultSummary}
+          />
+        )}
+        {abaAtiva === 'chaveamento' && (
+          <BracketPanel
+            currentUser={currentUser}
+            modoAdmin={modoAdmin}
+            jogosReais={jogosReais}
+            participanteUsuarios={participanteUsuarios}
+            palpitesJogos={palpitesJogos}
+            palpitesUsuarioAtual={palpitesUsuarioAtual}
+            palpitesMataMata={palpitesMataMata}
+            palpitesMataUsuarioAtual={palpitesMataUsuarioAtual}
+            gabaritoMataMata={gabaritoMataMata}
+            officialBracketSlots={officialBracketSlots}
+            condutaGrupos={condutaGrupos}
           />
         )}
         {abaAtiva === 'painel' && (
