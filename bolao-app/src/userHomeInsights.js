@@ -1,11 +1,12 @@
 import { buildDenseRanking } from './ranking.js';
 import { evaluateKnockoutPhasePick, getKnockoutPhaseOfficialState } from './officialResults/knockoutPhaseScoring.js';
+import { getKnockoutPhaseParticipantPicks } from './knockoutPhaseParticipants.js';
 
 const PHASE_LENGTHS = {
-  dezeszeseisavos: 32,
-  oitavas: 16,
-  quartas: 8,
-  semis: 4
+  dezeszeseisavos: [16, 32],
+  oitavas: [8, 16],
+  quartas: [4, 8],
+  semis: [2, 4]
 };
 const KNOCKOUT_PHASES = [
   { key: 'dezeszeseisavos', label: '16 avos', pointsKey: 'R32' },
@@ -14,6 +15,18 @@ const KNOCKOUT_PHASES = [
   { key: 'semis', label: 'semifinais', pointsKey: 'SF' }
 ];
 const MATCH_ACTIONABLE_BUFFER_MS = 0;
+const INSIGHT_PRIORITY = {
+  'champion-eliminated': 100,
+  'no-mathematical-chance': 95,
+  'next-match-overtake': 90,
+  'unique-prediction': 85,
+  'most-common-prediction': 84,
+  'same-prediction-next-match': 83,
+  'ranking-pressure': 70,
+  'awaiting-results': 65,
+  'next-match-focus': 60,
+  'knockout-consensus': 55
+};
 
 const isFilled = (value) => value !== '' && value !== null && value !== undefined;
 
@@ -101,6 +114,10 @@ const getPendingSummary = ({ pendingGroupPicksCount = 0, knockoutComplete = fals
 
 const getCurrentPoints = (entry) => entry?.total ?? entry?.points ?? 0;
 
+const isOfficialPhaseClosed = (phaseKey, officialLength) => (
+  (PHASE_LENGTHS[phaseKey] || []).includes(officialLength)
+);
+
 const getTopAlivePhase = (officialKnockout = {}) => {
   if (officialKnockout.campeao) return { key: 'campeao', teams: [officialKnockout.campeao] };
 
@@ -112,10 +129,10 @@ const getTopAlivePhase = (officialKnockout = {}) => {
   ].filter(Boolean);
   if (top4.length === 4) return { key: 'top4', teams: top4 };
 
-  if ((officialKnockout.semis || []).length === PHASE_LENGTHS.semis) return { key: 'semis', teams: officialKnockout.semis };
-  if ((officialKnockout.quartas || []).length === PHASE_LENGTHS.quartas) return { key: 'quartas', teams: officialKnockout.quartas };
-  if ((officialKnockout.oitavas || []).length === PHASE_LENGTHS.oitavas) return { key: 'oitavas', teams: officialKnockout.oitavas };
-  if ((officialKnockout.dezeszeseisavos || []).length === PHASE_LENGTHS.dezeszeseisavos) return { key: 'dezeszeseisavos', teams: officialKnockout.dezeszeseisavos };
+  if (isOfficialPhaseClosed('semis', (officialKnockout.semis || []).length)) return { key: 'semis', teams: officialKnockout.semis };
+  if (isOfficialPhaseClosed('quartas', (officialKnockout.quartas || []).length)) return { key: 'quartas', teams: officialKnockout.quartas };
+  if (isOfficialPhaseClosed('oitavas', (officialKnockout.oitavas || []).length)) return { key: 'oitavas', teams: officialKnockout.oitavas };
+  if (isOfficialPhaseClosed('dezeszeseisavos', (officialKnockout.dezeszeseisavos || []).length)) return { key: 'dezeszeseisavos', teams: officialKnockout.dezeszeseisavos };
   return null;
 };
 
@@ -124,6 +141,12 @@ const formatNamesList = (names = []) => {
   if (names.length === 1) return names[0];
   if (names.length === 2) return `${names[0]} e ${names[1]}`;
   return `${names[0]}, ${names[1]} e mais ${names.length - 2}`;
+};
+
+const getInsightPriority = (insight) => {
+  if (!insight?.type) return 0;
+  if (insight.type.startsWith('knockout-progress-')) return 58;
+  return INSIGHT_PRIORITY[insight.type] ?? 10;
 };
 
 const buildChampionEliminatedInsight = ({ championPick, officialKnockout }) => {
@@ -143,6 +166,9 @@ const buildChampionEliminatedInsight = ({ championPick, officialKnockout }) => {
 };
 
 const buildKnockoutProgressInsights = ({
+  matches = [],
+  groupPredictions = {},
+  conduct = {},
   officialKnockout = {},
   officialBracketSlots = {},
   knockoutPredictions = {},
@@ -151,7 +177,13 @@ const buildKnockoutProgressInsights = ({
   const insights = [];
 
   KNOCKOUT_PHASES.forEach(({ key, label, pointsKey }) => {
-    const picks = knockoutPredictions?.[key] || [];
+    const picks = getKnockoutPhaseParticipantPicks({
+      phaseKey: key,
+      knockoutBets: knockoutPredictions,
+      matches,
+      gamePredictions: groupPredictions,
+      conduct
+    });
     if (!picks.some(Boolean)) return;
 
     const officialState = getKnockoutPhaseOfficialState({
@@ -271,7 +303,7 @@ const buildKnockoutConsensusInsight = ({
   };
 };
 
-const buildNoMathematicalChanceInsight = ({ currentEntry, leaderEntry, matches, predictions, knockoutPredictions, officialKnockout, scoringRules }) => {
+const buildNoMathematicalChanceInsight = ({ currentEntry, leaderEntry, matches, predictions, knockoutPredictions, officialKnockout, scoringRules, conduct = {} }) => {
   if (!currentEntry || !leaderEntry || currentEntry.id === leaderEntry.id) return null;
 
   const unresolvedGamePoints = (matches || []).reduce((total, match) => {
@@ -286,8 +318,14 @@ const buildNoMathematicalChanceInsight = ({ currentEntry, leaderEntry, matches, 
     ['semis', scoringRules?.MATA?.SF ?? 30]
   ].reduce((total, [field, points]) => {
     const officialLength = (officialKnockout?.[field] || []).length;
-    if (officialLength >= PHASE_LENGTHS[field]) return total;
-    const picks = (knockoutPredictions?.[field] || []).filter(Boolean);
+    if (isOfficialPhaseClosed(field, officialLength)) return total;
+    const picks = getKnockoutPhaseParticipantPicks({
+      phaseKey: field,
+      knockoutBets: knockoutPredictions,
+      matches,
+      gamePredictions: predictions,
+      conduct
+    });
     return total + (picks.length * points);
   }, 0)
     + (!officialKnockout?.campeao && knockoutPredictions?.campeao ? (scoringRules?.MATA?.CAMPEAO ?? 100) : 0)
@@ -549,6 +587,7 @@ export function buildUserHomeInsights({
   officialBracketSlots = {},
   knockoutPredictions = {},
   knockoutPredictionsByUser = {},
+  conduct = {},
   nowMs = Date.now()
 }) {
   const title = 'Seu Bolão';
@@ -597,7 +636,8 @@ export function buildUserHomeInsights({
     predictions: predictions?.[currentUserId] || {},
     knockoutPredictions,
     officialKnockout,
-    scoringRules
+    scoringRules,
+    conduct
   });
   if (noMathematicalChanceInsight) insightCandidates.push(noMathematicalChanceInsight);
 
@@ -609,6 +649,9 @@ export function buildUserHomeInsights({
 
   insightCandidates.push(
     ...buildKnockoutProgressInsights({
+      matches,
+      groupPredictions: predictions?.[currentUserId] || {},
+      conduct,
       officialKnockout,
       officialBracketSlots,
       knockoutPredictions,
@@ -624,6 +667,15 @@ export function buildUserHomeInsights({
   if (knockoutConsensusInsight) insightCandidates.push(knockoutConsensusInsight);
 
   if (nextMatch) {
+    insightCandidates.push(
+      ...buildNextMatchPickInsights({
+        currentUserId,
+        users: participantUsers,
+        predictionsByUser: predictions,
+        nextMatch
+      })
+    );
+
     const overtakeInsight = buildNextMatchOvertakeInsight({
       currentEntry,
       ranking,
@@ -643,6 +695,11 @@ export function buildUserHomeInsights({
   const uniqueInsights = insightCandidates.filter((insight, index, list) => (
     list.findIndex((candidate) => candidate.type === insight.type && candidate.text === insight.text) === index
   ));
+  const prioritizedInsights = [...uniqueInsights].sort((a, b) => (
+    getInsightPriority(b) - getInsightPriority(a) ||
+    a.type.localeCompare(b.type, 'pt-BR') ||
+    a.text.localeCompare(b.text, 'pt-BR')
+  ));
 
   return {
     locked: false,
@@ -660,6 +717,6 @@ export function buildUserHomeInsights({
         ranking[1] ? `Você está liderando por ${getCurrentPoints(currentEntry) - getCurrentPoints(ranking[1])} ponto${getCurrentPoints(currentEntry) - getCurrentPoints(ranking[1]) === 1 ? '' : 's'}.` : 'Você está liderando o bolão.'
       ))
       : `Você está a ${leaderGap} ponto${leaderGap === 1 ? '' : 's'} da liderança.`,
-    insights: uniqueInsights.slice(0, 3)
+    insights: prioritizedInsights.slice(0, 3)
   };
 }

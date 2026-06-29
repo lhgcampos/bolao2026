@@ -1,5 +1,6 @@
 import { MATA_MATA_CONFIG } from '../constants.js';
 import { getOfficialBracketSlot, normalizeOfficialBracketSlots } from './officialBracketSlots.js';
+import { resolveLocalTeamName } from './matchMapping.js';
 
 const PHASE_SLOT_MATCH_IDS = {
   dezeszeseisavos: MATA_MATA_CONFIG.r32.map((match) => match.id),
@@ -22,7 +23,11 @@ const PHASE_KNOCKOUT_PARTICIPANTS_SOURCE = {
   semis: 'quartas'
 };
 
-const normalizeTeamName = (value) => (typeof value === 'string' ? value.trim() : '');
+const normalizeTeamName = (value) => {
+  const label = typeof value === 'string' ? value.trim() : '';
+  if (!label) return '';
+  return resolveLocalTeamName({ name: label, shortName: label }) || label;
+};
 
 const collectUniqueTeams = (teams = []) => {
   const unique = [];

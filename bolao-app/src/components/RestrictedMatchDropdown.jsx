@@ -1,11 +1,12 @@
 import React, { memo } from 'react';
 import { ChevronDown, Lock } from '../lucideIcons';
 import { PONTOS } from '../constants.js';
-import { evaluateKnockoutPhasePick } from '../officialResults/knockoutPhaseScoring.js';
-import { buildKnockoutReviewCopy, getOfficialKnockoutMatchup } from '../officialResults/knockoutReviewPresentation.js';
+import { getKnockoutPhaseOfficialState } from '../officialResults/knockoutPhaseScoring.js';
+import { getOfficialKnockoutMatchup } from '../officialResults/knockoutReviewPresentation.js';
 import { GLASS_CARD, GLASS_INPUT, TEXT_MUTED } from '../styles.js';
 import { getWinnerOfMatch } from '../utils.js';
 import { formatBrazilMatchSchedule, formatOfficialKickoffHint } from '../matchData';
+import { getKnockoutPhaseMatchReview } from '../knockoutPhaseParticipants.js';
 
 function RestrictedMatchDropdown({
   match,
@@ -49,50 +50,61 @@ function RestrictedMatchDropdown({
     : options;
   const isReady = options.length === 2;
   const isLocked = !modoAdmin && palpitesTravadosMata;
-  const review = evaluateKnockoutPhasePick({
+  const officialState = getKnockoutPhaseOfficialState({
     phaseKey,
-    pick: currentValue,
-    pickIndex: idx,
-    allPicks: phasePicks,
-    points: points ?? (
-      phaseKey === 'dezeszeseisavos'
-        ? PONTOS.MATA.R32
-        : phaseKey === 'oitavas'
-          ? PONTOS.MATA.R16
-          : phaseKey === 'quartas'
-            ? PONTOS.MATA.QF
-            : PONTOS.MATA.SF
-    ),
     officialKnockout: gabaritoMataMata,
-    officialBracketSlots,
-    successLabel: 'Acertou o classificado'
+    officialBracketSlots
   });
-  const reviewCopy = buildKnockoutReviewCopy({ review, pick: currentValue, points });
+  const matchPoints = points ?? (
+    phaseKey === 'dezeszeseisavos'
+      ? PONTOS.MATA.R32
+      : phaseKey === 'oitavas'
+        ? PONTOS.MATA.R16
+        : phaseKey === 'quartas'
+          ? PONTOS.MATA.QF
+          : PONTOS.MATA.SF
+  );
+  const matchReview = getKnockoutPhaseMatchReview({
+    phaseKey,
+    match,
+    points: matchPoints,
+    knockoutBets: modoAdmin ? gabaritoMataMata : (palpitesMataMata[currentUser.id] || {}),
+    matches: jogosReais,
+    gamePredictions: palpitesUsuarioAtual,
+    conduct: condutaGrupos,
+    officialKnockout: gabaritoMataMata,
+    officialBracketSlots
+  });
   const officialMatchup = getOfficialKnockoutMatchup(officialBracketSlots, match.id);
   const adminOfficialLabelA = officialMatchup.hasPublishedTeams || officialMatchup.placeholderA ? officialMatchup.labelA : (userTeamA || 'A definir');
   const adminOfficialLabelB = officialMatchup.hasPublishedTeams || officialMatchup.placeholderB ? officialMatchup.labelB : (userTeamB || 'A definir');
-  const phaseProgressLabel = review.officialState.expectedCount
-    ? `${review.officialState.publishedCount}/${review.officialState.expectedCount} times publicados`
-    : `${review.officialState.publishedCount} times publicados`;
+  const phaseProgressLabel = officialState.expectedCount
+    ? `${officialState.publishedCount}/${officialState.expectedCount} times publicados`
+    : `${officialState.publishedCount} times publicados`;
   const schedule = formatBrazilMatchSchedule(match);
   const officialKickoffHint = formatOfficialKickoffHint(match);
   const showReviewMode = !modoAdmin && isLocked;
-  const phaseBadge = review.officialState.isClosed
+  const phaseBadge = officialState.isClosed
     ? 'Oficial fechado'
-    : review.officialState.isPartial
+    : officialState.isPartial
       ? 'Oficial parcial'
       : 'Aguardando oficial';
-  const phaseBadgeTone = review.officialState.isClosed
+  const phaseBadgeTone = officialState.isClosed
     ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    : review.officialState.isPartial
+    : officialState.isPartial
       ? 'border-amber-200 bg-amber-50 text-amber-700'
       : 'border-slate-200 bg-slate-50 text-slate-600';
-  const pointsValueLabel = `${review.pointsAwarded} pts`;
-  const pointsValueTone = review.pointsAwarded > 0
+  const pointsValueLabel = `${matchReview.totalPoints} pts`;
+  const pointsValueTone = matchReview.totalPoints > 0
     ? 'text-emerald-700'
-    : review.state === 'error'
+    : matchReview.wrongSides > 0
       ? 'text-rose-700'
       : 'text-slate-900';
+  const pointsPanelTone = matchReview.totalPoints > 0
+    ? 'bg-emerald-50/65'
+    : matchReview.wrongSides > 0
+      ? 'bg-rose-50/65'
+      : 'bg-white';
 
   const renderMatchupCell = ({ labelA, labelB, selectedTeam = '' }) => {
     const teams = [labelA || 'A definir', labelB || 'A definir'];
@@ -203,12 +215,12 @@ function RestrictedMatchDropdown({
             <div className="bg-slate-50/55 px-4 py-4">
               <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Jogo do usuário</div>
               {renderMatchupCell({ labelA: userTeamA, labelB: userTeamB, selectedTeam: currentValue })}
-              <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700">Palpite: {currentValue || 'Sem palpite'}</div>
+              <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700">Seu vencedor neste jogo: {currentValue || 'Sem palpite'}</div>
             </div>
-            <div className={`bg-white px-4 py-4 md:text-right ${review.tone}`}>
+            <div className={`${pointsPanelTone} px-4 py-4 md:text-right`}>
               <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Pontos</div>
               <div className={`text-[24px] font-black tracking-[-0.04em] ${pointsValueTone}`}>{pointsValueLabel}</div>
-              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] opacity-90">{reviewCopy.badgeLabel}</div>
+              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] opacity-90">{matchReview.badgeLabel}</div>
             </div>
           </div>
 
@@ -220,12 +232,12 @@ function RestrictedMatchDropdown({
             <div className="bg-slate-100 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Jogo do usuário</div>
             <div className="bg-slate-50/55 px-4 py-4">
               {renderMatchupCell({ labelA: userTeamA, labelB: userTeamB, selectedTeam: currentValue })}
-              <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700">Palpite: {currentValue || 'Sem palpite'}</div>
+              <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700">Seu vencedor neste jogo: {currentValue || 'Sem palpite'}</div>
             </div>
             <div className="bg-slate-100 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Pontos</div>
-            <div className={`bg-white px-4 py-4 ${review.tone}`}>
+            <div className="bg-white px-4 py-4">
               <div className={`text-[24px] font-black tracking-[-0.04em] ${pointsValueTone}`}>{pointsValueLabel}</div>
-              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] opacity-90">{reviewCopy.badgeLabel}</div>
+              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] opacity-90">{matchReview.badgeLabel}</div>
             </div>
           </div>
 

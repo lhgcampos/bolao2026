@@ -4,9 +4,10 @@ import { GRUPOS_2026, buildChronologicalMatchGroups, formatBrazilMatchSchedule, 
 import { GLASS_CARD, GLASS_INPUT, TEXT_MUTED } from '../styles.js';
 import { MATA_MATA_CONFIG, PONTOS, SUBMISSION_FIELDS } from '../constants.js';
 import { calcularPontosJogo, formatSubmissionDate, getWinnerOfMatch } from '../utils.js';
-import { evaluateKnockoutPhasePick, getKnockoutPhaseOfficialState } from '../officialResults/knockoutPhaseScoring.js';
+import { getKnockoutPhaseOfficialState } from '../officialResults/knockoutPhaseScoring.js';
 import { buildKnockoutReviewCopy, getOfficialKnockoutMatchup } from '../officialResults/knockoutReviewPresentation.js';
 import { getMatchResultVariant } from '../officialResults/officialResultsView';
+import { getKnockoutPhaseMatchReview } from '../knockoutPhaseParticipants.js';
 
 const PANEL_STAGE_OPTIONS = [
   { id: 'todos', label: 'Painel completo' },
@@ -181,44 +182,6 @@ function ReviewSheet({
         .filter(Boolean)
     }));
 
-  const userCompletedGroupStage = (userGameBets = {}) => jogosReais.every((jogo) => {
-    if (jogo.placarA !== '' && jogo.placarB !== '') return true;
-    const palpite = userGameBets?.[jogo.id];
-    return Boolean(palpite && palpite.placarA !== '' && palpite.placarB !== '');
-  });
-
-  const resolveUserThirdPlaceLabel = (match, allocation, groupStageComplete) => {
-    if (!match.refThirdGroups) return null;
-    if (!groupStageComplete) return 'A definir';
-    return allocation[match.id] || `3o de ${match.refThirdGroups.join('/')}`;
-  };
-
-  const resolveUserKnockoutSides = (phaseKey, match, userId) => {
-    if (phaseKey === 'dezeszeseisavos') {
-      const userGameBets = palpitesJogos[userId] || {};
-      const groupStageComplete = userCompletedGroupStage(userGameBets);
-      const thirdPlaceAllocation = buildThirdPlaceAllocation(
-        jogosReais,
-        userGameBets,
-        condutaGrupos,
-        groupStageComplete
-      );
-
-      return {
-        sideA: getR32Team(match.refA, jogosReais, userGameBets, condutaGrupos),
-        sideB: match.refThirdGroups
-          ? resolveUserThirdPlaceLabel(match, thirdPlaceAllocation, groupStageComplete)
-          : getR32Team(match.refB, jogosReais, userGameBets, condutaGrupos)
-      };
-    }
-
-    const userKnockoutBets = palpitesMataMata[userId] || {};
-    return {
-      sideA: getWinnerOfMatch(match.feedA, userKnockoutBets) || `Venc. ${match.feedA}`,
-      sideB: getWinnerOfMatch(match.feedB, userKnockoutBets) || `Venc. ${match.feedB}`
-    };
-  };
-
   const resolveKnockoutSides = (phaseKey, match) => {
     const officialMatchup = getOfficialKnockoutMatchup(officialBracketSlots, match.id);
 
@@ -240,33 +203,44 @@ function ReviewSheet({
     const userMata = palpitesMataMata[user.id] || {};
     const phasePicks = userMata[phaseKey] || [];
     const palpite = phasePicks[pickIndex] || '';
-    const userMatchup = resolveUserKnockoutSides(phaseKey, match, user.id);
-    const review = evaluateKnockoutPhasePick({
+    const matchReview = getKnockoutPhaseMatchReview({
       phaseKey,
-      pick: palpite,
-      pickIndex,
-      allPicks: phasePicks,
       points,
+      match,
+      knockoutBets: userMata,
+      matches: jogosReais,
+      gamePredictions: palpitesJogos[user.id] || {},
+      conduct: condutaGrupos,
       officialKnockout: gabaritoMataMata,
-      officialBracketSlots,
-      successLabel: 'Acertou'
+      officialBracketSlots
     });
-    const reviewCopy = buildKnockoutReviewCopy({ review, pick: palpite, points });
+    const officialState = getKnockoutPhaseOfficialState({
+      phaseKey,
+      officialKnockout: gabaritoMataMata,
+      officialBracketSlots
+    });
 
     let status = buildStatus();
-    if (review.state === 'waiting-official') status = buildStatus('waiting-official');
-    if (review.state === 'partial-pending') status = buildStatus('partial');
-    if (review.state === 'partial-confirmed' || review.state === 'confirmed') status = buildStatus('correct');
-    if (review.state === 'duplicate') status = buildStatus('duplicate');
-    if (review.state === 'error') status = buildStatus('error');
+    if (officialState.isPending) status = buildStatus('waiting-official');
+    else if (matchReview.totalPoints > 0 && matchReview.openSides > 0) status = buildStatus('partial');
+    else if (matchReview.totalPoints > 0) status = buildStatus('correct');
+    else if (matchReview.openSides > 0) status = buildStatus('partial');
+    else if (matchReview.wrongSides > 0) status = buildStatus('error');
 
     return {
       userId: user.id,
       palpite: palpite || '—',
       status,
-      pontos: review.pointsAwarded,
-      userMatchup,
-      reviewCopy,
+      pontos: matchReview.totalPoints,
+      userMatchup: {
+        sideA: matchReview.sideA,
+        sideB: matchReview.sideB
+      },
+      reviewCopy: {
+        badgeLabel: matchReview.badgeLabel,
+        pointsLabel: `${matchReview.totalPoints} pts`,
+        caption: ''
+      },
       envio: formatSubmissionDate(submissoes[user.id]?.[SUBMISSION_FIELDS.MATA])
     };
   });
@@ -493,7 +467,7 @@ function ReviewSheet({
               <div className="bg-white px-3 py-2">
                 <div className="mb-2 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo do usuário</div>
                 {renderMatchupPills(buildMatchupTeams(palpite.userMatchup?.sideA, palpite.userMatchup?.sideB), palpite.palpite !== '—' ? palpite.palpite : '')}
-                <div className="mt-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-700">Palpite: {palpite.palpite}</div>
+                <div className="mt-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-700">Seu vencedor neste jogo: {palpite.palpite}</div>
               </div>
               <div className="bg-white px-3 py-2 lg:text-right">
                 <div className="mb-2 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Pontos</div>
@@ -510,7 +484,7 @@ function ReviewSheet({
               <div className="bg-slate-50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo do usuário</div>
               <div className="bg-white px-3 py-2">
                 {renderMatchupPills(buildMatchupTeams(palpite.userMatchup?.sideA, palpite.userMatchup?.sideB), palpite.palpite !== '—' ? palpite.palpite : '')}
-                <div className="mt-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-700">Palpite: {palpite.palpite}</div>
+                <div className="mt-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-700">Seu vencedor neste jogo: {palpite.palpite}</div>
               </div>
               <div className="bg-slate-50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Pontos</div>
               <div className="bg-white px-3 py-2">
@@ -660,7 +634,7 @@ function ReviewSheet({
                 <div className="bg-slate-50 px-2.5 py-2 text-[8px] font-bold uppercase tracking-[0.14em] text-slate-500">Jogo do usuario</div>
                 <div className="bg-white px-2.5 py-2">
                   {renderMatchupPills(buildMatchupTeams(palpite.userMatchup?.sideA, palpite.userMatchup?.sideB), palpite.palpite !== '—' ? palpite.palpite : '')}
-                  <div className="mt-2 text-[8px] font-semibold uppercase tracking-[0.14em] text-sky-700">Palpite: {palpite.palpite}</div>
+                  <div className="mt-2 text-[8px] font-semibold uppercase tracking-[0.14em] text-sky-700">Seu vencedor neste jogo: {palpite.palpite}</div>
                 </div>
 
                 <div className="bg-slate-50 px-2.5 py-2 text-[8px] font-bold uppercase tracking-[0.14em] text-slate-500">Pontos</div>

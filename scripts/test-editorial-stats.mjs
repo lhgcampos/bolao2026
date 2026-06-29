@@ -290,7 +290,7 @@ const smallHome = buildHomeEditorialInsights({
 
 assert.equal(smallDashboard.eligibleCount, 1, 'cenario reduzido precisa manter um unico usuario elegivel');
 assert.equal(smallHome.empty, true, 'home precisa cair no estado vazio com menos de dois elegiveis');
-assert.equal(smallHome.text, 'Assim que mais gente enviar tudo, o bolao comeca a revelar os estilos de palpite.');
+assert.equal(smallHome.text, 'Assim que mais gente enviar tudo, o bolão começa a revelar os estilos de palpite.');
 
 assert.equal(formatEditorialStatLine(dashboardA.stats.contrarianIndex), dashboardA.stats.contrarianIndex.text, 'formatEditorialStatLine deve devolver a linha editorial');
 

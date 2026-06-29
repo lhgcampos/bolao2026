@@ -42,7 +42,8 @@ import {
   getMatchResultVariant
 } from './officialResults/officialResultsView';
 import { getOfficialBracketSlotTeam, normalizeOfficialBracketSlots } from './officialResults/officialBracketSlots.js';
-import { calculateKnockoutPhasePoints, evaluateKnockoutPhasePick, getKnockoutPhaseOfficialState } from './officialResults/knockoutPhaseScoring.js';
+import { calculateKnockoutPhasePoints, getKnockoutPhaseOfficialState } from './officialResults/knockoutPhaseScoring.js';
+import { getKnockoutPhaseParticipantPicks, getKnockoutPhaseParticipantReviews } from './knockoutPhaseParticipants.js';
 
 const TODOS_TIMES = Object.values(GRUPOS_2026).flat().sort();
 
@@ -1977,29 +1978,28 @@ export default function App() {
     if (!currentUser || modoAdmin) return {};
 
     const buildPhaseSummary = (phaseKey, points) => {
-      const picks = palpitesMataUsuarioAtual[phaseKey] || [];
+      const reviews = getKnockoutPhaseParticipantReviews({
+        phaseKey,
+        points,
+        knockoutBets: palpitesMataUsuarioAtual,
+        matches: jogosReais,
+        gamePredictions: palpitesUsuarioAtual,
+        conduct: condutaGrupos,
+        officialKnockout: gabaritoMataMata,
+        officialBracketSlots
+      });
       const officialState = getKnockoutPhaseOfficialState({
         phaseKey,
         officialKnockout: gabaritoMataMata,
         officialBracketSlots
       });
-      const reviews = picks.map((pick, pickIndex) => evaluateKnockoutPhasePick({
-        phaseKey,
-        pick,
-        pickIndex,
-        allPicks: picks,
-        points,
-        officialKnockout: gabaritoMataMata,
-        officialBracketSlots,
-        successLabel: 'Acertou'
-      }));
 
       return {
         officialState,
-        confirmedCount: reviews.filter((review) => review.state === 'confirmed' || review.state === 'partial-confirmed').length,
-        openCount: reviews.filter((review) => review.state === 'partial-pending' || review.state === 'waiting-official').length,
-        wrongCount: reviews.filter((review) => review.state === 'error' || review.state === 'duplicate').length,
-        confirmedPoints: reviews.reduce((total, review) => total + review.pointsAwarded, 0)
+        confirmedCount: reviews.filter(({ review }) => review.state === 'confirmed' || review.state === 'partial-confirmed').length,
+        openCount: reviews.filter(({ review }) => review.state === 'partial-pending' || review.state === 'waiting-official').length,
+        wrongCount: reviews.filter(({ review }) => review.state === 'error' || review.state === 'duplicate').length,
+        confirmedPoints: reviews.reduce((total, entry) => total + (entry.review.pointsAwarded || 0), 0)
       };
     };
 
@@ -2009,7 +2009,7 @@ export default function App() {
       quartas: buildPhaseSummary('quartas', PONTOS.MATA.QF),
       semis: buildPhaseSummary('semis', PONTOS.MATA.SF)
     };
-  }, [currentUser, modoAdmin, palpitesMataUsuarioAtual, gabaritoMataMata, officialBracketSlots]);
+  }, [currentUser, modoAdmin, palpitesMataUsuarioAtual, palpitesUsuarioAtual, jogosReais, condutaGrupos, gabaritoMataMata, officialBracketSlots]);
   const matchResultSummary = useMemo(
     () => countResolvedMatchesByVariant(jogosReais),
     [jogosReais]
@@ -2042,7 +2042,13 @@ export default function App() {
       const checkPhase = (field, points) => {
         ptsMataMata += calculateKnockoutPhasePoints({
           phaseKey: field,
-          picks: userMM[field] || [],
+          picks: getKnockoutPhaseParticipantPicks({
+            phaseKey: field,
+            knockoutBets: userMM,
+            matches: jogosReais,
+            gamePredictions: palpitesJogos[user.id] || {},
+            conduct: condutaGrupos
+          }),
           points,
           officialKnockout: gabaritoMataMata,
           officialBracketSlots
@@ -2058,7 +2064,7 @@ export default function App() {
     });
 
     return buildDenseRanking(rankingEntries, (user) => user.total, (user) => user.nome);
-  }, [usuarios, jogosReais, palpitesJogos, palpitesMataMata, gabaritoMataMata, officialBracketSlots]);
+  }, [usuarios, jogosReais, palpitesJogos, palpitesMataMata, gabaritoMataMata, officialBracketSlots, condutaGrupos]);
   const homeInsightCard = useMemo(() => {
     if (!currentUser || modoAdmin) return null;
 
@@ -2075,7 +2081,8 @@ export default function App() {
       officialKnockout: gabaritoMataMata,
       officialBracketSlots,
       knockoutPredictions: palpitesMataUsuarioAtual,
-      knockoutPredictionsByUser: palpitesMataMata
+      knockoutPredictionsByUser: palpitesMataMata,
+      conduct: condutaGrupos
     });
   }, [
     currentUser,
@@ -2090,7 +2097,8 @@ export default function App() {
     palpitesMataMata,
     mataCompletaUsuarioAtual,
     gabaritoMataMata,
-    officialBracketSlots
+    officialBracketSlots,
+    condutaGrupos
   ]);
   const editorialStatsDashboard = useMemo(() => {
     if (!currentUser || !currentUserCanSeeConsensusPanel) return null;
@@ -2106,6 +2114,7 @@ export default function App() {
       teamRankings: TEAM_FIFA_RANKINGS,
       officialKnockout: gabaritoMataMata,
       officialBracketSlots,
+      conduct: condutaGrupos,
       submissionFields: SUBMISSION_FIELDS,
       isAdminUser,
       usuarioPreencheuTodosOsJogos,
@@ -2121,7 +2130,8 @@ export default function App() {
     jogosReais,
     ranking,
     gabaritoMataMata,
-    officialBracketSlots
+    officialBracketSlots,
+    condutaGrupos
   ]);
   const homeEditorialInsights = useMemo(() => {
     if (!currentUser) return null;

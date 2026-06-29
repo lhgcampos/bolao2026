@@ -1,5 +1,6 @@
 import { getConsensusEligibleUsers } from './rankingConsensus.js';
 import { calculateKnockoutPhasePoints } from './officialResults/knockoutPhaseScoring.js';
+import { getKnockoutPhaseParticipantPicks } from './knockoutPhaseParticipants.js';
 
 const COLLATOR = new Intl.Collator('pt-BR', { sensitivity: 'base' });
 
@@ -584,28 +585,52 @@ export function calculateUserStyleProfiles(input = {}) {
     profile.confirmedKnockoutPoints = (
       calculateKnockoutPhasePoints({
         phaseKey: 'dezeszeseisavos',
-        picks: bracket.dezeszeseisavos || [],
+        picks: getKnockoutPhaseParticipantPicks({
+          phaseKey: 'dezeszeseisavos',
+          knockoutBets: bracket,
+          matches: input.games || [],
+          gamePredictions: input.betsGames?.[user.id] || {},
+          conduct: input.conduct || {}
+        }),
         points: scoringRules?.MATA?.R32 ?? 0,
         officialKnockout: input.officialKnockout,
         officialBracketSlots: input.officialBracketSlots
       }) +
       calculateKnockoutPhasePoints({
         phaseKey: 'oitavas',
-        picks: bracket.oitavas || [],
+        picks: getKnockoutPhaseParticipantPicks({
+          phaseKey: 'oitavas',
+          knockoutBets: bracket,
+          matches: input.games || [],
+          gamePredictions: input.betsGames?.[user.id] || {},
+          conduct: input.conduct || {}
+        }),
         points: scoringRules?.MATA?.R16 ?? 0,
         officialKnockout: input.officialKnockout,
         officialBracketSlots: input.officialBracketSlots
       }) +
       calculateKnockoutPhasePoints({
         phaseKey: 'quartas',
-        picks: bracket.quartas || [],
+        picks: getKnockoutPhaseParticipantPicks({
+          phaseKey: 'quartas',
+          knockoutBets: bracket,
+          matches: input.games || [],
+          gamePredictions: input.betsGames?.[user.id] || {},
+          conduct: input.conduct || {}
+        }),
         points: scoringRules?.MATA?.QF ?? 0,
         officialKnockout: input.officialKnockout,
         officialBracketSlots: input.officialBracketSlots
       }) +
       calculateKnockoutPhasePoints({
         phaseKey: 'semis',
-        picks: bracket.semis || [],
+        picks: getKnockoutPhaseParticipantPicks({
+          phaseKey: 'semis',
+          knockoutBets: bracket,
+          matches: input.games || [],
+          gamePredictions: input.betsGames?.[user.id] || {},
+          conduct: input.conduct || {}
+        }),
         points: scoringRules?.MATA?.SF ?? 0,
         officialKnockout: input.officialKnockout,
         officialBracketSlots: input.officialBracketSlots
