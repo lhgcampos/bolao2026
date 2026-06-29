@@ -4,8 +4,8 @@ import { GRUPOS_2026, buildChronologicalMatchGroups, formatBrazilMatchSchedule, 
 import { GLASS_CARD, GLASS_INPUT, TEXT_MUTED } from '../styles.js';
 import { MATA_MATA_CONFIG, PONTOS, SUBMISSION_FIELDS } from '../constants.js';
 import { calcularPontosJogo, formatSubmissionDate, getWinnerOfMatch } from '../utils.js';
-import { evaluateKnockoutPhasePick, getKnockoutPhaseOfficialState } from '../officialResults/knockoutPhaseScoring.js';
-import { buildKnockoutReviewCopy, getOfficialKnockoutMatchup } from '../officialResults/knockoutReviewPresentation.js';
+import { evaluateKnockoutPhasePick, getKnockoutPhaseOfficialState, getKnockoutPhaseTeamStatus } from '../officialResults/knockoutPhaseScoring.js';
+import { buildKnockoutMatchupSummary, buildKnockoutReviewCopy, getOfficialKnockoutMatchup } from '../officialResults/knockoutReviewPresentation.js';
 import { getMatchResultVariant } from '../officialResults/officialResultsView';
 
 const PANEL_STAGE_OPTIONS = [
@@ -252,6 +252,22 @@ function ReviewSheet({
       successLabel: 'Acertou'
     });
     const reviewCopy = buildKnockoutReviewCopy({ review, pick: palpite, points });
+    const matchupSummary = buildKnockoutMatchupSummary({
+      sideStatuses: [
+        getKnockoutPhaseTeamStatus({
+          phaseKey,
+          team: userMatchup.sideA,
+          officialKnockout: gabaritoMataMata,
+          officialBracketSlots
+        }),
+        getKnockoutPhaseTeamStatus({
+          phaseKey,
+          team: userMatchup.sideB,
+          officialKnockout: gabaritoMataMata,
+          officialBracketSlots
+        })
+      ]
+    });
 
     let status = buildStatus();
     if (review.state === 'waiting-official') status = buildStatus('waiting-official');
@@ -266,6 +282,7 @@ function ReviewSheet({
       status,
       pontos: review.pointsAwarded,
       userMatchup,
+      matchupSummary,
       reviewCopy,
       envio: formatSubmissionDate(submissoes[user.id]?.[SUBMISSION_FIELDS.MATA])
     };
@@ -462,15 +479,20 @@ function ReviewSheet({
           <div className="mt-1 text-[13px] font-black leading-snug text-slate-900">
             {formatMatchupLabel(palpite.userMatchup?.sideA, palpite.userMatchup?.sideB)}
           </div>
+          <div className={`mt-2 rounded-[14px] border px-2.5 py-2 ${palpite.matchupSummary.tone}`}>
+            <div className="text-[9px] font-bold uppercase tracking-[0.16em]">{palpite.matchupSummary.label}</div>
+            <div className="mt-1 text-[10px] leading-snug opacity-90">{palpite.matchupSummary.detail}</div>
+          </div>
 
-          <div className="mt-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu vencedor</div>
+          <div className="mt-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Time que pontua nesta linha</div>
           <div className="mt-1 text-[17px] font-black tracking-[-0.03em] text-slate-900">{palpite.palpite}</div>
 
           <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-black/5 bg-white/85 px-2.5 py-1">
             <span className={`h-2.5 w-2.5 rounded-full ${palpite.status.dot}`}></span>
             <span className="text-[9px] font-bold uppercase tracking-[0.16em]">{palpite.reviewCopy.badgeLabel}</span>
           </div>
-          <div className="mt-2 text-[13px] font-black leading-none text-slate-900">{palpite.reviewCopy.pointsLabel}</div>
+          <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Pontos desta linha</div>
+          <div className="mt-1 text-[13px] font-black leading-none text-slate-900">{palpite.reviewCopy.pointsLabel}</div>
           <div className="mt-1.5 text-[10px] leading-snug text-slate-600">{palpite.reviewCopy.caption}</div>
           <div className="mt-2 text-[9px] leading-tight text-slate-500">{palpite.envio}</div>
         </div>
@@ -607,6 +629,12 @@ function ReviewSheet({
             <div className="mt-1 text-[12px] font-bold text-slate-900">
               {formatMatchupLabel(palpite.userMatchup?.sideA, palpite.userMatchup?.sideB)}
             </div>
+            <div className={`mt-2 rounded-[12px] border px-2.5 py-2 ${palpite.matchupSummary.tone}`}>
+              <div className="text-[9px] font-bold uppercase tracking-[0.14em]">{palpite.matchupSummary.label}</div>
+              <div className="mt-1 text-[10px] leading-snug opacity-90">{palpite.matchupSummary.detail}</div>
+            </div>
+            <div className="mt-2 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Time que pontua nesta linha</div>
+            <div className="mt-1 text-[12px] font-black text-slate-900">{palpite.palpite}</div>
             <div className="mt-1 text-[10px] leading-snug text-slate-600">{palpite.reviewCopy.caption}</div>
             <div className="mt-1 text-[9px] text-slate-500">{palpite.envio}</div>
           </div>

@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { ChevronDown, Lock } from '../lucideIcons';
 import { PONTOS } from '../constants.js';
 import { evaluateKnockoutPhasePick, getKnockoutPhaseTeamStatus } from '../officialResults/knockoutPhaseScoring.js';
-import { buildKnockoutReviewCopy, getOfficialKnockoutMatchup } from '../officialResults/knockoutReviewPresentation.js';
+import { buildKnockoutMatchupSummary, buildKnockoutReviewCopy, getOfficialKnockoutMatchup } from '../officialResults/knockoutReviewPresentation.js';
 import { GLASS_CARD, GLASS_INPUT, TEXT_MUTED } from '../styles.js';
 import { getWinnerOfMatch } from '../utils.js';
 import { formatBrazilMatchSchedule, formatOfficialKickoffHint } from '../matchData';
@@ -79,6 +79,9 @@ function RestrictedMatchDropdown({
     team: userTeamB,
     officialKnockout: gabaritoMataMata,
     officialBracketSlots
+  });
+  const matchupSummary = buildKnockoutMatchupSummary({
+    sideStatuses: [timeAStatus, timeBStatus]
   });
   const officialMatchup = getOfficialKnockoutMatchup(officialBracketSlots, match.id);
   const adminOfficialLabelA = officialMatchup.hasPublishedTeams || officialMatchup.placeholderA ? officialMatchup.labelA : (userTeamA || 'A definir');
@@ -195,6 +198,10 @@ function RestrictedMatchDropdown({
             <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu confronto neste jogo</div>
             <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{phaseProgressLabel}</div>
           </div>
+          <div className={`mt-3 rounded-[18px] border px-4 py-3 ${matchupSummary.tone}`}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em]">{matchupSummary.label}</div>
+            <div className="mt-1 text-[13px] leading-snug opacity-90">{matchupSummary.detail}</div>
+          </div>
           <div className="mt-3 grid gap-3">
             {renderTeamStatusRow(userTeamA, timeAStatus)}
             <div className="text-center text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">x</div>
@@ -204,18 +211,18 @@ function RestrictedMatchDropdown({
 
         <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
           <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu vencedor neste jogo</div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Time que pontua nesta linha</div>
             <div className="mt-3 text-[22px] font-black text-slate-900 lg:text-[26px]">
               {currentValue || 'Sem palpite'}
             </div>
             <div className="mt-2 text-[13px] leading-snug text-slate-500">
               {currentValue
-                ? `Voce marcou ${currentValue} para passar neste jogo da sua chave.`
+                ? `Voce marcou ${currentValue}. E esse time, sozinho, que pode gerar ponto nesta linha.`
                 : 'Nenhum classificado foi escolhido neste confronto.'}
             </div>
           </div>
           <div className={`rounded-[20px] border px-4 py-4 ${review.tone}`}>
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em]">{reviewCopy.badgeLabel}</div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em]">Pontos desta linha • {reviewCopy.badgeLabel}</div>
             <div className="mt-3 text-[20px] font-black lg:text-[24px]">{reviewCopy.pointsLabel}</div>
             <div className="mt-2 text-[13px] leading-snug opacity-80">
               {reviewCopy.caption}

@@ -92,3 +92,42 @@ export const buildKnockoutReviewCopy = ({ review, pick = '', points = 0 } = {}) 
       };
   }
 };
+
+export const buildKnockoutMatchupSummary = ({ sideStatuses = [] } = {}) => {
+  const totalSides = Math.max(sideStatuses.length, 2);
+  const confirmedSides = sideStatuses.filter((status) => status?.state === 'confirmed').length;
+  const openSides = sideStatuses.filter((status) => (
+    status?.state === 'unknown' || status?.state === 'waiting-official' || status?.state === 'partial-pending'
+  )).length;
+  const eliminatedSides = sideStatuses.filter((status) => status?.state === 'eliminated').length;
+
+  if (confirmedSides === totalSides) {
+    return {
+      label: `${confirmedSides} de ${totalSides} lados confirmados`,
+      detail: 'Seu confronto ja bate com o oficial desta fase. Isso nao dobra a pontuacao: esta linha vale so pelo seu vencedor.',
+      tone: 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    };
+  }
+
+  if (confirmedSides > 0) {
+    return {
+      label: `${confirmedSides} de ${totalSides} lados confirmados`,
+      detail: 'Parte do seu confronto ja apareceu oficialmente. A pontuacao desta linha continua valendo so pelo seu vencedor.',
+      tone: 'border-amber-200 bg-amber-50 text-amber-700'
+    };
+  }
+
+  if (eliminatedSides > 0 && openSides === 0) {
+    return {
+      label: `0 de ${totalSides} lados confirmados`,
+      detail: 'Os lados que voce montou nao bateram com o confronto oficial desta fase.',
+      tone: 'border-rose-200 bg-rose-50 text-rose-700'
+    };
+  }
+
+  return {
+    label: `0 de ${totalSides} lados confirmados`,
+    detail: 'Os lados deste confronto ainda nao apareceram oficialmente. Quando pontuar, esta linha valera so pelo seu vencedor.',
+    tone: 'border-slate-200 bg-slate-50 text-slate-600'
+  };
+};
