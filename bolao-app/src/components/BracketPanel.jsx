@@ -126,6 +126,7 @@ const PHASES = {
   qf: 'quartas',
   sf: 'semis'
 };
+const APP_BASE_URL = import.meta.env.BASE_URL || '/';
 
 const BRACKET_PANEL_STYLES = `
 .bracket-panel-header{display:flex;align-items:center;justify-content:space-between;gap:16px}
@@ -220,7 +221,7 @@ const getTeamLabel = (team) => {
 const getFlagPath = (team) => {
   const normalized = normalizeTeam(team);
   const code = FLAG_BY_TEAM[normalized] || FLAG_BY_TEAM[team];
-  return code ? `/flags/${code}.svg` : '';
+  return code ? `${APP_BASE_URL}flags/${code}.svg` : '';
 };
 
 const getPick = (source, phaseKey, index) => {
@@ -302,9 +303,10 @@ function useBracketScale() {
       if (!node) return;
       const width = node.querySelector('.bracket-scroll')?.clientWidth || node.clientWidth || 0;
       const viewportHeight = window.innerHeight || 900;
-      const availableHeight = Math.max(520, viewportHeight - 190);
+      const topOffset = node.getBoundingClientRect().top || 0;
+      const availableHeight = Math.max(360, viewportHeight - topOffset - 24);
       const nextScale = Math.min(width / 1480, availableHeight / 980, 0.78);
-      setScale(Math.max(0.48, Number.isFinite(nextScale) ? nextScale : 0.72));
+      setScale(Math.max(0.36, Number.isFinite(nextScale) ? nextScale : 0.72));
     };
 
     updateScale();
