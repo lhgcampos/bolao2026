@@ -485,18 +485,34 @@ function ReviewSheet({
       return (
         <div className={`rounded-[18px] border px-3 py-3 text-left shadow-[0_14px_24px_-24px_rgba(15,23,42,0.95)] ${palpite.status.tone}`}>
           <div className="overflow-hidden rounded-[14px] border border-slate-200 bg-white/85">
-            <div className="grid grid-cols-[92px_minmax(0,1fr)] gap-px bg-slate-200">
+            <div className="hidden gap-px bg-slate-200 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_110px]">
               <div className="bg-slate-50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo real</div>
+              <div className="bg-slate-50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo do usuário</div>
+              <div className="bg-slate-50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500 lg:text-right">Pontos</div>
+
               <div className="bg-white px-3 py-2">
                 {renderMatchupPills(buildMatchupTeams(row.sideA, row.sideB))}
               </div>
-
-              <div className="bg-slate-50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo do usuario</div>
               <div className="bg-white px-3 py-2">
                 {renderMatchupPills(buildMatchupTeams(palpite.userMatchup?.sideA, palpite.userMatchup?.sideB), palpite.palpite !== '—' ? palpite.palpite : '')}
                 <div className="mt-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-700">Palpite: {palpite.palpite}</div>
               </div>
+              <div className="bg-white px-3 py-2 lg:text-right">
+                <div className={`text-[16px] font-black tracking-[-0.03em] ${pointsToneByStatus(palpite.status)}`}>{palpite.pontos} pts</div>
+                <div className="mt-1 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">{palpite.reviewCopy.badgeLabel}</div>
+              </div>
+            </div>
 
+            <div className="grid gap-px bg-slate-200 lg:hidden">
+              <div className="bg-slate-50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo real</div>
+              <div className="bg-white px-3 py-2">
+                {renderMatchupPills(buildMatchupTeams(row.sideA, row.sideB))}
+              </div>
+              <div className="bg-slate-50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo do usuário</div>
+              <div className="bg-white px-3 py-2">
+                {renderMatchupPills(buildMatchupTeams(palpite.userMatchup?.sideA, palpite.userMatchup?.sideB), palpite.palpite !== '—' ? palpite.palpite : '')}
+                <div className="mt-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-700">Palpite: {palpite.palpite}</div>
+              </div>
               <div className="bg-slate-50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Pontos</div>
               <div className="bg-white px-3 py-2">
                 <div className={`text-[16px] font-black tracking-[-0.03em] ${pointsToneByStatus(palpite.status)}`}>{palpite.pontos} pts</div>

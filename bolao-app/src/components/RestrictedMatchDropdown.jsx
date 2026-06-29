@@ -192,42 +192,38 @@ function RestrictedMatchDropdown({
         </div>
 
         <div className="mt-5 overflow-hidden rounded-[22px] border border-slate-300 bg-white shadow-[0_18px_36px_-28px_rgba(15,23,42,0.28)]">
-          <div className="grid gap-px bg-slate-300 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px]">
-            <div className="bg-slate-100 px-4 py-3">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Confronto oficial</div>
-              <div className="mt-1 text-[11px] text-slate-600">Times confirmados pela FIFA para este jogo.</div>
-            </div>
-            <div className="bg-slate-100 px-4 py-3">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Seu confronto</div>
-              <div className="mt-1 text-[11px] text-slate-600">Times que seu caminho gerou e o classificado marcado.</div>
-            </div>
-            <div className="bg-slate-100 px-4 py-3 md:text-right">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Pontuação</div>
-              <div className="mt-1 text-[11px] text-slate-600">Situação do seu palpite neste jogo.</div>
-            </div>
+          <div className="hidden gap-px bg-slate-300 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px]">
+            <div className="bg-slate-100 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Jogo real</div>
+            <div className="bg-slate-100 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Jogo do usuário</div>
+            <div className="bg-slate-100 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700 md:text-right">Pontos</div>
 
             <div className="bg-white px-4 py-4">
-              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo real</div>
               {renderMatchupCell({ labelA: officialMatchup.labelA, labelB: officialMatchup.labelB })}
             </div>
             <div className="bg-slate-50/55 px-4 py-4">
-              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo do usuário</div>
               {renderMatchupCell({ labelA: userTeamA, labelB: userTeamB, selectedTeam: currentValue })}
-              <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700">
-                Palpite: {currentValue || 'Sem palpite'}
-              </div>
+              <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700">Palpite: {currentValue || 'Sem palpite'}</div>
             </div>
-            <div className={`px-4 py-4 md:text-right ${review.tone} bg-white`}>
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">Resultado</div>
-              <div className={`mt-2 text-[24px] font-black tracking-[-0.04em] ${pointsValueTone}`}>{pointsValueLabel}</div>
+            <div className={`bg-white px-4 py-4 md:text-right ${review.tone}`}>
+              <div className={`text-[24px] font-black tracking-[-0.04em] ${pointsValueTone}`}>{pointsValueLabel}</div>
               <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] opacity-90">{reviewCopy.badgeLabel}</div>
-              <div className="mt-2 text-[11px] leading-snug text-slate-600">
-                {review.state === 'success'
-                  ? 'Seu classificado bate com o oficial.'
-                  : review.state === 'error'
-                    ? 'Esse jogo já não soma mais pontos para você.'
-                    : 'Ainda depende da definição oficial completa.'}
-              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-px bg-slate-300 md:hidden">
+            <div className="bg-slate-100 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Jogo real</div>
+            <div className="bg-white px-4 py-4">
+              {renderMatchupCell({ labelA: officialMatchup.labelA, labelB: officialMatchup.labelB })}
+            </div>
+            <div className="bg-slate-100 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Jogo do usuário</div>
+            <div className="bg-slate-50/55 px-4 py-4">
+              {renderMatchupCell({ labelA: userTeamA, labelB: userTeamB, selectedTeam: currentValue })}
+              <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700">Palpite: {currentValue || 'Sem palpite'}</div>
+            </div>
+            <div className="bg-slate-100 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Pontos</div>
+            <div className={`bg-white px-4 py-4 ${review.tone}`}>
+              <div className={`text-[24px] font-black tracking-[-0.04em] ${pointsValueTone}`}>{pointsValueLabel}</div>
+              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] opacity-90">{reviewCopy.badgeLabel}</div>
             </div>
           </div>
 
