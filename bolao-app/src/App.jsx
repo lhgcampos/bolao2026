@@ -2559,7 +2559,7 @@ export default function App() {
         </aside>
 
         <section className="min-w-0 max-w-xl mx-auto w-full lg:max-w-none">
-        {!isDemoMode && (
+        {!isDemoMode && abaAtiva !== 'chaveamento' && (
           <div className={`${GLASS_CARD} mb-5 px-4 py-3`}>
             <div className="flex items-center justify-between gap-3">
               <div className="text-xs font-semibold text-slate-700">Base online</div>
@@ -2579,7 +2579,7 @@ export default function App() {
             {syncError && <div className="mt-2 text-[11px] text-rose-600">{syncError}</div>}
           </div>
         )}
-        {!modoAdmin && (
+        {!modoAdmin && abaAtiva !== 'chaveamento' && (
           <div className={`${GLASS_CARD} p-5 mb-5`}>
             <div className="flex items-center gap-4">
               <AvatarBadge user={currentUser} size="lg" />

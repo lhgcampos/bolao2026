@@ -129,27 +129,27 @@ const PHASES = {
 const APP_BASE_URL = import.meta.env.BASE_URL || '/';
 
 const BRACKET_PANEL_STYLES = `
-.bracket-panel-header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.bracket-panel-header{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .bracket-panel-header h2{margin:0;color:var(--app-text-primary);font-size:18px;font-weight:900}
 .bracket-panel-header p{margin:4px 0 0;color:var(--app-text-muted);font-size:12px;font-weight:700}
 .bracket-panel-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px}
 .bracket-view-select{min-height:40px;max-width:240px;border:1px solid var(--app-border-soft);border-radius:12px;background:var(--app-surface-card-strong);color:var(--app-text-primary);padding:8px 34px 8px 12px;font-size:12px;font-weight:800}
 .bracket-panel-legend{display:inline-flex;min-height:40px;align-items:center;gap:8px;border:1px solid var(--app-accent-emerald-border);border-radius:999px;background:var(--app-accent-emerald-bg);color:var(--app-accent-emerald-text);padding:8px 12px;font-size:11px;font-weight:800}
 .bracket-legend-dot{width:12px;height:12px;border-radius:999px;background:#16a34a;box-shadow:0 0 0 4px rgba(34,197,94,.18)}
-.bracket-panel-shell{overflow:hidden;padding:14px}
+.bracket-panel-shell{overflow:hidden;padding:8px}
 .bracket-scroll{overflow:hidden;border-radius:22px;background:var(--app-surface-card-strong)}
-.bracket-stage{--bracket-scale:.72;position:relative;width:calc(1480px * var(--bracket-scale));height:calc(980px * var(--bracket-scale));min-width:calc(1480px * var(--bracket-scale))}
+.bracket-stage{--bracket-scale:.5;position:relative;width:calc(1480px * var(--bracket-scale));height:calc(980px * var(--bracket-scale));min-width:calc(1480px * var(--bracket-scale))}
 .bracket-canvas{position:absolute;top:0;left:0;width:1480px;height:980px;transform:scale(var(--bracket-scale));transform-origin:top left;background:linear-gradient(90deg,rgba(148,163,184,.08) 1px,transparent 1px),linear-gradient(180deg,rgba(148,163,184,.08) 1px,transparent 1px),var(--app-surface-card-strong);background-size:74px 74px}
 .bracket-mobile{display:none}
 .bracket-lines{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.bracket-lines path{fill:none;stroke:#16a34a;stroke-linecap:round;stroke-linejoin:round;stroke-width:4}
+.bracket-lines path{fill:none;stroke:#94a3b8;stroke-linecap:round;stroke-linejoin:round;stroke-width:3;opacity:.72}
 .bracket-node-position{position:absolute;z-index:2;transform:translate(-50%,-50%)}
 .bracket-team-node{display:flex;min-width:68px;align-items:center;gap:8px;color:var(--app-text-primary)}
 .bracket-team-node--left{flex-direction:row}
 .bracket-team-node--right{flex-direction:row-reverse}
 .bracket-team-node--center{flex-direction:column}
-.bracket-team-flag{display:grid;place-items:center;flex:0 0 auto;overflow:hidden;border:4px solid #0f9f58;border-radius:999px;background:#f8fafc;box-shadow:0 8px 18px -14px rgba(15,23,42,.7)}
-.bracket-team-node:not(.is-correct) .bracket-team-flag{border-color:#cbd5e1}
+.bracket-team-flag{display:grid;place-items:center;flex:0 0 auto;overflow:hidden;border:4px solid #cbd5e1;border-radius:999px;background:#f8fafc;box-shadow:0 8px 18px -14px rgba(15,23,42,.7)}
+.bracket-team-node.is-correct .bracket-team-flag{border-color:#00b759;box-shadow:0 0 0 6px rgba(0,183,89,.24),0 12px 22px -12px rgba(0,128,80,.75)}
 .bracket-team-node.is-empty .bracket-team-flag{border-style:dashed;background:var(--app-surface-muted)}
 .bracket-team-flag img{width:100%;height:100%;object-fit:cover}
 .bracket-team-flag span{color:var(--app-text-muted);font-size:11px;font-weight:900}
@@ -166,25 +166,26 @@ const BRACKET_PANEL_STYLES = `
 .bracket-center-label strong{display:block;margin-top:6px;color:var(--app-text-primary);font-size:30px;font-weight:900;line-height:1.05}
 .bracket-podium{position:absolute;z-index:3;top:760px;left:740px;display:grid;width:360px;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;transform:translateX(-50%)}
 .bracket-podium-chip{min-width:0;border:1px solid var(--app-border-soft);border-radius:14px;background:var(--app-surface-soft);padding:10px;text-align:center}
-.bracket-podium-chip.is-correct{border-color:var(--app-accent-emerald-border);background:var(--app-accent-emerald-bg)}
+.bracket-podium-chip.is-correct{border-color:#00b759;background:rgba(0,183,89,.14);box-shadow:inset 0 0 0 1px rgba(0,183,89,.32),0 8px 18px -16px rgba(0,128,80,.8)}
 .bracket-podium-chip span{display:block;color:var(--app-text-muted);font-size:10px;font-weight:900}
 .bracket-podium-chip strong{display:block;margin-top:4px;overflow:hidden;color:var(--app-text-primary);font-size:12px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
-.bracket-mobile-hero{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;border:1px solid var(--app-accent-emerald-border);border-radius:18px;background:var(--app-accent-emerald-bg);padding:12px}
+.bracket-mobile-hero{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;border:1px solid var(--app-accent-emerald-border);border-radius:18px;background:var(--app-accent-emerald-bg);padding:8px}
 .bracket-mobile-hero .bracket-team-node{min-width:0}
+.bracket-mobile-hero .bracket-team-node--xl .bracket-team-flag{width:58px;height:58px;border-width:4px}
 .bracket-mobile-title span{display:block;color:var(--app-text-muted);font-size:11px;font-weight:900}
-.bracket-mobile-title strong{display:block;margin-top:2px;overflow:hidden;color:var(--app-text-primary);font-size:22px;font-weight:900;line-height:1.05;text-overflow:ellipsis;white-space:nowrap}
-.bracket-mobile-phases{margin-top:10px;display:grid;gap:8px}
-.bracket-mobile-phase{border:1px solid var(--app-border-soft);border-radius:14px;background:var(--app-surface-soft);padding:8px}
+.bracket-mobile-title strong{display:block;margin-top:2px;overflow:hidden;color:var(--app-text-primary);font-size:18px;font-weight:900;line-height:1.05;text-overflow:ellipsis;white-space:nowrap}
+.bracket-mobile-phases{margin-top:8px;display:grid;gap:6px}
+.bracket-mobile-phase{border:1px solid var(--app-border-soft);border-radius:14px;background:var(--app-surface-soft);padding:6px}
 .bracket-mobile-phase-title{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--app-text-muted);font-size:10px;font-weight:900;text-transform:uppercase}
-.bracket-mobile-team-grid{margin-top:6px;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.bracket-mobile-team-grid{margin-top:5px;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px}
 .bracket-mobile-team{display:grid;min-width:0;place-items:center;gap:2px}
-.bracket-mobile-team .bracket-team-flag{width:26px;height:26px;border-width:2px}
-.bracket-mobile-team:not(.is-correct) .bracket-team-flag{border-color:#cbd5e1}
+.bracket-mobile-team .bracket-team-flag{width:22px;height:22px;border-width:2px}
+.bracket-mobile-team.is-correct .bracket-team-flag{border-color:#00b759;box-shadow:0 0 0 3px rgba(0,183,89,.24)}
 .bracket-mobile-team.is-empty .bracket-team-flag{border-style:dashed;background:var(--app-surface-muted)}
-.bracket-mobile-team-code{max-width:100%;overflow:hidden;color:var(--app-text-secondary);font-size:9px;font-weight:900;line-height:1;text-overflow:ellipsis;white-space:nowrap}
-.bracket-mobile-podium{margin-top:10px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-.bracket-mobile-podium .bracket-podium-chip{padding:8px 6px;border-radius:12px}
-.bracket-mobile-podium .bracket-podium-chip strong{font-size:10px}
+.bracket-mobile-team-code{max-width:100%;overflow:hidden;color:var(--app-text-secondary);font-size:8px;font-weight:900;line-height:1;text-overflow:ellipsis;white-space:nowrap}
+.bracket-mobile-podium{margin-top:8px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.bracket-mobile-podium .bracket-podium-chip{padding:6px 5px;border-radius:12px}
+.bracket-mobile-podium .bracket-podium-chip strong{font-size:9px}
 @media (max-width:640px){.bracket-panel-header{align-items:stretch;flex-direction:column}.bracket-panel-actions{align-items:stretch;flex-direction:column}.bracket-view-select{max-width:none;width:100%}.bracket-panel-shell{padding:10px}.bracket-scroll{display:none}.bracket-mobile{display:block}}
 `;
 
@@ -295,7 +296,7 @@ function MobileTeamChip({ team, correct }) {
 
 function useBracketScale() {
   const ref = useRef(null);
-  const [scale, setScale] = useState(0.72);
+  const [scale, setScale] = useState(0.5);
 
   useEffect(() => {
     const updateScale = () => {
@@ -304,9 +305,9 @@ function useBracketScale() {
       const width = node.querySelector('.bracket-scroll')?.clientWidth || node.clientWidth || 0;
       const viewportHeight = window.innerHeight || 900;
       const topOffset = node.getBoundingClientRect().top || 0;
-      const availableHeight = Math.max(360, viewportHeight - topOffset - 24);
-      const nextScale = Math.min(width / 1480, availableHeight / 980, 0.78);
-      setScale(Math.max(0.36, Number.isFinite(nextScale) ? nextScale : 0.72));
+      const availableHeight = Math.max(280, Math.min(viewportHeight - topOffset - 16, viewportHeight * 0.58));
+      const nextScale = Math.min(width / 1480, availableHeight / 980, 0.5);
+      setScale(Math.max(0.28, Number.isFinite(nextScale) ? nextScale : 0.5));
     };
 
     updateScale();
