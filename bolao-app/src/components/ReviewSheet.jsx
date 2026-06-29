@@ -4,8 +4,8 @@ import { GRUPOS_2026, buildChronologicalMatchGroups, formatBrazilMatchSchedule, 
 import { GLASS_CARD, GLASS_INPUT, TEXT_MUTED } from '../styles.js';
 import { MATA_MATA_CONFIG, PONTOS, SUBMISSION_FIELDS } from '../constants.js';
 import { calcularPontosJogo, formatSubmissionDate, getWinnerOfMatch } from '../utils.js';
-import { evaluateKnockoutPhasePick, getKnockoutPhaseOfficialState, getKnockoutPhaseTeamStatus } from '../officialResults/knockoutPhaseScoring.js';
-import { buildKnockoutMatchupSummary, buildKnockoutReviewCopy, getOfficialKnockoutMatchup } from '../officialResults/knockoutReviewPresentation.js';
+import { evaluateKnockoutPhasePick, getKnockoutPhaseOfficialState } from '../officialResults/knockoutPhaseScoring.js';
+import { buildKnockoutReviewCopy, getOfficialKnockoutMatchup } from '../officialResults/knockoutReviewPresentation.js';
 import { getMatchResultVariant } from '../officialResults/officialResultsView';
 
 const PANEL_STAGE_OPTIONS = [
@@ -61,7 +61,7 @@ function ReviewSheet({
 
   const participantColumnCount = Math.max(usersFiltrados.length, 1);
   const reviewGridTemplate = `308px repeat(${participantColumnCount}, minmax(196px, 1fr))`;
-  const reviewDescription = 'O painel segue a sequencia completa do bolao: 1a Fase, mata-mata e podio final. No mata-mata, cada coluna mostra o confronto daquela chave, o time escolhido pelo usuario e o que ja pontuou.';
+  const reviewDescription = 'O painel segue a sequencia completa do bolao: 1a Fase, mata-mata e podio final. No mata-mata, cada linha compara jogo real, jogo do usuario e pontos.';
 
   const setRowRef = (rowId, surface) => (node) => {
     if (!rowRefs.current[rowId]) rowRefs.current[rowId] = {};
@@ -252,22 +252,6 @@ function ReviewSheet({
       successLabel: 'Acertou'
     });
     const reviewCopy = buildKnockoutReviewCopy({ review, pick: palpite, points });
-    const matchupSummary = buildKnockoutMatchupSummary({
-      sideStatuses: [
-        getKnockoutPhaseTeamStatus({
-          phaseKey,
-          team: userMatchup.sideA,
-          officialKnockout: gabaritoMataMata,
-          officialBracketSlots
-        }),
-        getKnockoutPhaseTeamStatus({
-          phaseKey,
-          team: userMatchup.sideB,
-          officialKnockout: gabaritoMataMata,
-          officialBracketSlots
-        })
-      ]
-    });
 
     let status = buildStatus();
     if (review.state === 'waiting-official') status = buildStatus('waiting-official');
@@ -282,7 +266,6 @@ function ReviewSheet({
       status,
       pontos: review.pointsAwarded,
       userMatchup,
-      matchupSummary,
       reviewCopy,
       envio: formatSubmissionDate(submissoes[user.id]?.[SUBMISSION_FIELDS.MATA])
     };
@@ -469,31 +452,58 @@ function ReviewSheet({
     return 'Rascunho';
   };
 
-  const formatMatchupLabel = (sideA, sideB) => `${sideA || 'A definir'} x ${sideB || 'A definir'}`;
+  const buildMatchupTeams = (sideA, sideB) => [sideA || 'A definir', sideB || 'A definir'];
+  const pointsToneByStatus = (status) => {
+    if (status?.label === 'Acertou') return 'text-emerald-700';
+    if (status?.label === 'Errou') return 'text-rose-700';
+    return 'text-slate-900';
+  };
+  const renderMatchupPills = (teams = [], selectedTeam = '') => (
+    <div className="flex flex-wrap items-center gap-2">
+      {teams.map((team, teamIndex) => {
+        const isSelected = Boolean(selectedTeam) && team === selectedTeam;
+        const isPlaceholder = team === 'A definir' || team === 'Aguardando oficial';
+
+        return (
+          <React.Fragment key={`${team}-${teamIndex}`}>
+            {teamIndex > 0 && <span className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">x</span>}
+            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${isSelected
+              ? 'border-sky-200 bg-sky-50 text-sky-700'
+              : isPlaceholder
+                ? 'border-slate-200 bg-slate-50 text-slate-400'
+                : 'border-slate-200 bg-white text-slate-900'}`}>
+              {team}
+            </span>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
 
   const renderParticipantCard = (row, palpite) => {
     if (row.kind === 'match') {
       return (
         <div className={`rounded-[18px] border px-3 py-3 text-left shadow-[0_14px_24px_-24px_rgba(15,23,42,0.95)] ${palpite.status.tone}`}>
-          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu confronto</div>
-          <div className="mt-1 text-[13px] font-black leading-snug text-slate-900">
-            {formatMatchupLabel(palpite.userMatchup?.sideA, palpite.userMatchup?.sideB)}
-          </div>
-          <div className={`mt-2 rounded-[14px] border px-2.5 py-2 ${palpite.matchupSummary.tone}`}>
-            <div className="text-[9px] font-bold uppercase tracking-[0.16em]">{palpite.matchupSummary.label}</div>
-            <div className="mt-1 text-[10px] leading-snug opacity-90">{palpite.matchupSummary.detail}</div>
-          </div>
+          <div className="overflow-hidden rounded-[14px] border border-slate-200 bg-white/85">
+            <div className="grid grid-cols-[92px_minmax(0,1fr)] gap-px bg-slate-200">
+              <div className="bg-slate-50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo real</div>
+              <div className="bg-white px-3 py-2">
+                {renderMatchupPills(buildMatchupTeams(row.sideA, row.sideB))}
+              </div>
 
-          <div className="mt-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Time que pontua nesta linha</div>
-          <div className="mt-1 text-[17px] font-black tracking-[-0.03em] text-slate-900">{palpite.palpite}</div>
+              <div className="bg-slate-50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo do usuario</div>
+              <div className="bg-white px-3 py-2">
+                {renderMatchupPills(buildMatchupTeams(palpite.userMatchup?.sideA, palpite.userMatchup?.sideB), palpite.palpite !== '—' ? palpite.palpite : '')}
+                <div className="mt-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-700">Palpite: {palpite.palpite}</div>
+              </div>
 
-          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-black/5 bg-white/85 px-2.5 py-1">
-            <span className={`h-2.5 w-2.5 rounded-full ${palpite.status.dot}`}></span>
-            <span className="text-[9px] font-bold uppercase tracking-[0.16em]">{palpite.reviewCopy.badgeLabel}</span>
+              <div className="bg-slate-50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Pontos</div>
+              <div className="bg-white px-3 py-2">
+                <div className={`text-[16px] font-black tracking-[-0.03em] ${pointsToneByStatus(palpite.status)}`}>{palpite.pontos} pts</div>
+                <div className="mt-1 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">{palpite.reviewCopy.badgeLabel}</div>
+              </div>
+            </div>
           </div>
-          <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Pontos desta linha</div>
-          <div className="mt-1 text-[13px] font-black leading-none text-slate-900">{palpite.reviewCopy.pointsLabel}</div>
-          <div className="mt-1.5 text-[10px] leading-snug text-slate-600">{palpite.reviewCopy.caption}</div>
           <div className="mt-2 text-[9px] leading-tight text-slate-500">{palpite.envio}</div>
         </div>
       );
@@ -625,17 +635,26 @@ function ReviewSheet({
             </div>
           </div>
           <div className="mt-2 rounded-[16px] border border-slate-200 bg-white/80 px-3 py-2">
-            <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Seu confronto</div>
-            <div className="mt-1 text-[12px] font-bold text-slate-900">
-              {formatMatchupLabel(palpite.userMatchup?.sideA, palpite.userMatchup?.sideB)}
+            <div className="overflow-hidden rounded-[12px] border border-slate-200">
+              <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-px bg-slate-200">
+                <div className="bg-slate-50 px-2.5 py-2 text-[8px] font-bold uppercase tracking-[0.14em] text-slate-500">Jogo real</div>
+                <div className="bg-white px-2.5 py-2">
+                  {renderMatchupPills(buildMatchupTeams(row.sideA, row.sideB))}
+                </div>
+
+                <div className="bg-slate-50 px-2.5 py-2 text-[8px] font-bold uppercase tracking-[0.14em] text-slate-500">Jogo do usuario</div>
+                <div className="bg-white px-2.5 py-2">
+                  {renderMatchupPills(buildMatchupTeams(palpite.userMatchup?.sideA, palpite.userMatchup?.sideB), palpite.palpite !== '—' ? palpite.palpite : '')}
+                  <div className="mt-2 text-[8px] font-semibold uppercase tracking-[0.14em] text-sky-700">Palpite: {palpite.palpite}</div>
+                </div>
+
+                <div className="bg-slate-50 px-2.5 py-2 text-[8px] font-bold uppercase tracking-[0.14em] text-slate-500">Pontos</div>
+                <div className="bg-white px-2.5 py-2">
+                  <div className={`text-[13px] font-black ${pointsToneByStatus(palpite.status)}`}>{palpite.pontos} pts</div>
+                  <div className="mt-1 text-[8px] font-bold uppercase tracking-[0.14em] text-slate-500">{palpite.reviewCopy.badgeLabel}</div>
+                </div>
+              </div>
             </div>
-            <div className={`mt-2 rounded-[12px] border px-2.5 py-2 ${palpite.matchupSummary.tone}`}>
-              <div className="text-[9px] font-bold uppercase tracking-[0.14em]">{palpite.matchupSummary.label}</div>
-              <div className="mt-1 text-[10px] leading-snug opacity-90">{palpite.matchupSummary.detail}</div>
-            </div>
-            <div className="mt-2 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Time que pontua nesta linha</div>
-            <div className="mt-1 text-[12px] font-black text-slate-900">{palpite.palpite}</div>
-            <div className="mt-1 text-[10px] leading-snug text-slate-600">{palpite.reviewCopy.caption}</div>
             <div className="mt-1 text-[9px] text-slate-500">{palpite.envio}</div>
           </div>
         </div>

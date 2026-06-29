@@ -1,8 +1,8 @@
 import React, { memo } from 'react';
 import { ChevronDown, Lock } from '../lucideIcons';
 import { PONTOS } from '../constants.js';
-import { evaluateKnockoutPhasePick, getKnockoutPhaseTeamStatus } from '../officialResults/knockoutPhaseScoring.js';
-import { buildKnockoutMatchupSummary, buildKnockoutReviewCopy, getOfficialKnockoutMatchup } from '../officialResults/knockoutReviewPresentation.js';
+import { evaluateKnockoutPhasePick } from '../officialResults/knockoutPhaseScoring.js';
+import { buildKnockoutReviewCopy, getOfficialKnockoutMatchup } from '../officialResults/knockoutReviewPresentation.js';
 import { GLASS_CARD, GLASS_INPUT, TEXT_MUTED } from '../styles.js';
 import { getWinnerOfMatch } from '../utils.js';
 import { formatBrazilMatchSchedule, formatOfficialKickoffHint } from '../matchData';
@@ -68,21 +68,6 @@ function RestrictedMatchDropdown({
     successLabel: 'Acertou o classificado'
   });
   const reviewCopy = buildKnockoutReviewCopy({ review, pick: currentValue, points });
-  const timeAStatus = getKnockoutPhaseTeamStatus({
-    phaseKey,
-    team: userTeamA,
-    officialKnockout: gabaritoMataMata,
-    officialBracketSlots
-  });
-  const timeBStatus = getKnockoutPhaseTeamStatus({
-    phaseKey,
-    team: userTeamB,
-    officialKnockout: gabaritoMataMata,
-    officialBracketSlots
-  });
-  const matchupSummary = buildKnockoutMatchupSummary({
-    sideStatuses: [timeAStatus, timeBStatus]
-  });
   const officialMatchup = getOfficialKnockoutMatchup(officialBracketSlots, match.id);
   const adminOfficialLabelA = officialMatchup.hasPublishedTeams || officialMatchup.placeholderA ? officialMatchup.labelA : (userTeamA || 'A definir');
   const adminOfficialLabelB = officialMatchup.hasPublishedTeams || officialMatchup.placeholderB ? officialMatchup.labelB : (userTeamB || 'A definir');
@@ -102,24 +87,37 @@ function RestrictedMatchDropdown({
     : review.officialState.isPartial
       ? 'border-amber-200 bg-amber-50 text-amber-700'
       : 'border-slate-200 bg-slate-50 text-slate-600';
+  const pointsValueLabel = `${review.pointsAwarded} pts`;
+  const pointsValueTone = review.pointsAwarded > 0
+    ? 'text-emerald-700'
+    : review.state === 'error'
+      ? 'text-rose-700'
+      : 'text-slate-900';
 
-  const renderTeamStatusRow = (team, teamStatus) => (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/90 px-4 py-3">
-      <div className="min-w-0">
-        <div className="truncate text-[16px] font-bold text-slate-900">{team || 'A definir'}</div>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${teamStatus.tone}`}>
-            {teamStatus.label}
-          </span>
-          {currentValue === team && (
-            <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-sky-700">
-              Seu vencedor
-            </span>
-          )}
-        </div>
+  const renderMatchupCell = ({ labelA, labelB, selectedTeam = '' }) => {
+    const teams = [labelA || 'A definir', labelB || 'A definir'];
+
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {teams.map((team, teamIndex) => {
+          const isSelected = Boolean(selectedTeam) && team === selectedTeam;
+          const isPlaceholder = team === 'Aguardando oficial' || team === 'A definir';
+          return (
+            <React.Fragment key={`${team}-${teamIndex}`}>
+              {teamIndex > 0 && <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">x</span>}
+              <span className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[12px] font-bold ${isSelected
+                ? 'border-sky-200 bg-sky-50 text-sky-700'
+                : isPlaceholder
+                  ? 'border-slate-200 bg-slate-50 text-slate-400'
+                  : 'border-slate-200 bg-white text-slate-900'}`}>
+                {team}
+              </span>
+            </React.Fragment>
+          );
+        })}
       </div>
-    </div>
-  );
+    );
+  };
 
   if (modoAdmin) {
     return (
@@ -193,63 +191,29 @@ function RestrictedMatchDropdown({
           </div>
         </div>
 
-        <div className="mt-5 rounded-[22px] border border-slate-200 bg-slate-50/70 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu confronto neste jogo</div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{phaseProgressLabel}</div>
-          </div>
-          <div className={`mt-3 rounded-[18px] border px-4 py-3 ${matchupSummary.tone}`}>
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em]">{matchupSummary.label}</div>
-            <div className="mt-1 text-[13px] leading-snug opacity-90">{matchupSummary.detail}</div>
-          </div>
-          <div className="mt-3 grid gap-3">
-            {renderTeamStatusRow(userTeamA, timeAStatus)}
-            <div className="text-center text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">x</div>
-            {renderTeamStatusRow(userTeamB, timeBStatus)}
-          </div>
-        </div>
+        <div className="mt-5 overflow-hidden rounded-[22px] border border-slate-200 bg-white/90">
+          <div className="grid gap-px bg-slate-200 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_140px]">
+            <div className="bg-slate-50 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo real</div>
+            <div className="bg-slate-50 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo do usuario</div>
+            <div className="bg-slate-50 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 md:text-right">Pontos</div>
 
-        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
-          <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Time que pontua nesta linha</div>
-            <div className="mt-3 text-[22px] font-black text-slate-900 lg:text-[26px]">
-              {currentValue || 'Sem palpite'}
+            <div className="bg-white px-4 py-4">
+              {renderMatchupCell({ labelA: officialMatchup.labelA, labelB: officialMatchup.labelB })}
             </div>
-            <div className="mt-2 text-[13px] leading-snug text-slate-500">
-              {currentValue
-                ? `Voce marcou ${currentValue}. E esse time, sozinho, que pode gerar ponto nesta linha.`
-                : 'Nenhum classificado foi escolhido neste confronto.'}
+            <div className="bg-white px-4 py-4">
+              {renderMatchupCell({ labelA: userTeamA, labelB: userTeamB, selectedTeam: currentValue })}
+              <div className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700">
+                Palpite: {currentValue || 'Sem palpite'}
+              </div>
             </div>
-          </div>
-          <div className={`rounded-[20px] border px-4 py-4 ${review.tone}`}>
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em]">Pontos desta linha • {reviewCopy.badgeLabel}</div>
-            <div className="mt-3 text-[20px] font-black lg:text-[24px]">{reviewCopy.pointsLabel}</div>
-            <div className="mt-2 text-[13px] leading-snug opacity-80">
-              {reviewCopy.caption}
+            <div className={`bg-white px-4 py-4 md:text-right ${review.tone}`}>
+              <div className={`text-[24px] font-black tracking-[-0.04em] ${pointsValueTone}`}>{pointsValueLabel}</div>
+              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] opacity-80">{reviewCopy.badgeLabel}</div>
             </div>
           </div>
-        </div>
 
-        <div className="mt-5 rounded-[22px] border border-slate-200 bg-white/85 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Publicado oficialmente neste confronto</div>
-            <div className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${phaseBadgeTone}`}>
-              {phaseBadge}
-            </div>
-          </div>
-          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
-            <div className={`text-right text-[15px] font-bold lg:text-[18px] ${officialMatchup.labelA === 'Aguardando oficial' ? 'text-slate-400' : 'text-slate-900'}`}>{officialMatchup.labelA}</div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-center text-sm font-black uppercase tracking-[0.18em] text-slate-500 lg:min-w-[112px]">
-              x
-            </div>
-            <div className={`text-left text-[15px] font-bold lg:text-[18px] ${officialMatchup.labelB === 'Aguardando oficial' ? 'text-slate-400' : 'text-slate-900'}`}>{officialMatchup.labelB}</div>
-          </div>
-          <div className="mt-3 text-[13px] text-slate-500">
-            {officialMatchup.hasPublishedTeams
-              ? 'Esse e o retrato oficial mais recente publicado para este jogo.'
-              : review.officialState.isPartial
-                ? 'A fase ja tem publicacao oficial, mas este confronto ainda nao apareceu com os dois lados.'
-                : 'A FIFA ainda nao publicou os lados oficiais deste confronto.'}
+          <div className="border-t border-slate-100 bg-slate-50/80 px-4 py-3 text-[11px] text-slate-500">
+            {phaseProgressLabel}
           </div>
         </div>
       </div>

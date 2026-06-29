@@ -6,6 +6,11 @@ export const formatKnockoutPlaceholder = (value = '') => {
   const normalized = normalizeLabel(value).toUpperCase();
   if (!normalized) return '';
 
+  const winnerMatch = normalized.match(/^W(\d+)$/);
+  if (winnerMatch) {
+    return `V${winnerMatch[1]}`;
+  }
+
   const directGroupMatch = normalized.match(/^([123])([A-L])$/);
   if (directGroupMatch) {
     return `${directGroupMatch[1]}o do Grupo ${directGroupMatch[2]}`;
@@ -50,7 +55,7 @@ export const buildKnockoutReviewCopy = ({ review, pick = '', points = 0 } = {}) 
         badgeLabel: 'Acertou',
         pointsLabel: `+${awardedPoints} pts confirmados`,
         caption: team
-          ? `Voce marcou ${team}, e esse time ja esta oficialmente nesta fase.`
+          ? `${team} ja esta oficialmente nesta fase.`
           : 'Seu time ja esta oficialmente nesta fase.'
       };
     case 'partial-pending':
@@ -58,21 +63,21 @@ export const buildKnockoutReviewCopy = ({ review, pick = '', points = 0 } = {}) 
         badgeLabel: 'Em aberto',
         pointsLabel: '0 pts por enquanto',
         caption: team
-          ? `${team} ainda pode aparecer oficialmente nesta fase.`
-          : 'Seu time ainda pode aparecer oficialmente nesta fase.'
+          ? `${team} ainda pode entrar nesta fase.`
+          : 'Seu time ainda pode entrar nesta fase.'
       };
     case 'waiting-official':
       return {
         badgeLabel: 'Aguardando oficial',
         pointsLabel: '0 pts por enquanto',
-        caption: 'A FIFA ainda nao publicou times suficientes desta fase para pontuar.'
+        caption: 'Aguardando publicacao oficial.'
       };
     case 'duplicate':
       return {
         badgeLabel: 'Duplicado',
         pointsLabel: '0 pts nesta fase',
         caption: team
-          ? `${team} foi repetido e so pontua uma vez nesta fase.`
+          ? `${team} so pontua uma vez nesta fase.`
           : 'O mesmo time so pontua uma vez nesta fase.'
       };
     case 'error':
@@ -80,7 +85,7 @@ export const buildKnockoutReviewCopy = ({ review, pick = '', points = 0 } = {}) 
         badgeLabel: 'Errou',
         pointsLabel: '0 pts nesta fase',
         caption: team
-          ? `${team} nao entrou oficialmente nesta fase.`
+          ? `${team} ficou fora desta fase.`
           : 'Seu time nao entrou oficialmente nesta fase.'
       };
     case 'no-pick':
@@ -88,46 +93,7 @@ export const buildKnockoutReviewCopy = ({ review, pick = '', points = 0 } = {}) 
       return {
         badgeLabel: 'Sem palpite',
         pointsLabel: '0 pts',
-        caption: 'Nenhum time foi marcado neste jogo.'
+        caption: 'Nenhum vencedor foi marcado.'
       };
   }
-};
-
-export const buildKnockoutMatchupSummary = ({ sideStatuses = [] } = {}) => {
-  const totalSides = Math.max(sideStatuses.length, 2);
-  const confirmedSides = sideStatuses.filter((status) => status?.state === 'confirmed').length;
-  const openSides = sideStatuses.filter((status) => (
-    status?.state === 'unknown' || status?.state === 'waiting-official' || status?.state === 'partial-pending'
-  )).length;
-  const eliminatedSides = sideStatuses.filter((status) => status?.state === 'eliminated').length;
-
-  if (confirmedSides === totalSides) {
-    return {
-      label: `${confirmedSides} de ${totalSides} lados confirmados`,
-      detail: 'Seu confronto ja bate com o oficial desta fase. Isso nao dobra a pontuacao: esta linha vale so pelo seu vencedor.',
-      tone: 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    };
-  }
-
-  if (confirmedSides > 0) {
-    return {
-      label: `${confirmedSides} de ${totalSides} lados confirmados`,
-      detail: 'Parte do seu confronto ja apareceu oficialmente. A pontuacao desta linha continua valendo so pelo seu vencedor.',
-      tone: 'border-amber-200 bg-amber-50 text-amber-700'
-    };
-  }
-
-  if (eliminatedSides > 0 && openSides === 0) {
-    return {
-      label: `0 de ${totalSides} lados confirmados`,
-      detail: 'Os lados que voce montou nao bateram com o confronto oficial desta fase.',
-      tone: 'border-rose-200 bg-rose-50 text-rose-700'
-    };
-  }
-
-  return {
-    label: `0 de ${totalSides} lados confirmados`,
-    detail: 'Os lados deste confronto ainda nao apareceram oficialmente. Quando pontuar, esta linha valera so pelo seu vencedor.',
-    tone: 'border-slate-200 bg-slate-50 text-slate-600'
-  };
 };
