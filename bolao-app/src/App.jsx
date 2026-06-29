@@ -3064,26 +3064,26 @@ export default function App() {
                       <div className={`${GLASS_CARD} p-4`}>
                         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                           <div>
-                            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Leitura rapida da fase</div>
-                            <div className="mt-1 text-[13px] text-slate-600">
+                            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-700">Resumo da fase</div>
+                            <div className="mt-1 text-[13px] text-slate-700">
                               {currentUserKnockoutPhaseSummary[section.key].officialState.publishedCount}/{currentUserKnockoutPhaseSummary[section.key].officialState.expectedCount} times oficiais ja publicados nesta fase.
                             </div>
                           </div>
                         </div>
                         <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                          <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-4 py-3">
-                            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Pontos confirmados</div>
+                          <div className="rounded-[18px] border border-slate-300 bg-white px-4 py-3 shadow-[0_12px_24px_-22px_rgba(15,23,42,0.18)]">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Pontos confirmados</div>
                             <div className="mt-2 text-[22px] font-black text-slate-900">{currentUserKnockoutPhaseSummary[section.key].confirmedPoints}</div>
                           </div>
-                          <div className="rounded-[18px] border border-emerald-200 bg-emerald-50/80 px-4 py-3">
+                          <div className="rounded-[18px] border border-emerald-300 bg-emerald-50 px-4 py-3 shadow-[0_12px_24px_-22px_rgba(16,185,129,0.2)]">
                             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">Acertos confirmados</div>
                             <div className="mt-2 text-[22px] font-black text-emerald-900">{currentUserKnockoutPhaseSummary[section.key].confirmedCount}</div>
                           </div>
-                          <div className="rounded-[18px] border border-amber-200 bg-amber-50/80 px-4 py-3">
+                          <div className="rounded-[18px] border border-amber-300 bg-amber-50 px-4 py-3 shadow-[0_12px_24px_-22px_rgba(245,158,11,0.2)]">
                             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-700">Ainda em aberto</div>
                             <div className="mt-2 text-[22px] font-black text-amber-900">{currentUserKnockoutPhaseSummary[section.key].openCount}</div>
                           </div>
-                          <div className="rounded-[18px] border border-rose-200 bg-rose-50/80 px-4 py-3">
+                          <div className="rounded-[18px] border border-rose-300 bg-rose-50 px-4 py-3 shadow-[0_12px_24px_-22px_rgba(244,63,94,0.2)]">
                             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-rose-700">Ja nao pontuam</div>
                             <div className="mt-2 text-[22px] font-black text-rose-900">{currentUserKnockoutPhaseSummary[section.key].wrongCount}</div>
                           </div>

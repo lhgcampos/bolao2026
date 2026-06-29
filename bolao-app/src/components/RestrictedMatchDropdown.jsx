@@ -179,40 +179,59 @@ function RestrictedMatchDropdown({
       <div className={`${GLASS_CARD} mb-3 p-4 lg:p-5 ${!isReady ? 'opacity-60' : ''}`}>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-600">
               <span>{schedule.day}/{schedule.month} • {schedule.time} BR</span>
-              {match.local && <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{match.local}</span>}
-              <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">Jogo {match.id}</span>
+              {match.local && <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-1 text-slate-700">{match.local}</span>}
+              <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-1 text-slate-700">Jogo {match.id}</span>
             </div>
-            {officialKickoffHint && <div className="mt-2 text-[13px] text-slate-500">{officialKickoffHint}</div>}
+            {officialKickoffHint && <div className="mt-2 text-[13px] text-slate-600">{officialKickoffHint}</div>}
           </div>
           <div className={`self-start rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] ${phaseBadgeTone}`}>
             {phaseBadge}
           </div>
         </div>
 
-        <div className="mt-5 overflow-hidden rounded-[22px] border border-slate-200 bg-white/90">
-          <div className="grid gap-px bg-slate-200 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_140px]">
-            <div className="bg-slate-50 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo real</div>
-            <div className="bg-slate-50 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo do usuario</div>
-            <div className="bg-slate-50 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 md:text-right">Pontos</div>
+        <div className="mt-5 overflow-hidden rounded-[22px] border border-slate-300 bg-white shadow-[0_18px_36px_-28px_rgba(15,23,42,0.28)]">
+          <div className="grid gap-px bg-slate-300 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px]">
+            <div className="bg-slate-100 px-4 py-3">
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Confronto oficial</div>
+              <div className="mt-1 text-[11px] text-slate-600">Times confirmados pela FIFA para este jogo.</div>
+            </div>
+            <div className="bg-slate-100 px-4 py-3">
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Seu confronto</div>
+              <div className="mt-1 text-[11px] text-slate-600">Times que seu caminho gerou e o classificado marcado.</div>
+            </div>
+            <div className="bg-slate-100 px-4 py-3 md:text-right">
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Pontuação</div>
+              <div className="mt-1 text-[11px] text-slate-600">Situação do seu palpite neste jogo.</div>
+            </div>
 
             <div className="bg-white px-4 py-4">
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo real</div>
               {renderMatchupCell({ labelA: officialMatchup.labelA, labelB: officialMatchup.labelB })}
             </div>
-            <div className="bg-white px-4 py-4">
+            <div className="bg-slate-50/55 px-4 py-4">
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Jogo do usuário</div>
               {renderMatchupCell({ labelA: userTeamA, labelB: userTeamB, selectedTeam: currentValue })}
-              <div className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700">
+              <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700">
                 Palpite: {currentValue || 'Sem palpite'}
               </div>
             </div>
-            <div className={`bg-white px-4 py-4 md:text-right ${review.tone}`}>
-              <div className={`text-[24px] font-black tracking-[-0.04em] ${pointsValueTone}`}>{pointsValueLabel}</div>
-              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] opacity-80">{reviewCopy.badgeLabel}</div>
+            <div className={`px-4 py-4 md:text-right ${review.tone} bg-white`}>
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">Resultado</div>
+              <div className={`mt-2 text-[24px] font-black tracking-[-0.04em] ${pointsValueTone}`}>{pointsValueLabel}</div>
+              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] opacity-90">{reviewCopy.badgeLabel}</div>
+              <div className="mt-2 text-[11px] leading-snug text-slate-600">
+                {review.state === 'success'
+                  ? 'Seu classificado bate com o oficial.'
+                  : review.state === 'error'
+                    ? 'Esse jogo já não soma mais pontos para você.'
+                    : 'Ainda depende da definição oficial completa.'}
+              </div>
             </div>
           </div>
 
-          <div className="border-t border-slate-100 bg-slate-50/80 px-4 py-3 text-[11px] text-slate-500">
+          <div className="border-t border-slate-200 bg-slate-100/80 px-4 py-3 text-[11px] text-slate-600">
             {phaseProgressLabel}
           </div>
         </div>
