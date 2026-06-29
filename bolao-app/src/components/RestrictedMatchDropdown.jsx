@@ -192,7 +192,10 @@ function RestrictedMatchDropdown({
         </div>
 
         <div className="mt-5 overflow-hidden rounded-[22px] border border-slate-300 bg-white shadow-[0_18px_36px_-28px_rgba(15,23,42,0.28)]">
-          <div className="hidden gap-px bg-slate-300 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px]">
+          <div
+            className="hidden gap-px bg-slate-300 lg:grid"
+            style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr) 180px' }}
+          >
             <div className="bg-white px-4 py-4">
               <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Jogo real</div>
               {renderMatchupCell({ labelA: officialMatchup.labelA, labelB: officialMatchup.labelB })}
@@ -209,7 +212,7 @@ function RestrictedMatchDropdown({
             </div>
           </div>
 
-          <div className="grid gap-px bg-slate-300 md:hidden">
+          <div className="grid gap-px bg-slate-300 lg:hidden">
             <div className="bg-slate-100 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-700">Jogo real</div>
             <div className="bg-white px-4 py-4">
               {renderMatchupCell({ labelA: officialMatchup.labelA, labelB: officialMatchup.labelB })}
