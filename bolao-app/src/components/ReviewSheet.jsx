@@ -4,8 +4,8 @@ import { GRUPOS_2026, buildChronologicalMatchGroups, formatBrazilMatchSchedule, 
 import { GLASS_CARD, GLASS_INPUT, TEXT_MUTED } from '../styles.js';
 import { MATA_MATA_CONFIG, PONTOS, SUBMISSION_FIELDS } from '../constants.js';
 import { calcularPontosJogo, formatSubmissionDate, getWinnerOfMatch } from '../utils.js';
-import { getOfficialBracketSlotTeam } from '../officialResults/officialBracketSlots.js';
 import { evaluateKnockoutPhasePick, getKnockoutPhaseOfficialState } from '../officialResults/knockoutPhaseScoring.js';
+import { buildKnockoutReviewCopy, getOfficialKnockoutMatchup } from '../officialResults/knockoutReviewPresentation.js';
 import { getMatchResultVariant } from '../officialResults/officialResultsView';
 
 const PANEL_STAGE_OPTIONS = [
@@ -47,6 +47,9 @@ function ReviewSheet({
   palpitesMataMata,
   gabaritoMataMata,
   officialBracketSlots,
+  condutaGrupos,
+  getR32Team,
+  buildThirdPlaceAllocation,
   scrollToMatchId,
   scrollRequestKey
 }) {
@@ -57,8 +60,8 @@ function ReviewSheet({
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
   const participantColumnCount = Math.max(usersFiltrados.length, 1);
-  const reviewGridTemplate = `282px repeat(${participantColumnCount}, minmax(148px, 1fr))`;
-  const reviewDescription = 'O painel segue a sequencia completa do bolao: 1a Fase, mata-mata e podio final. Cada linha mostra o oficial, o palpite do usuario e o que ja pontuou.';
+  const reviewGridTemplate = `308px repeat(${participantColumnCount}, minmax(196px, 1fr))`;
+  const reviewDescription = 'O painel segue a sequencia completa do bolao: 1a Fase, mata-mata e podio final. No mata-mata, cada coluna mostra o confronto daquela chave, o time escolhido pelo usuario e o que ja pontuou.';
 
   const setRowRef = (rowId, surface) => (node) => {
     if (!rowRefs.current[rowId]) rowRefs.current[rowId] = {};
@@ -178,28 +181,66 @@ function ReviewSheet({
         .filter(Boolean)
     }));
 
+  const userCompletedGroupStage = (userGameBets = {}) => jogosReais.every((jogo) => {
+    if (jogo.placarA !== '' && jogo.placarB !== '') return true;
+    const palpite = userGameBets?.[jogo.id];
+    return Boolean(palpite && palpite.placarA !== '' && palpite.placarB !== '');
+  });
+
+  const resolveUserThirdPlaceLabel = (match, allocation, groupStageComplete) => {
+    if (!match.refThirdGroups) return null;
+    if (!groupStageComplete) return 'A definir';
+    return allocation[match.id] || `3o de ${match.refThirdGroups.join('/')}`;
+  };
+
+  const resolveUserKnockoutSides = (phaseKey, match, userId) => {
+    if (phaseKey === 'dezeszeseisavos') {
+      const userGameBets = palpitesJogos[userId] || {};
+      const groupStageComplete = userCompletedGroupStage(userGameBets);
+      const thirdPlaceAllocation = buildThirdPlaceAllocation(
+        jogosReais,
+        userGameBets,
+        condutaGrupos,
+        groupStageComplete
+      );
+
+      return {
+        sideA: getR32Team(match.refA, jogosReais, userGameBets, condutaGrupos),
+        sideB: match.refThirdGroups
+          ? resolveUserThirdPlaceLabel(match, thirdPlaceAllocation, groupStageComplete)
+          : getR32Team(match.refB, jogosReais, userGameBets, condutaGrupos)
+      };
+    }
+
+    const userKnockoutBets = palpitesMataMata[userId] || {};
+    return {
+      sideA: getWinnerOfMatch(match.feedA, userKnockoutBets) || `Venc. ${match.feedA}`,
+      sideB: getWinnerOfMatch(match.feedB, userKnockoutBets) || `Venc. ${match.feedB}`
+    };
+  };
+
   const resolveKnockoutSides = (phaseKey, match) => {
-    const officialTeamA = getOfficialBracketSlotTeam(officialBracketSlots, match.id, 'A');
-    const officialTeamB = getOfficialBracketSlotTeam(officialBracketSlots, match.id, 'B');
+    const officialMatchup = getOfficialKnockoutMatchup(officialBracketSlots, match.id);
 
     if (phaseKey === 'dezeszeseisavos' && match?.label?.includes(' x ')) {
       const [sideA, sideB] = match.label.split(' x ');
       return {
-        sideA: officialTeamA || sideA,
-        sideB: officialTeamB || sideB
+        sideA: officialMatchup.teamA || officialMatchup.placeholderA || sideA,
+        sideB: officialMatchup.teamB || officialMatchup.placeholderB || sideB
       };
     }
 
     return {
-      sideA: officialTeamA || getWinnerOfMatch(match.feedA, gabaritoMataMata) || `Venc. ${match.feedA}`,
-      sideB: officialTeamB || getWinnerOfMatch(match.feedB, gabaritoMataMata) || `Venc. ${match.feedB}`
+      sideA: officialMatchup.teamA || getWinnerOfMatch(match.feedA, gabaritoMataMata) || officialMatchup.placeholderA || `Venc. ${match.feedA}`,
+      sideB: officialMatchup.teamB || getWinnerOfMatch(match.feedB, gabaritoMataMata) || officialMatchup.placeholderB || `Venc. ${match.feedB}`
     };
   };
 
-  const buildPhaseKnockoutPalpites = ({ phaseKey, points, pickIndex }) => usersFiltrados.map((user) => {
+  const buildPhaseKnockoutPalpites = ({ phaseKey, points, pickIndex, match }) => usersFiltrados.map((user) => {
     const userMata = palpitesMataMata[user.id] || {};
     const phasePicks = userMata[phaseKey] || [];
     const palpite = phasePicks[pickIndex] || '';
+    const userMatchup = resolveUserKnockoutSides(phaseKey, match, user.id);
     const review = evaluateKnockoutPhasePick({
       phaseKey,
       pick: palpite,
@@ -210,6 +251,7 @@ function ReviewSheet({
       officialBracketSlots,
       successLabel: 'Acertou'
     });
+    const reviewCopy = buildKnockoutReviewCopy({ review, pick: palpite, points });
 
     let status = buildStatus();
     if (review.state === 'waiting-official') status = buildStatus('waiting-official');
@@ -223,6 +265,8 @@ function ReviewSheet({
       palpite: palpite || '—',
       status,
       pontos: review.pointsAwarded,
+      userMatchup,
+      reviewCopy,
       envio: formatSubmissionDate(submissoes[user.id]?.[SUBMISSION_FIELDS.MATA])
     };
   });
@@ -241,6 +285,27 @@ function ReviewSheet({
       palpite: palpite || '—',
       status,
       pontos,
+      reviewCopy: official === '—'
+        ? {
+          badgeLabel: preenchido ? 'Aguardando oficial' : 'Sem palpite',
+          pointsLabel: '0 pts por enquanto',
+          caption: preenchido
+            ? 'A comparacao aparece quando a posicao oficial sair.'
+            : 'Nenhuma escolha foi registrada para esta posicao.'
+        }
+        : pontos > 0
+          ? {
+            badgeLabel: 'Acertou',
+            pointsLabel: `+${points} pts`,
+            caption: `Voce acertou esta posicao oficial: ${official}.`
+          }
+          : {
+            badgeLabel: 'Errou',
+            pointsLabel: '0 pts',
+            caption: preenchido
+              ? `Oficial: ${official}.`
+              : 'Nenhuma escolha foi registrada para esta posicao.'
+          },
       envio: formatSubmissionDate(submissoes[user.id]?.[SUBMISSION_FIELDS.MATA])
     };
   });
@@ -256,18 +321,19 @@ function ReviewSheet({
     rows: section.list.map((match, idx) => {
       const schedule = formatBrazilMatchSchedule(match);
       const { sideA, sideB } = resolveKnockoutSides(section.phaseKey, match);
+      const officialMatchup = getOfficialKnockoutMatchup(officialBracketSlots, match.id);
       const officialState = getKnockoutPhaseOfficialState({
         phaseKey: section.phaseKey,
         officialKnockout: gabaritoMataMata,
         officialBracketSlots
       });
-      const officialTeamA = getOfficialBracketSlotTeam(officialBracketSlots, match.id, 'A');
-      const officialTeamB = getOfficialBracketSlotTeam(officialBracketSlots, match.id, 'B');
-      const official = [officialTeamA, officialTeamB].filter(Boolean).join(' / ') || '—';
+      const official = officialMatchup.hasPublishedTeams || officialMatchup.placeholderA || officialMatchup.placeholderB
+        ? `${officialMatchup.labelA} x ${officialMatchup.labelB}`
+        : '—';
       const officialMeta = officialState.isClosed
         ? `${section.points} pts em jogo`
         : officialState.isPartial
-          ? 'Oficial parcial'
+          ? `${officialState.publishedCount}/${officialState.expectedCount} times publicados`
           : 'Aguardando definicao';
 
       return {
@@ -278,16 +344,17 @@ function ReviewSheet({
         metaBottom: `${schedule.day}/${schedule.month} • ${schedule.time} BR`,
         metaNote: match.local,
         matchupTitle: `Jogo ${match.id}`,
-        matchupSubtitle: `${section.points} pts em jogo`,
+        matchupSubtitle: 'Publicacao oficial desta fase',
         sideA,
         sideB,
         official,
-        officialBadgeLabel: officialState.isPartial ? 'Oficial parcial' : 'Oficial',
+        officialBadgeLabel: officialState.isPartial ? 'Publicacao parcial' : 'Oficial',
         officialMeta,
         palpites: buildPhaseKnockoutPalpites({
           phaseKey: section.phaseKey,
           points: section.points,
-          pickIndex: idx
+          pickIndex: idx,
+          match
         })
       };
     })
@@ -385,17 +452,59 @@ function ReviewSheet({
     return 'Rascunho';
   };
 
-  const renderParticipantCard = (palpite) => (
-    <div className={`rounded-[18px] border px-2 py-2.5 text-center shadow-[0_14px_24px_-24px_rgba(15,23,42,0.95)] ${palpite.status.tone}`}>
-      <div className="text-base font-black tracking-[-0.04em] text-slate-900 leading-none">{palpite.palpite}</div>
-      <div className="mt-1.5 inline-flex items-center justify-center gap-1.5 rounded-full border border-black/5 bg-white/80 px-2 py-0.5">
-        <span className={`h-2.5 w-2.5 rounded-full ${palpite.status.dot}`}></span>
-        <span className="text-[9px] font-bold uppercase tracking-[0.16em]">{palpite.status.label}</span>
+  const formatMatchupLabel = (sideA, sideB) => `${sideA || 'A definir'} x ${sideB || 'A definir'}`;
+
+  const renderParticipantCard = (row, palpite) => {
+    if (row.kind === 'match') {
+      return (
+        <div className={`rounded-[18px] border px-3 py-3 text-left shadow-[0_14px_24px_-24px_rgba(15,23,42,0.95)] ${palpite.status.tone}`}>
+          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu confronto</div>
+          <div className="mt-1 text-[13px] font-black leading-snug text-slate-900">
+            {formatMatchupLabel(palpite.userMatchup?.sideA, palpite.userMatchup?.sideB)}
+          </div>
+
+          <div className="mt-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu vencedor</div>
+          <div className="mt-1 text-[17px] font-black tracking-[-0.03em] text-slate-900">{palpite.palpite}</div>
+
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-black/5 bg-white/85 px-2.5 py-1">
+            <span className={`h-2.5 w-2.5 rounded-full ${palpite.status.dot}`}></span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.16em]">{palpite.reviewCopy.badgeLabel}</span>
+          </div>
+          <div className="mt-2 text-[13px] font-black leading-none text-slate-900">{palpite.reviewCopy.pointsLabel}</div>
+          <div className="mt-1.5 text-[10px] leading-snug text-slate-600">{palpite.reviewCopy.caption}</div>
+          <div className="mt-2 text-[9px] leading-tight text-slate-500">{palpite.envio}</div>
+        </div>
+      );
+    }
+
+    if (row.kind === 'podium') {
+      return (
+        <div className={`rounded-[18px] border px-3 py-3 text-left shadow-[0_14px_24px_-24px_rgba(15,23,42,0.95)] ${palpite.status.tone}`}>
+          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Sua escolha</div>
+          <div className="mt-1 text-[17px] font-black tracking-[-0.03em] text-slate-900">{palpite.palpite}</div>
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-black/5 bg-white/85 px-2.5 py-1">
+            <span className={`h-2.5 w-2.5 rounded-full ${palpite.status.dot}`}></span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.16em]">{palpite.reviewCopy.badgeLabel}</span>
+          </div>
+          <div className="mt-2 text-[13px] font-black leading-none text-slate-900">{palpite.reviewCopy.pointsLabel}</div>
+          <div className="mt-1.5 text-[10px] leading-snug text-slate-600">{palpite.reviewCopy.caption}</div>
+          <div className="mt-2 text-[9px] leading-tight text-slate-500">{palpite.envio}</div>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`rounded-[18px] border px-2 py-2.5 text-center shadow-[0_14px_24px_-24px_rgba(15,23,42,0.95)] ${palpite.status.tone}`}>
+        <div className="text-base font-black tracking-[-0.04em] text-slate-900 leading-none">{palpite.palpite}</div>
+        <div className="mt-1.5 inline-flex items-center justify-center gap-1.5 rounded-full border border-black/5 bg-white/80 px-2 py-0.5">
+          <span className={`h-2.5 w-2.5 rounded-full ${palpite.status.dot}`}></span>
+          <span className="text-[9px] font-bold uppercase tracking-[0.16em]">{palpite.status.label}</span>
+        </div>
+        <div className="mt-1.5 text-[10px] font-bold text-slate-700">{palpite.pontos} pts</div>
+        <div className="mt-1 text-[9px] leading-tight text-slate-500">{palpite.envio}</div>
       </div>
-      <div className="mt-1.5 text-[10px] font-bold text-slate-700">{palpite.pontos} pts</div>
-      <div className="mt-1 text-[9px] leading-tight text-slate-500">{palpite.envio}</div>
-    </div>
-  );
+    );
+  };
 
   const renderSummaryCell = (row) => {
     if (row.kind === 'game') {
@@ -473,8 +582,61 @@ function ReviewSheet({
     );
   };
 
-  const renderMobileParticipantRow = (palpite) => {
+  const renderMobileParticipantRow = (row, palpite) => {
     const user = usersFiltradosById[palpite.userId];
+
+    if (row.kind === 'match') {
+      return (
+        <div key={palpite.userId} className="px-3 py-3">
+          <div className="flex items-center gap-3">
+            <AvatarBadge user={user} size="sm" className="shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[12px] font-bold text-slate-800">{user?.nome || 'Participante'}</div>
+              <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                <span className={`h-2 w-2 rounded-full ${palpite.status.dot}`}></span>
+                <span className="truncate">{palpite.reviewCopy.badgeLabel}</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[13px] font-black tracking-[-0.03em] text-slate-900">{palpite.palpite}</div>
+              <div className="mt-0.5 text-[10px] font-semibold text-slate-600">{palpite.reviewCopy.pointsLabel}</div>
+            </div>
+          </div>
+          <div className="mt-2 rounded-[16px] border border-slate-200 bg-white/80 px-3 py-2">
+            <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Seu confronto</div>
+            <div className="mt-1 text-[12px] font-bold text-slate-900">
+              {formatMatchupLabel(palpite.userMatchup?.sideA, palpite.userMatchup?.sideB)}
+            </div>
+            <div className="mt-1 text-[10px] leading-snug text-slate-600">{palpite.reviewCopy.caption}</div>
+            <div className="mt-1 text-[9px] text-slate-500">{palpite.envio}</div>
+          </div>
+        </div>
+      );
+    }
+
+    if (row.kind === 'podium') {
+      return (
+        <div key={palpite.userId} className="px-3 py-3">
+          <div className="flex items-center gap-3">
+            <AvatarBadge user={user} size="sm" className="shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[12px] font-bold text-slate-800">{user?.nome || 'Participante'}</div>
+              <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                <span className={`h-2 w-2 rounded-full ${palpite.status.dot}`}></span>
+                <span className="truncate">{palpite.reviewCopy.badgeLabel}</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[13px] font-black tracking-[-0.03em] text-slate-900">{palpite.palpite}</div>
+              <div className="mt-0.5 text-[10px] font-semibold text-slate-600">{palpite.reviewCopy.pointsLabel}</div>
+            </div>
+          </div>
+          <div className="mt-2 text-[10px] leading-snug text-slate-600">{palpite.reviewCopy.caption}</div>
+          <div className="mt-1 text-[9px] text-slate-500">{palpite.envio}</div>
+        </div>
+      );
+    }
+
     return (
       <div key={palpite.userId} className="flex items-center gap-3 px-3 py-2.5">
         <AvatarBadge user={user} size="sm" className="shrink-0" />
@@ -507,7 +669,7 @@ function ReviewSheet({
       <div className="border-t border-slate-100 bg-slate-50/55">
         {row.palpites.map((palpite, index) => (
           <div key={`${row.id}-${palpite.userId}`} className={index > 0 ? 'border-t border-slate-100' : ''}>
-            {renderMobileParticipantRow(palpite)}
+            {renderMobileParticipantRow(row, palpite)}
           </div>
         ))}
       </div>
@@ -642,7 +804,7 @@ function ReviewSheet({
 
                     {row.palpites.map((palpite) => (
                       <div key={`${row.id}-${palpite.userId}`} className="border-r border-slate-100 px-2 py-3 last:border-r-0">
-                        {renderParticipantCard(palpite)}
+                        {renderParticipantCard(row, palpite)}
                       </div>
                     ))}
                   </div>

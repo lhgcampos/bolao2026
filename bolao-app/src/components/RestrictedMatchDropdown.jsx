@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { ChevronDown, Lock } from '../lucideIcons';
 import { PONTOS } from '../constants.js';
 import { evaluateKnockoutPhasePick, getKnockoutPhaseTeamStatus } from '../officialResults/knockoutPhaseScoring.js';
+import { buildKnockoutReviewCopy, getOfficialKnockoutMatchup } from '../officialResults/knockoutReviewPresentation.js';
 import { GLASS_CARD, GLASS_INPUT, TEXT_MUTED } from '../styles.js';
 import { getWinnerOfMatch } from '../utils.js';
 import { formatBrazilMatchSchedule, formatOfficialKickoffHint } from '../matchData';
@@ -26,23 +27,23 @@ function RestrictedMatchDropdown({
   getThirdPlaceCandidate,
   points
 }) {
-  let timeA;
-  let timeB;
+  let userTeamA;
+  let userTeamB;
 
   if (phaseKey === 'dezeszeseisavos') {
-    timeA = getR32Team(match.refA, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos);
-    timeB = match.refThirdGroups
+    userTeamA = getR32Team(match.refA, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos);
+    userTeamB = match.refThirdGroups
       ? getThirdPlaceCandidate(match, alocacaoTerceiros, gruposCompletos)
       : getR32Team(match.refB, jogosReais, palpitesUsuarioAtual, condutaGrupos, gruposCompletos);
   } else {
     const source = modoAdmin ? gabaritoMataMata : (palpitesMataMata[currentUser.id] || {});
-    timeA = getWinnerOfMatch(match.feedA, source) || `Venc. ${match.feedA}`;
-    timeB = getWinnerOfMatch(match.feedB, source) || `Venc. ${match.feedB}`;
+    userTeamA = getWinnerOfMatch(match.feedA, source) || `Venc. ${match.feedA}`;
+    userTeamB = getWinnerOfMatch(match.feedB, source) || `Venc. ${match.feedB}`;
   }
 
   const phasePicks = modoAdmin ? (gabaritoMataMata[phaseKey] || []) : (palpitesMataMata[currentUser.id]?.[phaseKey] || []);
   const currentValue = phasePicks?.[idx];
-  const options = [timeA, timeB].filter((team) => team && team !== 'A definir' && !team.includes('Aguardando') && !team.includes('Venc.') && !team.startsWith('3º de '));
+  const options = [userTeamA, userTeamB].filter((team) => team && team !== 'A definir' && !team.includes('Aguardando') && !team.includes('Venc.') && !team.startsWith('3º de '));
   const normalizedOptions = currentValue && !options.includes(currentValue)
     ? [currentValue, ...options]
     : options;
@@ -66,18 +67,25 @@ function RestrictedMatchDropdown({
     officialBracketSlots,
     successLabel: 'Acertou o classificado'
   });
+  const reviewCopy = buildKnockoutReviewCopy({ review, pick: currentValue, points });
   const timeAStatus = getKnockoutPhaseTeamStatus({
     phaseKey,
-    team: timeA,
+    team: userTeamA,
     officialKnockout: gabaritoMataMata,
     officialBracketSlots
   });
   const timeBStatus = getKnockoutPhaseTeamStatus({
     phaseKey,
-    team: timeB,
+    team: userTeamB,
     officialKnockout: gabaritoMataMata,
     officialBracketSlots
   });
+  const officialMatchup = getOfficialKnockoutMatchup(officialBracketSlots, match.id);
+  const adminOfficialLabelA = officialMatchup.hasPublishedTeams || officialMatchup.placeholderA ? officialMatchup.labelA : (userTeamA || 'A definir');
+  const adminOfficialLabelB = officialMatchup.hasPublishedTeams || officialMatchup.placeholderB ? officialMatchup.labelB : (userTeamB || 'A definir');
+  const phaseProgressLabel = review.officialState.expectedCount
+    ? `${review.officialState.publishedCount}/${review.officialState.expectedCount} times publicados`
+    : `${review.officialState.publishedCount} times publicados`;
   const schedule = formatBrazilMatchSchedule(match);
   const officialKickoffHint = formatOfficialKickoffHint(match);
   const showReviewMode = !modoAdmin && isLocked;
@@ -130,11 +138,11 @@ function RestrictedMatchDropdown({
         <div className="mt-5 rounded-[22px] border border-slate-200 bg-slate-50/70 p-4">
           <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Confronto oficial atual</div>
           <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
-            <div className={`text-right text-[15px] font-bold lg:text-[18px] ${timeA && timeA !== 'A definir' ? 'text-slate-900' : 'text-slate-400'}`}>{timeA || 'A definir'}</div>
+            <div className={`text-right text-[15px] font-bold lg:text-[18px] ${adminOfficialLabelA && adminOfficialLabelA !== 'A definir' ? 'text-slate-900' : 'text-slate-400'}`}>{adminOfficialLabelA}</div>
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-center text-sm font-black uppercase tracking-[0.18em] text-slate-500 lg:min-w-[112px]">
               x
             </div>
-            <div className={`text-left text-[15px] font-bold lg:text-[18px] ${timeB && timeB !== 'A definir' ? 'text-slate-900' : 'text-slate-400'}`}>{timeB || 'A definir'}</div>
+            <div className={`text-left text-[15px] font-bold lg:text-[18px] ${adminOfficialLabelB && adminOfficialLabelB !== 'A definir' ? 'text-slate-900' : 'text-slate-400'}`}>{adminOfficialLabelB}</div>
           </div>
           <div className="mt-3 text-[13px] text-slate-500">
             {isReady
@@ -183,11 +191,14 @@ function RestrictedMatchDropdown({
         </div>
 
         <div className="mt-5 rounded-[22px] border border-slate-200 bg-slate-50/70 p-4">
-          <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Sua chave</div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Seu confronto neste jogo</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{phaseProgressLabel}</div>
+          </div>
           <div className="mt-3 grid gap-3">
-            {renderTeamStatusRow(timeA, timeAStatus)}
+            {renderTeamStatusRow(userTeamA, timeAStatus)}
             <div className="text-center text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">x</div>
-            {renderTeamStatusRow(timeB, timeBStatus)}
+            {renderTeamStatusRow(userTeamB, timeBStatus)}
           </div>
         </div>
 
@@ -198,19 +209,40 @@ function RestrictedMatchDropdown({
               {currentValue || 'Sem palpite'}
             </div>
             <div className="mt-2 text-[13px] leading-snug text-slate-500">
-              {currentValue ? 'Esse foi o time que voce marcou para avancar na sua chave.' : 'Nenhum classificado foi escolhido neste confronto.'}
+              {currentValue
+                ? `Voce marcou ${currentValue} para passar neste jogo da sua chave.`
+                : 'Nenhum classificado foi escolhido neste confronto.'}
             </div>
           </div>
           <div className={`rounded-[20px] border px-4 py-4 ${review.tone}`}>
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em]">Pontuacao do seu classificado</div>
-            <div className="mt-3 text-[20px] font-black lg:text-[24px]">{review.detail}</div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em]">{reviewCopy.badgeLabel}</div>
+            <div className="mt-3 text-[20px] font-black lg:text-[24px]">{reviewCopy.pointsLabel}</div>
             <div className="mt-2 text-[13px] leading-snug opacity-80">
-              {review.officialState.isClosed
-                ? 'A fase ja foi fechada oficialmente para esta pontuacao.'
-                : review.officialState.isPartial
-                  ? 'A FIFA ja publicou parte dos times corretos desta fase.'
-                  : 'A pontuacao entra quando a FIFA publicar a definicao oficial.'}
+              {reviewCopy.caption}
             </div>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[22px] border border-slate-200 bg-white/85 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Publicado oficialmente neste confronto</div>
+            <div className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${phaseBadgeTone}`}>
+              {phaseBadge}
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+            <div className={`text-right text-[15px] font-bold lg:text-[18px] ${officialMatchup.labelA === 'Aguardando oficial' ? 'text-slate-400' : 'text-slate-900'}`}>{officialMatchup.labelA}</div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-center text-sm font-black uppercase tracking-[0.18em] text-slate-500 lg:min-w-[112px]">
+              x
+            </div>
+            <div className={`text-left text-[15px] font-bold lg:text-[18px] ${officialMatchup.labelB === 'Aguardando oficial' ? 'text-slate-400' : 'text-slate-900'}`}>{officialMatchup.labelB}</div>
+          </div>
+          <div className="mt-3 text-[13px] text-slate-500">
+            {officialMatchup.hasPublishedTeams
+              ? 'Esse e o retrato oficial mais recente publicado para este jogo.'
+              : review.officialState.isPartial
+                ? 'A fase ja tem publicacao oficial, mas este confronto ainda nao apareceu com os dois lados.'
+                : 'A FIFA ainda nao publicou os lados oficiais deste confronto.'}
           </div>
         </div>
       </div>
@@ -230,9 +262,9 @@ function RestrictedMatchDropdown({
         </div>
       </div>
       <div className="flex items-center justify-between mb-3">
-        <span className={`text-xs font-bold truncate max-w-[45%] text-right ${isReady ? 'text-slate-800' : TEXT_MUTED}`}>{timeA}</span>
+        <span className={`text-xs font-bold truncate max-w-[45%] text-right ${isReady ? 'text-slate-800' : TEXT_MUTED}`}>{userTeamA}</span>
         <span className={`text-[10px] px-2 ${TEXT_MUTED}`}>vs</span>
-        <span className={`text-xs font-bold truncate max-w-[45%] text-left ${isReady ? 'text-slate-800' : TEXT_MUTED}`}>{timeB}</span>
+        <span className={`text-xs font-bold truncate max-w-[45%] text-left ${isReady ? 'text-slate-800' : TEXT_MUTED}`}>{userTeamB}</span>
       </div>
       <div className="relative">
         {(!isReady || isLocked) && <Lock size={12} className={`absolute left-3 top-4 ${TEXT_MUTED}`} />}

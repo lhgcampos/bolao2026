@@ -42,7 +42,7 @@ import {
   getMatchResultVariant
 } from './officialResults/officialResultsView';
 import { getOfficialBracketSlotTeam, normalizeOfficialBracketSlots } from './officialResults/officialBracketSlots.js';
-import { calculateKnockoutPhasePoints } from './officialResults/knockoutPhaseScoring.js';
+import { calculateKnockoutPhasePoints, evaluateKnockoutPhasePick, getKnockoutPhaseOfficialState } from './officialResults/knockoutPhaseScoring.js';
 
 const TODOS_TIMES = Object.values(GRUPOS_2026).flat().sort();
 
@@ -1973,6 +1973,43 @@ export default function App() {
     () => usuarios.filter((user) => !isAdminUser(user)),
     [usuarios]
   );
+  const currentUserKnockoutPhaseSummary = useMemo(() => {
+    if (!currentUser || modoAdmin) return {};
+
+    const buildPhaseSummary = (phaseKey, points) => {
+      const picks = palpitesMataUsuarioAtual[phaseKey] || [];
+      const officialState = getKnockoutPhaseOfficialState({
+        phaseKey,
+        officialKnockout: gabaritoMataMata,
+        officialBracketSlots
+      });
+      const reviews = picks.map((pick, pickIndex) => evaluateKnockoutPhasePick({
+        phaseKey,
+        pick,
+        pickIndex,
+        allPicks: picks,
+        points,
+        officialKnockout: gabaritoMataMata,
+        officialBracketSlots,
+        successLabel: 'Acertou'
+      }));
+
+      return {
+        officialState,
+        confirmedCount: reviews.filter((review) => review.state === 'confirmed' || review.state === 'partial-confirmed').length,
+        openCount: reviews.filter((review) => review.state === 'partial-pending' || review.state === 'waiting-official').length,
+        wrongCount: reviews.filter((review) => review.state === 'error' || review.state === 'duplicate').length,
+        confirmedPoints: reviews.reduce((total, review) => total + review.pointsAwarded, 0)
+      };
+    };
+
+    return {
+      dezeszeseisavos: buildPhaseSummary('dezeszeseisavos', PONTOS.MATA.R32),
+      oitavas: buildPhaseSummary('oitavas', PONTOS.MATA.R16),
+      quartas: buildPhaseSummary('quartas', PONTOS.MATA.QF),
+      semis: buildPhaseSummary('semis', PONTOS.MATA.SF)
+    };
+  }, [currentUser, modoAdmin, palpitesMataUsuarioAtual, gabaritoMataMata, officialBracketSlots]);
   const matchResultSummary = useMemo(
     () => countResolvedMatchesByVariant(jogosReais),
     [jogosReais]
@@ -3022,29 +3059,61 @@ export default function App() {
                   {secaoExpandida === section.id ? <ChevronUp size={16} className={TEXT_MUTED} /> : <ChevronDown size={16} className={TEXT_MUTED} />}
                 </button>
                 {secaoExpandida === section.id && (
-                  <div className="mt-2 mb-6">{section.list.map((match, idx) => (
-                    <RestrictedMatchDropdown
-                      key={match.id}
-                      match={match}
-                      idx={idx}
-                      phaseKey={section.key}
-                      points={section.pts}
-                      modoAdmin={modoAdmin}
-                      palpitesTravadosMata={palpitesTravadosMata}
-                      gabaritoMataMata={gabaritoMataMata}
-                      palpitesMataMata={palpitesMataMata}
-                      currentUser={currentUser}
-                      jogosReais={jogosReais}
-                      palpitesUsuarioAtual={palpitesUsuarioAtual}
-                      condutaGrupos={condutaGrupos}
-                      gruposCompletos={gruposCompletos}
-                      officialBracketSlots={officialBracketSlots}
-                      alocacaoTerceiros={alocacaoTerceiros}
-                      atualizarMataMata={atualizarMataMata}
-                      getR32Team={getR32Team}
-                      getThirdPlaceCandidate={getThirdPlaceCandidate}
-                    />
-                  ))}</div>
+                  <div className="mt-2 mb-6 space-y-3">
+                    {!modoAdmin && currentUserKnockoutPhaseSummary[section.key] && (
+                      <div className={`${GLASS_CARD} p-4`}>
+                        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                          <div>
+                            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Leitura rapida da fase</div>
+                            <div className="mt-1 text-[13px] text-slate-600">
+                              {currentUserKnockoutPhaseSummary[section.key].officialState.publishedCount}/{currentUserKnockoutPhaseSummary[section.key].officialState.expectedCount} times oficiais ja publicados nesta fase.
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                          <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-4 py-3">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Pontos confirmados</div>
+                            <div className="mt-2 text-[22px] font-black text-slate-900">{currentUserKnockoutPhaseSummary[section.key].confirmedPoints}</div>
+                          </div>
+                          <div className="rounded-[18px] border border-emerald-200 bg-emerald-50/80 px-4 py-3">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">Acertos confirmados</div>
+                            <div className="mt-2 text-[22px] font-black text-emerald-900">{currentUserKnockoutPhaseSummary[section.key].confirmedCount}</div>
+                          </div>
+                          <div className="rounded-[18px] border border-amber-200 bg-amber-50/80 px-4 py-3">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-700">Ainda em aberto</div>
+                            <div className="mt-2 text-[22px] font-black text-amber-900">{currentUserKnockoutPhaseSummary[section.key].openCount}</div>
+                          </div>
+                          <div className="rounded-[18px] border border-rose-200 bg-rose-50/80 px-4 py-3">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-rose-700">Ja nao pontuam</div>
+                            <div className="mt-2 text-[22px] font-black text-rose-900">{currentUserKnockoutPhaseSummary[section.key].wrongCount}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div>{section.list.map((match, idx) => (
+                      <RestrictedMatchDropdown
+                        key={match.id}
+                        match={match}
+                        idx={idx}
+                        phaseKey={section.key}
+                        points={section.pts}
+                        modoAdmin={modoAdmin}
+                        palpitesTravadosMata={palpitesTravadosMata}
+                        gabaritoMataMata={gabaritoMataMata}
+                        palpitesMataMata={palpitesMataMata}
+                        currentUser={currentUser}
+                        jogosReais={jogosReais}
+                        palpitesUsuarioAtual={palpitesUsuarioAtual}
+                        condutaGrupos={condutaGrupos}
+                        gruposCompletos={gruposCompletos}
+                        officialBracketSlots={officialBracketSlots}
+                        alocacaoTerceiros={alocacaoTerceiros}
+                        atualizarMataMata={atualizarMataMata}
+                        getR32Team={getR32Team}
+                        getThirdPlaceCandidate={getThirdPlaceCandidate}
+                      />
+                    ))}</div>
+                  </div>
                 )}
               </div>
             ))}
@@ -3087,6 +3156,9 @@ export default function App() {
             palpitesMataMata={palpitesMataMata}
             gabaritoMataMata={gabaritoMataMata}
             officialBracketSlots={officialBracketSlots}
+            condutaGrupos={condutaGrupos}
+            getR32Team={getR32Team}
+            buildThirdPlaceAllocation={buildThirdPlaceAllocation}
             scrollToMatchId={nearestReviewRowId}
             scrollRequestKey={reviewScrollRequest}
           />
