@@ -114,6 +114,12 @@ const getPendingSummary = ({ pendingGroupPicksCount = 0, knockoutComplete = fals
 
 const getCurrentPoints = (entry) => entry?.total ?? entry?.points ?? 0;
 
+const getOfficialPhaseTeams = (teams = []) => (
+  Array.isArray(teams)
+    ? teams.filter((team) => typeof team === 'string' && team.trim())
+    : []
+);
+
 const isOfficialPhaseClosed = (phaseKey, officialLength) => (
   (PHASE_LENGTHS[phaseKey] || []).includes(officialLength)
 );
@@ -129,10 +135,15 @@ const getTopAlivePhase = (officialKnockout = {}) => {
   ].filter(Boolean);
   if (top4.length === 4) return { key: 'top4', teams: top4 };
 
-  if (isOfficialPhaseClosed('semis', (officialKnockout.semis || []).length)) return { key: 'semis', teams: officialKnockout.semis };
-  if (isOfficialPhaseClosed('quartas', (officialKnockout.quartas || []).length)) return { key: 'quartas', teams: officialKnockout.quartas };
-  if (isOfficialPhaseClosed('oitavas', (officialKnockout.oitavas || []).length)) return { key: 'oitavas', teams: officialKnockout.oitavas };
-  if (isOfficialPhaseClosed('dezeszeseisavos', (officialKnockout.dezeszeseisavos || []).length)) return { key: 'dezeszeseisavos', teams: officialKnockout.dezeszeseisavos };
+  const semisTeams = getOfficialPhaseTeams(officialKnockout.semis);
+  const quartasTeams = getOfficialPhaseTeams(officialKnockout.quartas);
+  const oitavasTeams = getOfficialPhaseTeams(officialKnockout.oitavas);
+  const dezeszeseisavosTeams = getOfficialPhaseTeams(officialKnockout.dezeszeseisavos);
+
+  if (isOfficialPhaseClosed('semis', semisTeams.length)) return { key: 'semis', teams: semisTeams };
+  if (isOfficialPhaseClosed('quartas', quartasTeams.length)) return { key: 'quartas', teams: quartasTeams };
+  if (isOfficialPhaseClosed('oitavas', oitavasTeams.length)) return { key: 'oitavas', teams: oitavasTeams };
+  if (isOfficialPhaseClosed('dezeszeseisavos', dezeszeseisavosTeams.length)) return { key: 'dezeszeseisavos', teams: dezeszeseisavosTeams };
   return null;
 };
 
@@ -317,7 +328,7 @@ const buildNoMathematicalChanceInsight = ({ currentEntry, leaderEntry, matches, 
     ['quartas', scoringRules?.MATA?.QF ?? 20],
     ['semis', scoringRules?.MATA?.SF ?? 30]
   ].reduce((total, [field, points]) => {
-    const officialLength = (officialKnockout?.[field] || []).length;
+    const officialLength = getOfficialPhaseTeams(officialKnockout?.[field] || []).length;
     if (isOfficialPhaseClosed(field, officialLength)) return total;
     const picks = getKnockoutPhaseParticipantPicks({
       phaseKey: field,
