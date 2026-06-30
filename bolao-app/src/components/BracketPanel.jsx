@@ -242,6 +242,15 @@ const collectR32MatchIds = (matchId) => {
 
 const makePoint = (x, y) => ({ x, y });
 
+const BRACKET_ADVANCEMENT_MATCHES = [
+  ...MATA_MATA_CONFIG.r16,
+  ...MATA_MATA_CONFIG.qf,
+  ...MATA_MATA_CONFIG.sf,
+  { id: 104, feedA: 101, feedB: 102 }
+];
+
+const getAdvancementPlaceholder = (value) => String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+
 const getDefaultViewId = (currentUser, modoAdmin) => (
   modoAdmin ? 'real' : String(currentUser?.id || 'real')
 );
@@ -407,7 +416,27 @@ function BracketPanel({
       const normalized = normalizeTeam(team);
       return Boolean(normalized && [gabaritoMataMata?.campeao, gabaritoMataMata?.vice].map(normalizeTeam).includes(normalized));
     };
+    const getOfficialMatchWinner = (matchId) => {
+      const winnerPlaceholder = `W${matchId}`;
+      const parent = BRACKET_ADVANCEMENT_MATCHES.find((match) => (
+        match.feedA === matchId
+        || match.feedB === matchId
+        || getAdvancementPlaceholder(getOfficialBracketSlot(officialBracketSlots, match.id)?.placeholderA) === winnerPlaceholder
+        || getAdvancementPlaceholder(getOfficialBracketSlot(officialBracketSlots, match.id)?.placeholderB) === winnerPlaceholder
+      ));
+      const parentSlot = parent ? getOfficialBracketSlot(officialBracketSlots, parent.id) : null;
+      if (!parentSlot) return '';
+
+      if (parent.feedA === matchId || getAdvancementPlaceholder(parentSlot.placeholderA) === winnerPlaceholder) {
+        return normalizeTeam(parentSlot.teamA);
+      }
+      if (parent.feedB === matchId || getAdvancementPlaceholder(parentSlot.placeholderB) === winnerPlaceholder) {
+        return normalizeTeam(parentSlot.teamB);
+      }
+      return '';
+    };
     const getMatchWinner = (matchId) => {
+      if (isOfficialView) return getOfficialMatchWinner(matchId);
       const entry = ROUND_BY_MATCH_ID.get(matchId);
       if (!entry) return '';
       return getPick(source, entry.phaseKey, entry.index);
