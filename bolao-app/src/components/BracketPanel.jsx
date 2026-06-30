@@ -438,7 +438,7 @@ function BracketPanel({
     const lines = [];
     const canvasHeight = 980;
     const leafStartY = 58;
-    const leafGap = 108;
+    const leafGap = 56;
     const sideX = {
       left: { leaf: 74, r32: 194, r16: 330, qf: 466, sf: 604 },
       right: { leaf: 1406, r32: 1286, r16: 1150, qf: 1014, sf: 876 }
