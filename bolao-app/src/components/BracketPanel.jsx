@@ -152,23 +152,23 @@ const BRACKET_PANEL_STYLES = `
 .bracket-team-node.is-correct .bracket-team-flag{border-color:#00b759;box-shadow:0 0 0 6px rgba(0,183,89,.24),0 12px 22px -12px rgba(0,128,80,.75)}
 .bracket-team-node.is-empty .bracket-team-flag{border-style:dashed;background:var(--app-surface-muted)}
 .bracket-team-flag img{width:100%;height:100%;object-fit:cover}
-.bracket-team-flag span{color:var(--app-text-muted);font-size:11px;font-weight:900}
-.bracket-team-code{max-width:72px;overflow:hidden;color:var(--app-text-secondary);font-size:24px;font-weight:900;line-height:1;text-overflow:ellipsis;white-space:nowrap}
+.bracket-team-flag span{color:var(--app-text-muted);font-size:20px;font-weight:900}
+.bracket-team-code{max-width:92px;overflow:hidden;color:var(--app-text-secondary);font-size:36px;font-weight:900;line-height:1;text-overflow:ellipsis;white-space:nowrap}
 .bracket-team-node--sm .bracket-team-flag{width:48px;height:48px}
-.bracket-team-node--sm .bracket-team-code{font-size:22px}
+.bracket-team-node--sm .bracket-team-code{font-size:32px}
 .bracket-team-node--md .bracket-team-flag{width:58px;height:58px}
 .bracket-team-node--lg .bracket-team-flag{width:72px;height:72px}
 .bracket-team-node--xl .bracket-team-flag{width:86px;height:86px}
 .bracket-team-node--champion .bracket-team-flag{width:136px;height:136px;border-width:7px}
 .bracket-team-node--champion .bracket-team-code{display:none}
 .bracket-center-label{position:absolute;z-index:3;top:286px;left:740px;width:180px;transform:translateX(-50%);text-align:center}
-.bracket-center-label div{color:var(--app-text-muted);font-size:26px;font-weight:700;line-height:1}
-.bracket-center-label strong{display:block;margin-top:6px;color:var(--app-text-primary);font-size:30px;font-weight:900;line-height:1.05}
-.bracket-podium{position:absolute;z-index:3;top:760px;left:740px;display:grid;width:360px;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;transform:translateX(-50%)}
-.bracket-podium-chip{min-width:0;border:1px solid var(--app-border-soft);border-radius:14px;background:var(--app-surface-soft);padding:10px;text-align:center}
+.bracket-center-label div{color:var(--app-text-muted);font-size:34px;font-weight:800;line-height:1}
+.bracket-center-label strong{display:block;margin-top:6px;color:var(--app-text-primary);font-size:42px;font-weight:900;line-height:1.05}
+.bracket-podium{position:absolute;z-index:3;top:746px;left:740px;display:grid;width:500px;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;transform:translateX(-50%)}
+.bracket-podium-chip{min-width:0;border:1px solid var(--app-border-soft);border-radius:16px;background:var(--app-surface-soft);padding:16px 14px;text-align:center}
 .bracket-podium-chip.is-correct{border-color:#00b759;background:rgba(0,183,89,.14);box-shadow:inset 0 0 0 1px rgba(0,183,89,.32),0 8px 18px -16px rgba(0,128,80,.8)}
-.bracket-podium-chip span{display:block;color:var(--app-text-muted);font-size:10px;font-weight:900}
-.bracket-podium-chip strong{display:block;margin-top:4px;overflow:hidden;color:var(--app-text-primary);font-size:12px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+.bracket-podium-chip span{display:block;color:var(--app-text-muted);font-size:20px;font-weight:900}
+.bracket-podium-chip strong{display:block;margin-top:8px;overflow:hidden;color:var(--app-text-primary);font-size:26px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
 .bracket-mobile-hero{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;border:1px solid var(--app-accent-emerald-border);border-radius:18px;background:var(--app-accent-emerald-bg);padding:8px}
 .bracket-mobile-hero .bracket-team-node{min-width:0}
 .bracket-mobile-hero .bracket-team-node--xl .bracket-team-flag{width:58px;height:58px;border-width:4px}
