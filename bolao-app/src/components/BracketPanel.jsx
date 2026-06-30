@@ -136,9 +136,9 @@ const BRACKET_PANEL_STYLES = `
 .bracket-view-select{min-height:40px;max-width:240px;border:1px solid var(--app-border-soft);border-radius:12px;background:var(--app-surface-card-strong);color:var(--app-text-primary);padding:8px 34px 8px 12px;font-size:12px;font-weight:800}
 .bracket-panel-legend{display:inline-flex;min-height:40px;align-items:center;gap:8px;border:1px solid var(--app-accent-emerald-border);border-radius:999px;background:var(--app-accent-emerald-bg);color:var(--app-accent-emerald-text);padding:8px 12px;font-size:11px;font-weight:800}
 .bracket-legend-dot{width:12px;height:12px;border-radius:999px;background:#16a34a;box-shadow:0 0 0 4px rgba(34,197,94,.18)}
-.bracket-panel-shell{overflow:hidden;padding:8px}
-.bracket-scroll{overflow:hidden;border-radius:22px;background:var(--app-surface-card-strong)}
-.bracket-stage{--bracket-scale:.5;position:relative;width:calc(1480px * var(--bracket-scale));height:calc(980px * var(--bracket-scale));min-width:calc(1480px * var(--bracket-scale))}
+.bracket-panel-shell{overflow:visible;padding:8px}
+.bracket-scroll{display:flex;justify-content:center;overflow:visible;border-radius:22px;background:var(--app-surface-card-strong)}
+.bracket-stage{--bracket-scale:.42;position:relative;flex:0 0 auto;width:calc(1480px * var(--bracket-scale));height:calc(980px * var(--bracket-scale));min-width:calc(1480px * var(--bracket-scale))}
 .bracket-canvas{position:absolute;top:0;left:0;width:1480px;height:980px;transform:scale(var(--bracket-scale));transform-origin:top left;background:linear-gradient(90deg,rgba(148,163,184,.08) 1px,transparent 1px),linear-gradient(180deg,rgba(148,163,184,.08) 1px,transparent 1px),var(--app-surface-card-strong);background-size:74px 74px}
 .bracket-mobile{display:none}
 .bracket-lines{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
@@ -296,7 +296,7 @@ function MobileTeamChip({ team, correct }) {
 
 function useBracketScale() {
   const ref = useRef(null);
-  const [scale, setScale] = useState(0.5);
+  const [scale, setScale] = useState(0.42);
 
   useEffect(() => {
     const updateScale = () => {
@@ -305,9 +305,9 @@ function useBracketScale() {
       const width = node.querySelector('.bracket-scroll')?.clientWidth || node.clientWidth || 0;
       const viewportHeight = window.innerHeight || 900;
       const topOffset = node.getBoundingClientRect().top || 0;
-      const availableHeight = Math.max(280, Math.min(viewportHeight - topOffset - 16, viewportHeight * 0.58));
-      const nextScale = Math.min(width / 1480, availableHeight / 980, 0.5);
-      setScale(Math.max(0.28, Number.isFinite(nextScale) ? nextScale : 0.5));
+      const availableHeight = Math.max(240, viewportHeight - topOffset - 24);
+      const nextScale = Math.min(width / 1480, availableHeight / 980, 0.42);
+      setScale(Math.max(0.22, Number.isFinite(nextScale) ? nextScale : 0.42));
     };
 
     updateScale();
@@ -437,8 +437,8 @@ function BracketPanel({
     const nodes = [];
     const lines = [];
     const canvasHeight = 980;
-    const leafStartY = 58;
-    const leafGap = 56;
+    const leafStartY = 50;
+    const leafGap = 50;
     const sideX = {
       left: { leaf: 74, r32: 194, r16: 330, qf: 466, sf: 604 },
       right: { leaf: 1406, r32: 1286, r16: 1150, qf: 1014, sf: 876 }

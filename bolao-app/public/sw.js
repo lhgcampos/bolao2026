@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bolao2026-pwa-v6';
+const CACHE_NAME = 'bolao2026-pwa-v7';
 const scopePath = new URL(self.registration.scope).pathname;
 const APP_SHELL = [
   scopePath,
