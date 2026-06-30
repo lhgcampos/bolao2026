@@ -186,7 +186,7 @@ const BRACKET_PANEL_STYLES = `
 .bracket-mobile-podium{margin-top:8px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
 .bracket-mobile-podium .bracket-podium-chip{padding:6px 5px;border-radius:12px}
 .bracket-mobile-podium .bracket-podium-chip strong{font-size:9px}
-@media (max-width:640px){.bracket-panel-header{align-items:stretch;flex-direction:column}.bracket-panel-actions{align-items:stretch;flex-direction:column}.bracket-view-select{max-width:none;width:100%}.bracket-panel-shell{padding:10px}.bracket-scroll{display:none}.bracket-mobile{display:block}}
+@media (max-width:640px){.bracket-panel-header{align-items:stretch;flex-direction:column}.bracket-panel-actions{align-items:stretch;flex-direction:column}.bracket-view-select{max-width:none;width:100%}.bracket-panel-shell{overflow:hidden;padding:8px}.bracket-scroll{justify-content:flex-start;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}.bracket-stage{margin:0 auto}.bracket-mobile{display:none}}
 `;
 
 const ROUND_BY_MATCH_ID = new Map(
@@ -315,7 +315,10 @@ function useBracketScale() {
       const viewportHeight = window.innerHeight || 900;
       const topOffset = node.getBoundingClientRect().top || 0;
       const availableHeight = Math.max(240, viewportHeight - topOffset - 24);
-      const nextScale = Math.min(width / 1480, availableHeight / 980, 0.46);
+      const isPhone = window.matchMedia?.('(max-width: 640px)').matches;
+      const nextScale = isPhone
+        ? Math.min(availableHeight / 980, 0.46)
+        : Math.min(width / 1480, availableHeight / 980, 0.46);
       setScale(Math.max(0.22, Number.isFinite(nextScale) ? nextScale : 0.46));
     };
 
@@ -352,6 +355,12 @@ function BracketPanel({
   useEffect(() => {
     setSelectedViewId(getDefaultViewId(currentUser, modoAdmin));
   }, [currentUser?.id, modoAdmin]);
+
+  useEffect(() => {
+    const scroller = scaleRef.current?.querySelector('.bracket-scroll');
+    if (!scroller || !window.matchMedia?.('(max-width: 640px)').matches) return;
+    scroller.scrollLeft = Math.max(0, (scroller.scrollWidth - scroller.clientWidth) / 2);
+  }, [bracketScale, selectedViewId, scaleRef]);
 
   const participantOptions = useMemo(() => {
     const participants = [...participanteUsuarios].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
