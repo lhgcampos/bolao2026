@@ -143,6 +143,7 @@ const BRACKET_PANEL_STYLES = `
 .bracket-mobile{display:none}
 .bracket-lines{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .bracket-lines path{fill:none;stroke:#94a3b8;stroke-linecap:round;stroke-linejoin:round;stroke-width:3;opacity:.72}
+.bracket-lines path.is-correct{stroke:#00b759;stroke-width:10;opacity:1;filter:drop-shadow(0 4px 5px rgba(0,128,80,.24))}
 .bracket-node-position{position:absolute;z-index:2;transform:translate(-50%,-50%)}
 .bracket-team-node{display:flex;min-width:68px;align-items:center;gap:8px;color:var(--app-text-primary)}
 .bracket-team-node--left{flex-direction:row}
@@ -472,6 +473,7 @@ function BracketPanel({
       { side: 'right', semifinalId: 102 }
     ];
     const nodeMap = new Map();
+    const nodeMetaMap = new Map();
     const nodes = [];
     const lines = [];
     const canvasHeight = 980;
@@ -484,12 +486,21 @@ function BracketPanel({
 
     const addNode = (key, point, node) => {
       nodeMap.set(key, point);
+      nodeMetaMap.set(key, node);
       nodes.push({ key, point, ...node });
     };
     const addLine = (fromKey, toKey) => {
       const from = nodeMap.get(fromKey);
       const to = nodeMap.get(toKey);
-      if (from && to) lines.push({ key: `${fromKey}->${toKey}`, from, to });
+      const fromNode = nodeMetaMap.get(fromKey);
+      const toNode = nodeMetaMap.get(toKey);
+      const advancesCorrectTeam = Boolean(
+        fromNode
+        && toNode?.correct
+        && normalizeTeam(fromNode.team)
+        && normalizeTeam(fromNode.team) === normalizeTeam(toNode.team)
+      );
+      if (from && to) lines.push({ key: `${fromKey}->${toKey}`, from, to, correct: advancesCorrectTeam });
     };
 
     halves.forEach(({ side, semifinalId }) => {
@@ -652,6 +663,7 @@ function BracketPanel({
                 {bracket.lines.map((line) => (
                   <path
                     key={line.key}
+                    className={line.correct ? 'is-correct' : ''}
                     d={`M ${line.from.x} ${line.from.y} H ${(line.from.x + line.to.x) / 2} V ${line.to.y} H ${line.to.x}`}
                   />
                 ))}
